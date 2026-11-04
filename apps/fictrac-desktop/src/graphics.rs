@@ -2,6 +2,15 @@
 use eframe::egui_wgpu::WgpuSetupCreateNew;
 use std::sync::Arc;
 
+pub fn configure_x11_presentation(config: &mut eframe::egui_wgpu::WgpuConfiguration) {
+    // Immediate viewports all present on the UI thread. Under XWayland, a
+    // covered GLES window can receive compositor frame callbacks at only 1 Hz;
+    // waiting for its vsync then stalls every other window. The compositor
+    // still presents the desktop, while our root timer bounds redraw cadence.
+    config.present_mode = wgpu::PresentMode::AutoNoVsync;
+    config.desired_maximum_frame_latency = Some(1);
+}
+
 pub fn linux_backends(explicit: Option<wgpu::Backends>, x11: bool) -> wgpu::Backends {
     explicit.unwrap_or(if x11 {
         wgpu::Backends::GL | wgpu::Backends::VULKAN
@@ -23,14 +32,14 @@ pub fn configure_setup(
     if setup.native_adapter_selector.is_some() || (!x11 && adapter_name.is_none() && !software) {
         return;
     }
-    let prefer_gles = x11 && explicit.is_none();
+    let prefer_vulkan = x11 && explicit.is_none();
     let power_preference = setup.power_preference;
     setup.native_adapter_selector = Some(Arc::new(move |adapters, surface| {
         select_native_adapter(
             adapters,
             surface,
             backends,
-            prefer_gles,
+            prefer_vulkan,
             power_preference,
             adapter_name.as_deref(),
             software,
@@ -48,7 +57,7 @@ struct AdapterCandidate<'a> {
 fn select_adapter_index(
     adapters: &[AdapterCandidate<'_>],
     backends: wgpu::Backends,
-    prefer_gles: bool,
+    prefer_vulkan: bool,
     power_preference: wgpu::PowerPreference,
     adapter_name: Option<&str>,
     software: bool,
@@ -66,16 +75,17 @@ fn select_adapter_index(
                     .is_none_or(|name| adapter.name.to_lowercase().contains(name.as_str()))
         })
         .min_by_key(|(index, adapter)| {
-            let backend_order = if prefer_gles {
+            let backend_order = if prefer_vulkan {
                 match adapter.backend {
-                    wgpu::Backend::Gl => 0,
-                    wgpu::Backend::Vulkan => 1,
+                    wgpu::Backend::Vulkan => 0,
+                    wgpu::Backend::Gl => 1,
                     _ => 2,
                 }
             } else {
                 0
             };
             (
+                u8::from(adapter.device_type == wgpu::DeviceType::Cpu),
                 backend_order,
                 power_order(adapter.device_type, power_preference),
                 *index,
@@ -138,7 +148,7 @@ fn select_native_adapter(
     adapters: &[wgpu::Adapter],
     surface: Option<&wgpu::Surface<'_>>,
     backends: wgpu::Backends,
-    prefer_gles: bool,
+    prefer_vulkan: bool,
     power_preference: wgpu::PowerPreference,
     adapter_name: Option<&str>,
     software: bool,
@@ -166,7 +176,7 @@ fn select_native_adapter(
     let selected = select_adapter_index(
         &candidates,
         backends,
-        prefer_gles,
+        prefer_vulkan,
         power_preference,
         adapter_name,
         software,
@@ -177,9 +187,9 @@ fn select_native_adapter(
         let message = selection_error(&candidates, backends, adapter_name);
         if software { format!("Mesa software graphics is unavailable. Install/repair the distribution's Mesa software-rendering drivers. {message}") } else { message }
     })?;
-    if prefer_gles && selected.get_info().backend == wgpu::Backend::Vulkan {
+    if prefer_vulkan && selected.get_info().backend == wgpu::Backend::Gl {
         eprintln!(
-            "Graphics: no matching OpenGL adapter supports this window surface; using the compatible Vulkan adapter"
+            "Graphics: no matching hardware Vulkan adapter supports this window surface; using the compatible OpenGL adapter"
         );
     }
     Ok(selected)
@@ -210,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    fn compatible_gles_stays_preferred_over_a_discrete_vulkan_adapter() {
+    fn hardware_vulkan_precedes_gles_for_nonblocking_multiwindow_presentation() {
         let adapters = [
             AdapterCandidate {
                 device_type: wgpu::DeviceType::DiscreteGpu,
@@ -218,7 +228,20 @@ mod tests {
             },
             candidate("NV136", wgpu::Backend::Gl, true),
         ];
+        assert_eq!(select(&adapters), Some(0));
+    }
+
+    #[test]
+    fn vulkan_preference_never_displaces_a_hardware_adapter_with_cpu_rendering() {
+        let adapters = [
+            AdapterCandidate {
+                device_type: wgpu::DeviceType::Cpu,
+                ..candidate("Software Vulkan", wgpu::Backend::Vulkan, true)
+            },
+            candidate("Hardware GLES", wgpu::Backend::Gl, true),
+        ];
         assert_eq!(select(&adapters), Some(1));
+        assert_eq!(select(&adapters[..1]), Some(0));
     }
 
     #[test]

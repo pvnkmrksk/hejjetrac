@@ -10,6 +10,15 @@ The engine and native frontends are separate. [PhotoCraft's architecture](https:
 
 `fictrac` is the CLI frontend. `fictrac-desktop` uses egui/eframe and wgpu (Metal, DX12, Vulkan/GLES) in native windows, with native file dialogs. Each session owns its config document, undo history and worker. Worker commands are bounded, snapshots expose only the latest image/state, and capture/decoding/fitting do not run on the render thread. Invalid numerical settings retain a responsive video preview with an error. Configuration changes reset the tracking epoch; recordings start new data/quality/config files so calibrations do not silently mix.
 
+On Linux X11/XWayland, compatible hardware Vulkan is preferred for nonblocking
+multiwindow presentation; explicit overrides remain authoritative and hardware
+adapters precede software adapters. The older GLES preference could block every
+window when an auxiliary window was minimized. A single root repaint timer
+coordinates immediate viewports. Fixed-size source/diagnostic textures use partial
+updates to retain their GPU allocation. Optional state output includes bounded
+per-window UI timing separately from numerical worker/publication FPS.
+[Native minimized-window regression](ui-rendering.md).
+
 ## Legacy spherical-map estimation
 
 Recorded-video frontends use a one-slot bounded decode producer, overlapping

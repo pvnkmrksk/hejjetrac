@@ -1,5 +1,12 @@
 # v0.3.6 — camera freshness, exact bindings and calibration editing
 
+The minimized-rig-manager freeze is reproduced and corrected: the old OpenGL
+path took about **2.6 seconds** to paint a button response; the hardware-Vulkan
+build stays below **50 ms** in the recorded-input regression cases. Real native
+pointer tests include all four ball-outline drags, magnifiers, resize and a
+hidden root window. **334 workspace tests** pass. [Root cause and evidence](ui-rendering.md).
+The earlier live captures below predate this graphics-policy correction.
+
 Fresh final-build live captures:
 [M01](images/edit-M01-20261104.png) · [M02](images/edit-M02-20261104.png) ·
 [M03](images/edit-M03-20261104.png) · [M04](images/edit-M04-20261104.png) ·
@@ -43,7 +50,7 @@ truth. [Calibration evidence](benchmarks/calibration-47-20261104.json) retains
 the pixel points, angular fits and exact native binary hash.
 
 Required checks pass: formatting, strict locked workspace/all-target Clippy and
-**332 workspace tests** (zero failures or ignored tests). The release synthetic
+**334 workspace tests** (zero failures or ignored tests). The release synthetic
 demo and real sample pass; existing scientific tolerances and oracles are unchanged.
 
 Preview-image age was **27.11 ms median**, **44.92 ms p95**, **48.86 ms maximum**

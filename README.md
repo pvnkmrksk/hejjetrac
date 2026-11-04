@@ -15,6 +15,10 @@ show the saved 47° M01–M04 outlines. To adjust a saved outline, choose **Edit
 and drag a numbered rim mark. The rig profiles bind M01–M04 by serial, independently
 of camera enumeration order.
 
+The minimized-rig-manager UI freeze is fixed by the corrected hardware-GPU
+presentation path. [Reproduction and native-input checks](docs/ui-rendering.md)
+separate actual window responsiveness from background tracking FPS.
+
 **Several live cameras:** run simultaneous sessions with one saved calibration
 and serial link per rig. [Multi-camera setup](book/src/rigs.md) explains linking,
 array launch and separate outputs. [Example hardware and optional Arducam serial

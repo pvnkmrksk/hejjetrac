@@ -11,6 +11,7 @@ mod runtime;
 mod session;
 mod startup;
 mod ui;
+mod ui_metrics;
 use clap::Parser;
 use eframe::egui;
 use fictrac_io::ConfigDocument;
@@ -683,7 +684,8 @@ impl Desktop {
     }
 }
 impl eframe::App for Desktop {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        let update_started = Instant::now();
         if self.startup_frames < 2 {
             self.startup_frames += 1;
             #[cfg(target_os = "linux")]
@@ -838,8 +840,8 @@ impl eframe::App for Desktop {
         if self.last_state.elapsed().as_millis() > 400
             && let Some(path) = &self.args.state_output
         {
-            let instances:Vec<_>=self.sessions.iter().filter(|s| !s.closed).map(|s|serde_json::json!({"id":s.id,"frames":s.snapshot.frames,"source":s.source_edit,"config_path":s.path,"paused":s.snapshot.paused,"native_window":s.native_window,"window_rect":s.window_rect,"window_title":s.window_title(),"revision":s.snapshot.revision,"notice":s.snapshot.notice,"error":s.error,"config_text":s.history.text})).collect();
-            let value = serde_json::json!({"instances":instances,"elapsed_seconds":elapsed});
+            let instances:Vec<_>=self.sessions.iter().filter(|s| !s.closed).map(|s|serde_json::json!({"id":s.id,"frames":s.snapshot.frames,"source":s.source_edit,"config_path":s.path,"paused":s.snapshot.paused,"native_window":s.native_window,"window_rect":s.window_rect,"window_title":s.window_title(),"revision":s.snapshot.revision,"notice":s.snapshot.notice,"error":s.error,"config_text":s.history.text,"ui":s.ui_metrics.value(),"preview_age_ms":s.snapshot.preview_age_ms})).collect();
+            let value = serde_json::json!({"instances":instances,"elapsed_seconds":elapsed,"root_update_ms":update_started.elapsed().as_secs_f64()*1000.,"previous_native_frame_ms":frame.info().cpu_usage.map(|seconds|seconds*1000.)});
             match serde_json::to_vec_pretty(&value)
                 .map_err(|e| e.to_string())
                 .and_then(|data| std::fs::write(path, data).map_err(|e| e.to_string()))
@@ -851,6 +853,18 @@ impl eframe::App for Desktop {
         }
         if self.args.exit_after.is_some_and(|t| elapsed > t) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+        // Immediate child viewports repaint through their parent. A timer per
+        // child makes their staggered wakeups redraw every window repeatedly.
+        // Keep one timer on the root, including when its own rig is closed.
+        if let Some(interval) = self
+            .sessions
+            .iter()
+            .filter(|session| !session.closed)
+            .map(Session::repaint_interval)
+            .min()
+        {
+            ctx.request_repaint_after(interval);
         }
     }
 }
@@ -923,16 +937,16 @@ fn configure_graphics(mut options: eframe::NativeOptions) -> Result<eframe::Nati
     let display = std::env::var("DISPLAY").is_ok_and(|value| !value.is_empty());
     let x11 = linux_use_x11(display, requested.as_deref())?;
     if x11 {
-        // The tested hybrid Vulkan driver loses surface capabilities on
-        // resize, and Wayland EGL can block indefinitely in presentation.
-        // Prefer X11/XWayland + GLES. If no GLES adapter can present to
-        // this surface, a compatible Vulkan adapter can still open the app.
+        // Keep the tested X11/XWayland window path. Prefer compatible hardware
+        // Vulkan: wgpu's Linux GLES presentation only offers blocking FIFO,
+        // which throttles the whole UI when a child window becomes occluded.
         // Preserve explicit overrides and native Wayland-only installations.
         eprintln!("Linux window system: X11/XWayland");
         options.event_loop_builder = Some(Box::new(|builder| {
             use winit::platform::x11::EventLoopBuilderExtX11;
             builder.with_x11();
         }));
+        graphics::configure_x11_presentation(&mut options.wgpu_options);
     } else if requested.as_deref() == Some("wayland") {
         options.event_loop_builder = Some(Box::new(|builder| {
             use winit::platform::wayland::EventLoopBuilderExtWayland;

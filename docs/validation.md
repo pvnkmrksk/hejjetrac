@@ -1,5 +1,19 @@
 # HejjéTrac validation evidence
 
+## Minimized rig manager stalls UI — 2026-11-04
+
+The earlier sustained worker/command tests missed minimized-window presentation.
+The reproduced old OpenGL build drops to roughly one UI update per second after
+minimizing the rig manager, while workers continue. Six real button responses
+take 2.58–2.62 seconds. The corrected automatic hardware-Vulkan build passes
+minimize/restore, diagnostics, all four magnifiers and real rim drags, resize and
+hidden-root checks, with 31.9–43.3 ms native button responses in that case. Saved
+profile settings also pass below 49.2 ms. The live user confirmed responsiveness
+with the manager minimized. **334 workspace tests**, formatting and strict Clippy
+pass; tracking code and scientific gates are unchanged.
+[Root cause, commit history and reproduction](ui-rendering.md) ·
+[Exact measurement scope and hashes](benchmarks/ui-minimize-20261104.json).
+
 ## Fresh four-camera 47° hardware run — 2026-11-04
 
 The cameras are accessible again: exact M01/M02/M03/M04 bindings open video0/2/4/6

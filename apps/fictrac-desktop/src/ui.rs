@@ -93,7 +93,11 @@ impl Session {
         None
     }
     pub fn show(&mut self, ctx: &egui::Context) {
+        let show_started = std::time::Instant::now();
+        self.ui_metrics
+            .begin(ctx.cumulative_frame_nr(), show_started);
         self.update();
+        self.ui_metrics.update_ms = show_started.elapsed().as_secs_f64() * 1000.;
         let limit = constrain_framebuffer(ctx, self.framebuffer_limit);
         self.max_window_inner_size = limit;
         if let Some(size) = self.requested_window_size.take() {
@@ -231,7 +235,9 @@ impl Session {
             egui::TopBottomPanel::top(egui::Id::new(("calibration-guide", self.id)))
                 .show(ctx, |ui| self.calibration_banner(ui));
         }
+        let texture_started = std::time::Instant::now();
         self.refresh_textures(ctx);
+        self.ui_metrics.textures_ms = texture_started.elapsed().as_secs_f64() * 1000.;
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(Color32::from_rgb(12, 15, 19)))
             .show(ctx, |ui| {
@@ -336,13 +342,7 @@ impl Session {
                 }
             });
         }
-        ctx.request_repaint_after(
-            if self.snapshot.paused || self.snapshot.ended || self.worker.is_none() {
-                std::time::Duration::from_millis(250)
-            } else {
-                std::time::Duration::from_secs_f64(1.0 / f64::from(self.display_fps))
-            },
-        );
+        self.ui_metrics.show_ms = show_started.elapsed().as_secs_f64() * 1000.;
     }
     fn toolbar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| self.toolbar_row(ui));
@@ -1884,7 +1884,14 @@ value}
                 TextureOptions::LINEAR
             };
             if let Some(texture) = self.textures.get_mut(i) {
-                texture.set(image, options);
+                if texture.size() == image.size {
+                    // A full set reallocates the GPU texture and bind group.
+                    // Camera/atlas dimensions normally stay fixed: update the
+                    // existing allocation, including when filtering changes.
+                    texture.set_partial([0, 0], image, options);
+                } else {
+                    texture.set(image, options);
+                }
             } else {
                 self.textures.push(ctx.load_texture(
                     format!("session-{}-{i}", self.id),
@@ -1895,6 +1902,7 @@ value}
         }
         self.texture_frame = key;
         self.texture_image = Some(frame.clone());
+        self.ui_metrics.texture_updates = self.ui_metrics.texture_updates.saturating_add(1);
     }
     pub(crate) fn core_config(&self) -> Result<Config, String> {
         let (width, height) = self
@@ -2079,6 +2087,8 @@ value}
         let Some(image) = &self.snapshot.image else {
             return;
         };
+        self.ui_metrics.source_rect = Some([rect.left(), rect.top(), rect.width(), rect.height()]);
+        self.ui_metrics.source_dimensions = Some([image.width, image.height]);
         let w = image.width as f64;
         let h = image.height as f64;
         let to_screen = |p: [f64; 2]| {
@@ -2952,6 +2962,77 @@ mod tests {
     use crate::runtime::ViewFrame;
     use fictrac_io::ConfigDocument;
     use std::sync::Arc;
+    #[test]
+    fn live_textures_reuse_gpu_allocations_until_dimensions_change() -> Result<(), String> {
+        let mut session = session()?;
+        let ctx = egui::Context::default();
+        let first = ctx.run(egui::RawInput::default(), |ctx| {
+            session.refresh_textures(ctx)
+        });
+        let id = session
+            .textures
+            .first()
+            .ok_or("source texture missing")?
+            .id();
+        assert!(
+            first
+                .textures_delta
+                .set
+                .iter()
+                .any(|(texture, delta)| *texture == id && delta.pos.is_none())
+        );
+        for precision in [false, true, false] {
+            session.tool = if precision { Tool::Rim } else { Tool::Inspect };
+            session.snapshot.image = Some(Arc::new(ViewFrame {
+                width: 384,
+                height: 288,
+                rgb: vec![87; 384 * 288 * 3],
+                debug: None,
+            }));
+            let update = ctx.run(egui::RawInput::default(), |ctx| {
+                session.refresh_textures(ctx)
+            });
+            let delta = update
+                .textures_delta
+                .set
+                .iter()
+                .find(|(texture, _)| *texture == id)
+                .map(|(_, delta)| delta)
+                .ok_or("source pixels were not uploaded")?;
+            assert_eq!(delta.pos, Some([0, 0]));
+            assert_eq!(delta.image.size(), [384, 288]);
+            assert_eq!(session.textures[0].id(), id);
+            let held = ctx.run(egui::RawInput::default(), |ctx| {
+                session.refresh_textures(ctx)
+            });
+            assert!(
+                !held
+                    .textures_delta
+                    .set
+                    .iter()
+                    .any(|(texture, _)| *texture == id)
+            );
+        }
+        session.snapshot.image = Some(Arc::new(ViewFrame {
+            width: 320,
+            height: 240,
+            rgb: vec![123; 320 * 240 * 3],
+            debug: None,
+        }));
+        let resized = ctx.run(egui::RawInput::default(), |ctx| {
+            session.refresh_textures(ctx)
+        });
+        assert!(
+            resized
+                .textures_delta
+                .set
+                .iter()
+                .any(|(texture, delta)| *texture == id
+                    && delta.pos.is_none()
+                    && delta.image.size() == [320, 240])
+        );
+        Ok(())
+    }
     #[test]
     fn omitted_tracking_controls_show_effective_defaults_without_editing_config()
     -> Result<(), String> {

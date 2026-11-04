@@ -1,5 +1,16 @@
 # Behavioral parity assessment
 
+## Minimized auxiliary windows and actual GUI responsiveness — 2026-11-04
+
+Prior worker FPS and command-latency reports did not cover the rig manager being
+minimized. The old GLES presentation path then blocked the shared GUI thread.
+The final Linux X11 default now prefers compatible hardware Vulkan, retaining
+hardware over software selection, and passes real native-input minimize/restore,
+four-calibration drag/magnifier and resize tests. This is a UI correction, with
+no tracking algorithm, quality or missing-motion change. Other operating systems
+and explicit OpenGL rendering are outside the new hardware execution evidence.
+[Reproduction, limits and measured response](ui-rendering.md).
+
 ## Fresh 47° hardware validation and remaining recovery gap — 2026-11-04
 
 The final explicit binary build passes six minutes of four-camera live tracking,

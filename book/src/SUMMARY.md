@@ -51,6 +51,7 @@
 - [Validation evidence](validation.md)
 - [Architecture](architecture.md)
 - [Native UI design](ui-design.md)
+- [Minimized-window UI regression](ui-rendering.md)
 
 # Project
 

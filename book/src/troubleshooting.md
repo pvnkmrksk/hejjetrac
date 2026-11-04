@@ -1,5 +1,13 @@
 # Troubleshooting
 
+## Camera windows slow down when the rig manager is minimized
+
+Use the corrected v0.3.6 build. The old Linux OpenGL presentation path could block
+all windows while tracking continued in the background. Current X11 startup
+prefers compatible hardware Vulkan and has native minimize/restore and pointer
+regression coverage. No software-rendering flag is required on the validated
+Intel HD Graphics 530 setup. [Root cause, measurements and scope](../../docs/ui-rendering.md).
+
 ## The app will not open
 
 Use the platform **binary archive**, extract it fully and follow [installation](install.md). Mac release bundles are ad hoc signed and not notarized; Windows binaries are unsigned. Use only a per-app trust exception after verifying the source. Do not disable global OS protections. An actual malware/damaged-file warning needs investigation, not an automatic override.

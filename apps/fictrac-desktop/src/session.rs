@@ -12,6 +12,7 @@ pub enum Tool {
 }
 
 pub struct Session {
+    pub ui_metrics: crate::ui_metrics::UiMetrics,
     pub source_base: Option<PathBuf>,
     pub running_source: String,
     pub running_camera_binding: Option<String>,
@@ -88,6 +89,7 @@ impl Session {
         let text = doc.text().to_owned();
         let source_edit = doc.get("src_fn").unwrap_or("").to_owned();
         Self {
+            ui_metrics: crate::ui_metrics::UiMetrics::default(),
             source_base: path.clone(),
             running_source: String::new(),
             running_camera_binding: None,
@@ -275,6 +277,13 @@ impl Session {
         }
         self.display_fps = fps;
         Ok(())
+    }
+    pub fn repaint_interval(&self) -> std::time::Duration {
+        if self.snapshot.paused || self.snapshot.ended || self.worker.is_none() {
+            std::time::Duration::from_millis(250)
+        } else {
+            std::time::Duration::from_secs_f64(1.0 / f64::from(self.display_fps))
+        }
     }
     /// Daily calibration inspection changes only transient preview state.
     pub(crate) fn set_calibration_panel(&mut self, show: bool) {
