@@ -28,6 +28,7 @@
 - [Several rigs](rigs.md)
 - [Legacy MATREX VR output](matrex-vr.md)
 - [Occlusion recovery](recovery.md)
+- [Atlas learning and refinement](atlas-learning.md)
 - [CLI reference](cli.md)
 - [AI agents and MCP](agent-control.md)
 - [Troubleshooting](troubleshooting.md)

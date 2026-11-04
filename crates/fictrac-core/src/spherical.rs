@@ -373,10 +373,12 @@ impl MapTracker {
         // fails outright. Refine against the last accepted observation only
         // when the usual fit or motion consistency is uncertain. No reference
         // survives a rejection, and both fits retain the configured window.
+        // This retry is useful before motion history exists too: selection
+        // still requires distributed temporal agreement and every final gate.
+        // Relaxed appearance acceptance separately requires stable history.
         let motion = DVec3::from_array(x);
         if self.settings.resilient
             && self.temporal_valid
-            && self.recovery.stable_motion_history()
             && (!acceptable(error, limit)
                 || (!self
                     .recovery
@@ -441,11 +443,7 @@ impl MapTracker {
             },
         );
         let motion = DVec3::from_array(x);
-        if !strict_score_good
-            && self.settings.resilient
-            && self.temporal_valid
-            && self.prepared_temporal.is_none()
-        {
+        if self.settings.resilient && self.temporal_valid && self.prepared_temporal.is_none() {
             self.prepared_temporal = Some(objective.temporal_evidence(
                 DQuat::from_scaled_axis(motion) * orientation,
                 &self.temporal_map,
@@ -472,6 +470,10 @@ impl MapTracker {
                 || if self
                     .recovery
                     .accepted_ramp_ok(motion, self.prepared_delta_ms)
+                    || self.prepared_temporal.as_ref().is_some_and(|evidence| {
+                        self.recovery
+                            .verified_ramp_ok(motion, self.prepared_delta_ms, evidence)
+                    })
                 {
                     self.recovery.begin_ramp_epoch();
                     true
@@ -554,6 +556,11 @@ impl MapTracker {
                         self.sampler.basis * DVec3::from_array(row.delta_camera)
                     },
                     self.prepared_delta_ms,
+                );
+                self.recovery.observe_temporal_support(
+                    self.prepared_temporal
+                        .as_ref()
+                        .is_some_and(|evidence| evidence.verified),
                 );
             }
             if self.settings.resilient

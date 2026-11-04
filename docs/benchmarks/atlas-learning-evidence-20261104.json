@@ -1,0 +1,100 @@
+{
+  "passed": true,
+  "date": "2026-11-04",
+  "source_boundary": "Final core source hashes match the complete release scientific regression report. User-owned VR files are preserved separately from the commit.",
+  "core_source_sha256": {
+    "crates/fictrac-core/src/calibration.rs": "6c81097ec61c9b620b3918eb4492f541a6f0b531837260e473b97550f9350e82",
+    "crates/fictrac-core/src/config.rs": "751a6ab8da1e8f9800a2fec6f0da88691f701bb18f1394243c842e4f2ae3adbc",
+    "crates/fictrac-core/src/diagnostics.rs": "d51a0104d6c301ae7f071cdf16da7944289d7391caa8ffdde1ea673c064e7edb",
+    "crates/fictrac-core/src/frame.rs": "a4ca945eb614424f564bbc24e410f27b0116fb24ce487f919c88437b722abc02",
+    "crates/fictrac-core/src/geometry.rs": "d0a67a1d3e3e0253d0d8b8298bfd06caad47a4000ec1511a63d40126d803c36d",
+    "crates/fictrac-core/src/lib.rs": "81b6b8884c6dce9b55469145149f3945a1fae6ed487103760cd894f4d4146580",
+    "crates/fictrac-core/src/resilience.rs": "526951349a39def785326e9fe82d80159ff020495edf367b39c14453902727b7",
+    "crates/fictrac-core/src/spherical.rs": "c1601dc6698f78e500a2c882377f816d914bdb6ab789f6b69681865c1f8f80da",
+    "crates/fictrac-core/src/synthetic.rs": "3cc9b84434d5360bb0dc06c74d5f24b0c488f326f3cd1b25867aa19dc8b0da05",
+    "crates/fictrac-core/src/tracker.rs": "15ead39d1329dc130ac4d969c7fd0750b7ae3852c598266d74c906bca3de503a"
+  },
+  "binaries": {
+    "fictrac": "e1ef35c0cf612980b112aed6baa2a7ac154a3a91ea88fcefa97a4637c1e42219",
+    "fictrac-desktop": "6be8bab0f4ce1b8f3e612436060aa029d607e8544d91a1e994ab91b9745d56db",
+    "examples/replay_evidence": "3dee6fb1b67c0e006b58661e20ceca2ca1d54e31b2ec935877f30ef5e597a919"
+  },
+  "checks": [
+    {
+      "name": "clippy",
+      "command": "cargo clippy --workspace --all-targets --locked -- -D warnings",
+      "log_sha256": "a1735ae4077c0d54855ce7aa2b0a5064f115c3458e17b59b0d62da248ee130c8"
+    },
+    {
+      "name": "workspace_tests",
+      "command": "cargo test --workspace --locked",
+      "log_sha256": "8e3d84a764043f6dae8614fecbf433629d28acbfc480120b72b0beb9008c52bc",
+      "passed": 343,
+      "failed": 0,
+      "ignored": 0,
+      "all_test_groups_ok": true
+    },
+    {
+      "name": "release_build",
+      "command": "cargo build --release --locked --workspace --bins --example replay_evidence",
+      "log_sha256": "68f68be3941f2c81a761a869195ad59785f5a19385e79567967dbe58474b0f23"
+    }
+  ],
+  "format_check": "cargo fmt --all -- --check passed",
+  "reports": [
+    "atlas-learning-final-20261104.json",
+    "atlas-live-four-20261104.json",
+    "atlas-preview-age-20261104.json",
+    "atlas-native-ui-20261104.json"
+  ],
+  "native_screen_recording": {
+    "scope": "Three-second native M03 diagnostics screen recording on four connected physical cameras; only the owned test window is captured.",
+    "binary_sha256": "6be8bab0f4ce1b8f3e612436060aa029d607e8544d91a1e994ab91b9745d56db",
+    "video": "docs/images/atlas-live-native-20261104.mp4",
+    "video_sha256": "fe0389865189e2427d63362c141d0e04cb6599b01ecf1423f0f6d68b0805af53",
+    "media": {
+      "programs": [],
+      "streams": [
+        {
+          "width": 1000,
+          "height": 700,
+          "nb_frames": "90"
+        }
+      ],
+      "format": {
+        "duration": "3.000000"
+      }
+    },
+    "sessions": [
+      {
+        "session": 1,
+        "running_camera_binding": "usb:0c45:6366:M01:video:0",
+        "frames": 719,
+        "preview_age_ms": 38.014101000000004,
+        "source_label": "Arducam OV9281 USB Camera: Ardu (/dev/video4)"
+      },
+      {
+        "session": 2,
+        "running_camera_binding": "usb:0c45:6366:M02:video:0",
+        "frames": 688,
+        "preview_age_ms": 27.40795,
+        "source_label": "Arducam OV9281 USB Camera: Ardu (/dev/video0)"
+      },
+      {
+        "session": 3,
+        "running_camera_binding": "usb:0c45:6366:M03:video:0",
+        "frames": 655,
+        "preview_age_ms": 32.341969,
+        "source_label": "Arducam OV9281 USB Camera: Ardu (/dev/video6)"
+      },
+      {
+        "session": 4,
+        "running_camera_binding": "usb:0c45:6366:M04:video:0",
+        "frames": 623,
+        "preview_age_ms": 21.506356,
+        "source_label": "Arducam OV9281 USB Camera: Ardu (/dev/video2)"
+      }
+    ]
+  },
+  "scope": "Known-motion synthetic tests and original-FicTrac full-video agreement; four live Linux cameras under airflow jitter. No universal hand-recovery, physical-motion ground truth or native Windows/macOS execution claim."
+}

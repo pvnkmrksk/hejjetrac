@@ -7,6 +7,9 @@ use std::f64::consts::{PI, TAU};
 // acquire extra inertia. At 100 FPS this requires at least ten seconds of
 // actual visibility; newly learned surfaces keep upstream's consolidation.
 const MATURE_TEACHING_FRAMES: u16 = 1024;
+const REFINEMENT_CONFIRMATIONS: u8 = 8;
+const REFINEMENT_VIEW_SEPARATION: f64 = 0.08;
+const YOUNG_REFINEMENT_STEP: u8 = 4;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum LearningPolicy {
@@ -44,10 +47,22 @@ pub struct Diagnostics {
     pub(crate) points: Vec<Option<(DVec3, [f64; 2])>>,
     pub(crate) map: Vec<u8>,
     learning_hits: Vec<u16>,
+    refinement_votes: Vec<u8>,
+    last_refinement_frame: Vec<u32>,
+    last_refinement_view: Vec<u32>,
+    refinement_view: u32,
+    refinement_pose: Option<DQuat>,
+    projected_sites: Vec<usize>,
+    refinement_support: Vec<bool>,
+    cell_votes: Vec<u8>,
+    candidate_registered: Vec<bool>,
+    candidate_back_seen: Vec<bool>,
+    candidate_points: Vec<(usize, DVec3)>,
     last_learning_epoch: Vec<u32>,
     learning_epoch: u32,
     resilient_learning: bool,
     previous: Option<GrayFrame>,
+    previous_accepted: bool,
     pub(crate) size: usize,
     pub(crate) map_width: usize,
     pub(crate) map_height: usize,
@@ -100,10 +115,22 @@ impl Diagnostics {
             points,
             map: vec![128; map_width * map_height],
             learning_hits: vec![0; map_width * map_height],
+            refinement_votes: vec![0; map_width * map_height],
+            last_refinement_frame: vec![0; map_width * map_height],
+            last_refinement_view: vec![0; map_width * map_height],
+            refinement_view: 0,
+            refinement_pose: None,
+            projected_sites: vec![0; size * size],
+            refinement_support: vec![false; size * size],
+            cell_votes: vec![0; map_width * map_height],
+            candidate_registered: vec![false; map_width * map_height],
+            candidate_back_seen: vec![false; map_width * map_height],
+            candidate_points: Vec::with_capacity(map_width * map_height),
             last_learning_epoch: vec![0; map_width * map_height],
             learning_epoch: 0,
             resilient_learning,
             previous: None,
+            previous_accepted: false,
             size,
             map_width,
             map_height,
@@ -113,7 +140,16 @@ impl Diagnostics {
     }
     pub(crate) fn reset_history(&mut self) {
         self.previous = None;
+        self.previous_accepted = false;
         self.learning_hits.fill(0);
+        self.refinement_votes.fill(0);
+        self.last_refinement_frame.fill(0);
+        self.last_refinement_view.fill(0);
+        self.refinement_view = 0;
+        self.refinement_pose = None;
+        self.candidate_registered.fill(false);
+        self.candidate_back_seen.fill(false);
+        self.candidate_points.clear();
         self.last_learning_epoch.fill(0);
         self.learning_epoch = 0;
     }
@@ -122,11 +158,38 @@ impl Diagnostics {
             next
         } else {
             self.last_learning_epoch.fill(0);
+            self.last_refinement_frame.fill(0);
             1
         };
     }
-    fn learn_site(&mut self, index: usize, observation: u8) {
+    fn begin_refinement_view(&mut self, pose: DQuat) {
+        let view = self.basis * (pose.inverse() * DVec3::from_array(self.config.sphere.centre));
+        for &(index, normal) in &self.candidate_points {
+            if self.refinement_votes[index] > 0 && normal.dot(view) > 0.0 {
+                self.candidate_back_seen[index] = true;
+            }
+        }
+        if self.refinement_pose.is_none_or(|previous| {
+            previous.dot(pose).abs() <= (REFINEMENT_VIEW_SEPARATION * 0.5).cos()
+        }) {
+            self.refinement_view = if let Some(next) = self.refinement_view.checked_add(1) {
+                next
+            } else {
+                self.last_refinement_view.fill(0);
+                1
+            };
+            self.refinement_pose = Some(pose);
+        }
+    }
+    fn learn_site(
+        &mut self,
+        index: usize,
+        observation: u8,
+        refinement_allowed: bool,
+        revisited: bool,
+    ) {
         let first_hit = self.learning_hits[index] == 0;
+        let new_refinement_frame = self.last_refinement_frame[index] != self.learning_epoch;
         let mut mature = false;
         if self.resilient_learning {
             if self.last_learning_epoch[index] != self.learning_epoch {
@@ -150,13 +213,70 @@ impl Diagnostics {
             mature = hits >= MATURE_TEACHING_FRAMES;
             let contrary = (self.map[index] >= 160 && observation == 0)
                 || (self.map[index] <= 96 && observation == 255);
+            let refining = self.map[index] == 0
+                || self.map[index] == 255
+                || self.refinement_votes[index] >= REFINEMENT_CONFIRMATIONS;
+            if refining && !refinement_allowed {
+                return;
+            }
             if mature && !first_hit && contrary && !hits.is_multiple_of(period) {
                 return;
             }
+            // Fully consolidated cells remain revisable, but a boundary vote
+            // or several colliding samples from one image cannot unlock them.
+            // Require repeated contrary teaching frames before consolidation
+            // can move away from an extreme. Mature cells keep their slower
+            // update phase as well.
+            if self.map[index] == 0 || self.map[index] == 255 {
+                if self.map[index] == observation {
+                    self.refinement_votes[index] = 0;
+                    self.candidate_back_seen[index] = false;
+                } else {
+                    if new_refinement_frame {
+                        if !self.candidate_registered[index] {
+                            let y = (index / self.map_width) as f64;
+                            let x = (index % self.map_width) as f64;
+                            let py = (y + 0.5) * 2.0 / self.map_height as f64 - 1.0;
+                            let longitude = -(x + 0.5) / self.map_width as f64 * TAU - PI;
+                            let radius = (1.0 - py * py).max(0.0).sqrt();
+                            self.candidate_points.push((
+                                index,
+                                DVec3::new(radius * longitude.sin(), py, radius * longitude.cos()),
+                            ));
+                            self.candidate_registered[index] = true;
+                        }
+                        self.refinement_votes[index] =
+                            self.refinement_votes[index].saturating_add(1);
+                        self.last_refinement_frame[index] = self.learning_epoch;
+                        self.last_refinement_view[index] = self.refinement_view;
+                    }
+                    // A run of views in the first sweep can share an alias or
+                    // transient obstruction. Keep its anchor until this
+                    // material patch has faced away and is observed again.
+                    if self.refinement_votes[index] < REFINEMENT_CONFIRMATIONS || !revisited {
+                        return;
+                    }
+                }
+            }
+            if self.refinement_votes[index] >= REFINEMENT_CONFIRMATIONS && !new_refinement_frame {
+                // Once unlocked, revise at most once per teaching frame.
+                return;
+            }
+            if self.refinement_votes[index] >= REFINEMENT_CONFIRMATIONS {
+                self.last_refinement_frame[index] = self.learning_epoch;
+            }
         }
+        let step = if self.resilient_learning
+            && !mature
+            && self.refinement_votes[index] >= REFINEMENT_CONFIRMATIONS
+        {
+            YOUNG_REFINEMENT_STEP
+        } else {
+            1
+        };
         self.map[index] = match self.map[index] {
-            0 => 0,
-            255 => 255,
+            0 if !self.resilient_learning => 0,
+            255 if !self.resilient_learning => 255,
             128 if !mature || first_hit => {
                 if observation == 255 {
                     192
@@ -166,14 +286,21 @@ impl Diagnostics {
             }
             value => {
                 if observation == 255 {
-                    value.saturating_add(1)
+                    value.saturating_add(step)
                 } else {
-                    value.saturating_sub(1)
+                    value.saturating_sub(step)
                 }
             }
         };
     }
-    fn teach_site(&mut self, index: usize, observation: u8, policy: LearningPolicy) {
+    fn teach_site(
+        &mut self,
+        index: usize,
+        observation: u8,
+        policy: LearningPolicy,
+        refinement_allowed: bool,
+        revisited: bool,
+    ) {
         if matches!(policy, LearningPolicy::Full | LearningPolicy::Guarded)
             || (policy == LearningPolicy::NewSurface
                 && self.map[index] == 128
@@ -183,7 +310,7 @@ impl Diagnostics {
             // not new surface. Imported templates use 128 for unseen cells,
             // while their nonneutral confidence values remain protected even
             // though imports deliberately reset age history.
-            self.learn_site(index, observation);
+            self.learn_site(index, observation, refinement_allowed, revisited);
         }
     }
     pub(crate) fn prepare(&self, frame: &GrayFrame) -> Vec<u8> {
@@ -339,6 +466,10 @@ impl Diagnostics {
             .map(|r| exported_basis.inverse() * DVec3::from_array(r.delta_camera))
             .unwrap_or(DVec3::ZERO);
         let inverse_delta = DQuat::from_scaled_axis(-rotation);
+        // Fast views can share the same exposure smear across many images.
+        // Revisit established labels only below one atlas-longitude step;
+        // faster accepted views can still extend genuinely unseen surface.
+        let refinement_motion_ok = rotation.length() <= TAU / mw as f64;
         let learning = if row.is_none_or(|r| r.accepted) {
             learning
         } else {
@@ -346,6 +477,7 @@ impl Diagnostics {
         };
         if learning != LearningPolicy::Frozen && self.resilient_learning {
             self.begin_learning_frame();
+            self.begin_refinement_view(orientation_cam);
         }
         let informative = matches!(
             learning,
@@ -362,6 +494,7 @@ impl Diagnostics {
                 || sites.iter().filter(|site| **site).count() * 2
                     < self.points.iter().filter(|point| point.is_some()).count()
         });
+        self.cell_votes.fill(0);
         for y in 0..n {
             for x in 0..n {
                 let i = y * n + x;
@@ -384,9 +517,8 @@ impl Diagnostics {
                     ray.x * factor + n as f64 * 0.5 - 0.5,
                     ray.y * factor + n as f64 * 0.5 - 0.5,
                 ];
-                if let Some(previous) = &self.previous
-                    && let Some(v) = previous.sample(xy[0], xy[1])
-                {
+                let previous = self.previous.as_ref().and_then(|p| p.sample(xy[0], xy[1]));
+                if let Some(v) = previous {
                     diff[i] = (f64::from(value) - v * 255.0).abs().min(255.0) as u8;
                 }
                 let p = self.basis * (orientation_cam.inverse() * p);
@@ -395,10 +527,51 @@ impl Diagnostics {
                 let my = (p.y + 1.0) * 0.5 * mh as f64;
                 let mi = (my.floor() as usize).min(mh - 1) * mw + (mx.floor() as usize).min(mw - 1);
                 instant[mi] = value;
-                let unobserved = self.map[mi] == 128 && self.learning_hits[mi] == 0;
-                if !unobserved || informative.as_ref().is_none_or(|sites| sites[i]) {
-                    self.teach_site(mi, value, learning);
-                }
+                self.projected_sites[i] = mi;
+                self.cell_votes[mi] |= if value == 0 { 1 } else { 2 };
+                // Revisit a consolidated marking only in its supported
+                // interior, with matching evidence from the preceding
+                // accepted observation warped by the measured increment.
+                // Threshold boundaries and single-image defects cannot
+                // rewrite a confident material label.
+                self.refinement_support[i] = refinement_motion_ok
+                    && self.previous_accepted
+                    && previous
+                        .is_some_and(|v| (value == 0 && v <= 0.1) || (value == 255 && v >= 0.9))
+                    && x > 0
+                    && x + 1 < n
+                    && y > 0
+                    && y + 1 < n
+                    && [i - 1, i + 1, i - n, i + n]
+                        .iter()
+                        .filter(|neighbor| roi[**neighbor] == value)
+                        .count()
+                        >= 3;
+            }
+        }
+        // Several ROI sites can land in one atlas cell. An early colliding
+        // sample must not overturn the label when other current samples
+        // disagree. Resolve that ambiguity before applying any refinement,
+        // while preserving the original order of ordinary confidence updates.
+        for (i, value) in roi.iter().copied().enumerate() {
+            if self.points[i].is_none() {
+                continue;
+            }
+            let mi = self.projected_sites[i];
+            let unobserved = self.map[mi] == 128 && self.learning_hits[mi] == 0;
+            if !unobserved || informative.as_ref().is_none_or(|sites| sites[i]) {
+                let refinement_allowed = self.refinement_support[i]
+                    && self.cell_votes[mi] != 3
+                    && (self.map[mi] != 0 && self.map[mi] != 255
+                        || self.map[mi] == value
+                        || self.last_refinement_view[mi] != self.refinement_view);
+                self.teach_site(
+                    mi,
+                    value,
+                    learning,
+                    refinement_allowed,
+                    self.candidate_back_seen[mi],
+                );
             }
         }
         self.previous = GrayFrame::new(
@@ -408,6 +581,7 @@ impl Diagnostics {
             frame.timestamp_ms(),
         )
         .ok();
+        self.previous_accepted = row.is_none_or(|row| row.accepted);
         DebugViews {
             roi,
             diff,
@@ -524,12 +698,203 @@ mod learning_tests {
     }
 
     #[test]
+    fn repeated_accepted_passes_can_correct_saturated_first_pass_evidence() -> Result<()> {
+        let mut adaptive = diagnostics(true)?;
+        let mut legacy = diagnostics(false)?;
+        for map in [&mut adaptive, &mut legacy] {
+            for _ in 0..80 {
+                map.begin_learning_frame();
+                map.learn_site(0, 255, true, true);
+                map.learn_site(1, 0, true, true);
+            }
+            assert_eq!(&map.map[..2], &[255, 0]);
+        }
+        // Later accepted views consistently contradict the first pass. A single
+        // image must not flip its labels, but sustained evidence must correct
+        // both extremes instead of treating them as permanent material truth.
+        for pass in 0..300 {
+            for map in [&mut adaptive, &mut legacy] {
+                map.begin_learning_frame();
+                map.teach_site(0, 0, LearningPolicy::Guarded, true, true);
+                map.teach_site(1, 255, LearningPolicy::Guarded, true, true);
+            }
+            if pass == 0 {
+                assert!(adaptive.map[0] > 128 && adaptive.map[1] < 128);
+            }
+        }
+        assert!(adaptive.map[0] < 128 && adaptive.map[1] > 128);
+        assert_eq!(&legacy.map[..2], &[255, 0], "legacy opt-out stays fixed");
+        Ok(())
+    }
+
+    #[test]
+    fn saturated_refinement_needs_distinct_frames_and_resists_transient_votes() -> Result<()> {
+        let mut adaptive = diagnostics(true)?;
+        adaptive.map[0] = 255;
+        for _ in 0..REFINEMENT_CONFIRMATIONS - 1 {
+            adaptive.begin_learning_frame();
+            for _ in 0..100 {
+                adaptive.learn_site(0, 0, true, true);
+            }
+            assert_eq!(adaptive.map[0], 255, "one image cannot unlock a cell");
+        }
+        adaptive.begin_learning_frame();
+        adaptive.learn_site(0, 255, true, true);
+        assert_eq!(
+            adaptive.refinement_votes[0], 0,
+            "agreement clears a transient streak"
+        );
+        for _ in 0..REFINEMENT_CONFIRMATIONS {
+            adaptive.begin_learning_frame();
+            for _ in 0..100 {
+                adaptive.learn_site(0, 0, true, true);
+            }
+        }
+        assert_eq!(
+            adaptive.map[0],
+            255 - YOUNG_REFINEMENT_STEP,
+            "refinement counts each image once"
+        );
+        adaptive.reset_history();
+        assert!(adaptive.refinement_votes.iter().all(|votes| *votes == 0));
+        Ok(())
+    }
+
+    #[test]
+    fn mature_saturated_cells_remain_protected_but_can_eventually_refine() -> Result<()> {
+        let mut adaptive = diagnostics(true)?;
+        adaptive.map[0] = 255;
+        adaptive.map[1] = 0;
+        adaptive.learning_hits[..2].fill(1600);
+        for image in 0..3000 {
+            adaptive.begin_learning_frame();
+            adaptive.teach_site(0, 0, LearningPolicy::Guarded, true, true);
+            adaptive.teach_site(1, 255, LearningPolicy::Guarded, true, true);
+            if image == 299 {
+                assert!(adaptive.map[0] >= 160 && adaptive.map[1] <= 96);
+            }
+        }
+        assert!(adaptive.map[0] < 128 && adaptive.map[1] > 128);
+        Ok(())
+    }
+
+    #[test]
+    fn boundaries_and_unaccepted_previous_images_cannot_unlock_confident_cells() -> Result<()> {
+        let mut adaptive = diagnostics(true)?;
+        adaptive.map.fill(255);
+        let base = GrayFrame::new(160, 160, vec![0.5; 160 * 160], 0.)?;
+        let mut row = Tracker::new(Config::default())?.process(base.clone())?;
+        let boundary: Vec<_> = (0..adaptive.size * adaptive.size)
+            .map(|i| {
+                if (i / adaptive.size + i % adaptive.size) % 2 == 0 {
+                    0
+                } else {
+                    255
+                }
+            })
+            .collect();
+        for i in 0..100 {
+            row.absolute_camera = [i as f64 * 0.02, 0., 0.];
+            row.delta_camera = [0.02, 0., 0.];
+            adaptive.update_prepared(&base, Some(&row), boundary.clone(), LearningPolicy::Guarded);
+        }
+        assert!(adaptive.map.iter().all(|value| *value == 255));
+        assert!(adaptive.refinement_votes.iter().all(|votes| *votes == 0));
+        let uniform = vec![0; adaptive.size * adaptive.size];
+        for i in 100..200 {
+            row.absolute_camera = [i as f64 * 0.02, 0., 0.];
+            row.accepted = false;
+            adaptive.update_prepared(&base, Some(&row), uniform.clone(), LearningPolicy::Guarded);
+            row.accepted = true;
+            adaptive.update_prepared(&base, Some(&row), uniform.clone(), LearningPolicy::Guarded);
+        }
+        assert!(adaptive.map.iter().all(|value| *value == 255));
+        assert!(adaptive.refinement_votes.iter().all(|votes| *votes == 0));
+        Ok(())
+    }
+
+    #[test]
+    fn confidence_revision_requires_separated_slow_views() -> Result<()> {
+        let mut adaptive = diagnostics(true)?;
+        adaptive.map.fill(255);
+        let base = GrayFrame::new(160, 160, vec![0.5; 160 * 160], 0.)?;
+        let mut row = Tracker::new(Config::default())?.process(base.clone())?;
+        let uniform = vec![0; adaptive.size * adaptive.size];
+        for _ in 0..100 {
+            adaptive.update_prepared(&base, Some(&row), uniform.clone(), LearningPolicy::Guarded);
+        }
+        assert!(adaptive.map.iter().all(|value| *value == 255));
+        assert!(adaptive.refinement_votes.iter().all(|votes| *votes <= 1));
+        row.delta_camera = [0.02, 0., 0.];
+        for i in 1..=100 {
+            row.absolute_camera = [i as f64 * 0.02, 0., 0.];
+            adaptive.update_prepared(&base, Some(&row), uniform.clone(), LearningPolicy::Guarded);
+        }
+        assert!(
+            adaptive.map.iter().all(|value| *value == 255),
+            "a first pass is not an independent revisit"
+        );
+        row.delta_camera = [0.2, 0., 0.];
+        for i in 1..=100 {
+            row.absolute_camera = [2.0 + i as f64 * 0.2, 0., 0.];
+            adaptive.update_prepared(&base, Some(&row), uniform.clone(), LearningPolicy::Guarded);
+        }
+        assert!(adaptive.map.iter().all(|value| *value == 255));
+        row.delta_camera = [0.02, 0., 0.];
+        for i in 1..=400 {
+            row.absolute_camera = [22.0 + i as f64 * 0.02, 0., 0.];
+            adaptive.update_prepared(&base, Some(&row), uniform.clone(), LearningPolicy::Guarded);
+        }
+        assert!(adaptive.map.iter().any(|value| *value < 128));
+        Ok(())
+    }
+
+    #[test]
+    fn conflicting_projections_cannot_confirm_a_material_label() -> Result<()> {
+        let mut adaptive = diagnostics(true)?;
+        adaptive.map.fill(255);
+        let base = GrayFrame::new(160, 160, vec![0.5; 160 * 160], 0.)?;
+        let row = Tracker::new(Config::default())?.process(base.clone())?;
+        let roi: Vec<_> = (0..adaptive.size * adaptive.size)
+            .map(|i| {
+                if i % adaptive.size < adaptive.size / 2 + 2 {
+                    0
+                } else {
+                    255
+                }
+            })
+            .collect();
+        for _ in 0..2 {
+            adaptive.update_prepared(&base, Some(&row), roi.clone(), LearningPolicy::Guarded);
+        }
+        let mixed: Vec<_> = adaptive
+            .cell_votes
+            .iter()
+            .enumerate()
+            .filter_map(|(index, votes)| (*votes == 3).then_some(index))
+            .collect();
+        assert!(
+            !mixed.is_empty(),
+            "fixture must project both colors into shared cells"
+        );
+        assert!(
+            mixed
+                .iter()
+                .all(|index| adaptive.refinement_votes[*index] == 0)
+        );
+        assert!(
+            adaptive.refinement_votes.contains(&1),
+            "unambiguous cells can supply evidence"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn mature_unsaturated_map_resists_300_accepted_contrary_images() -> Result<()> {
         let mut protected = diagnostics(true)?;
         let mut legacy = diagnostics(false)?;
-        // A long-observed boundary cell can remain unsaturated. Saturated
-        // cells are already immutable in both policies; exercise the vulnerable
-        // partially consolidated evidence instead of only rejected images.
+        // A long-observed boundary cell can remain unsaturated. Exercise that
+        // vulnerable evidence as well as the fully consolidated extremes.
         protected.map.fill(200);
         legacy.map.fill(200);
         protected.learning_hits.fill(1600);
@@ -574,14 +939,14 @@ mod learning_tests {
     fn new_surface_and_legacy_updates_remain_fast_and_learning_history_resets() -> Result<()> {
         let mut protected = diagnostics(true)?;
         protected.begin_learning_frame();
-        protected.learn_site(0, 255);
+        protected.learn_site(0, 255, true, true);
         assert_eq!(protected.map[0], 192);
-        protected.learn_site(0, 255);
+        protected.learn_site(0, 255, true, true);
         assert_eq!(protected.map[0], 193);
         assert_eq!(protected.learning_hits[0], 1);
         protected.map[1] = 128;
         protected.learning_hits[1] = 10;
-        protected.learn_site(1, 255);
+        protected.learn_site(1, 255, true, true);
         assert_eq!(
             protected.map[1], 192,
             "young evidence retains legacy consolidation"
@@ -589,15 +954,15 @@ mod learning_tests {
         protected.map[1] = 128;
         protected.learning_hits[1] = 1600;
         protected.begin_learning_frame();
-        protected.learn_site(1, 255);
+        protected.learn_site(1, 255, true, true);
         assert_eq!(
             protected.map[1], 129,
             "mature neutral evidence is not unseen"
         );
         protected.map[2] = 0;
         protected.map[3] = 255;
-        protected.learn_site(2, 255);
-        protected.learn_site(3, 0);
+        protected.learn_site(2, 255, true, true);
+        protected.learn_site(3, 0, true, true);
         assert_eq!(&protected.map[2..4], &[0, 255]);
         protected.reset_history();
         assert_eq!(protected.learning_epoch, 0);
@@ -612,13 +977,13 @@ mod learning_tests {
         let mut legacy = diagnostics(false)?;
         legacy.map[0] = 128;
         legacy.learning_hits[0] = 1000;
-        legacy.learn_site(0, 255);
+        legacy.learn_site(0, 255, true, true);
         assert_eq!(legacy.map[0], 192);
-        legacy.learn_site(0, 0);
+        legacy.learn_site(0, 0, true, true);
         assert_eq!(legacy.map[0], 191);
         legacy.map[1] = 128;
         legacy.learning_hits[1] = 1000;
-        legacy.learn_site(1, 0);
+        legacy.learn_site(1, 0, true, true);
         assert_eq!(legacy.map[1], 64);
         Ok(())
     }
@@ -627,10 +992,10 @@ mod learning_tests {
     fn new_surface_probation_never_rewrites_known_or_observed_neutral_cells() -> Result<()> {
         let mut protected = diagnostics(true)?;
         protected.begin_learning_frame();
-        protected.teach_site(0, 255, LearningPolicy::NewSurface);
+        protected.teach_site(0, 255, LearningPolicy::NewSurface, true, true);
         assert_eq!(protected.map[0], 192);
         assert_eq!(protected.learning_hits[0], 1);
-        protected.teach_site(0, 0, LearningPolicy::NewSurface);
+        protected.teach_site(0, 0, LearningPolicy::NewSurface, true, true);
         assert_eq!(
             protected.map[0], 192,
             "a newly seen cell is now protected too"
@@ -644,13 +1009,13 @@ mod learning_tests {
         protected.learning_hits[2] = 10;
         protected.map[3] = 128;
         protected.learning_hits[3] = 1600;
-        protected.teach_site(1, 0, LearningPolicy::NewSurface);
-        protected.teach_site(2, 255, LearningPolicy::NewSurface);
-        protected.teach_site(3, 0, LearningPolicy::NewSurface);
-        protected.teach_site(4, 255, LearningPolicy::Frozen);
+        protected.teach_site(1, 0, LearningPolicy::NewSurface, true, true);
+        protected.teach_site(2, 255, LearningPolicy::NewSurface, true, true);
+        protected.teach_site(3, 0, LearningPolicy::NewSurface, true, true);
+        protected.teach_site(4, 255, LearningPolicy::Frozen, true, true);
         assert_eq!(&protected.map[1..5], &[200, 128, 128, 128]);
         assert_eq!(&protected.learning_hits[1..5], &[0, 10, 1600, 0]);
-        protected.teach_site(0, 255, LearningPolicy::Full);
+        protected.teach_site(0, 255, LearningPolicy::Full, true, true);
         assert_eq!(protected.map[0], 193, "ordinary consolidation resumes");
         Ok(())
     }
@@ -710,14 +1075,14 @@ mod learning_tests {
             legacy.map[0] = 200;
             protected.learning_hits[0] = age;
             protected.begin_learning_frame();
-            protected.learn_site(0, 0);
-            legacy.learn_site(0, 0);
+            protected.learn_site(0, 0, true, true);
+            legacy.learn_site(0, 0, true, true);
             assert_eq!(protected.map[0], legacy.map[0], "young boundary age {age}");
         }
         protected.map[0] = 200;
         protected.learning_hits[0] = MATURE_TEACHING_FRAMES;
         protected.begin_learning_frame();
-        protected.learn_site(0, 0);
+        protected.learn_site(0, 0, true, true);
         assert_eq!(
             protected.map[0], 200,
             "mature contrary vote waits for its phase"
@@ -732,7 +1097,7 @@ mod learning_tests {
         protected.learning_hits[0] = u16::MAX - 1;
         for _ in 0..34 {
             protected.begin_learning_frame();
-            protected.learn_site(0, 0);
+            protected.learn_site(0, 0, true, true);
         }
         assert_eq!(protected.map[0], 197);
         assert!(protected.learning_hits[0] >= u16::MAX - 15);

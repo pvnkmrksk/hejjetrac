@@ -1,5 +1,20 @@
 # Behavioral parity assessment
 
+## Revisable atlas and early local refinement — 2026-11-04
+
+Resilient tracking can retry an uncertain fit against the previous accepted
+image before motion history accumulates, retaining final acceptance gates.
+Saturated atlas cells can be corrected by repeated accepted evidence, with
+separated-view confirmation, a genuine surface revisit, agreement of colliding
+ROI samples and mature-cell inertia. First sweeps and stationary repetition
+cannot overwrite anchors. Legacy opt-out retains
+permanent saturation. This is an intentional learning-policy extension;
+[atlas-learning methods and limits](atlas-learning.md) distinguish controlled
+known-motion correction from arbitrary hand-occlusion recovery.
+The final build passes 343 workspace tests, all original complete-video gates,
+six minutes on four live cameras and 8,162-image live/file cold-start parity.
+[Current evidence and limits](validation.md#progressive-atlas-learning-and-early-confirmation--2026-11-04).
+
 ## Minimized auxiliary windows and actual GUI responsiveness — 2026-11-04
 
 Prior worker FPS and command-latency reports did not cover the rig manager being

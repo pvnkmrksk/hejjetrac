@@ -1,6 +1,21 @@
 # Preview age, tracking rate and display cadence
 
-The final fresh **47° four-camera run on November 4** measures **27.30 ms median**,
+The current atlas-learning build's **47° four-camera run on November 4** measures
+**26.50 ms median**, **45.56 ms p95**, **105.74 ms maximum** over 2,824 steady-state
+samples. Nine samples exceed 50 ms; one exceeds 100 ms. The maximum is M01,
+144.25 seconds into the second three-minute phase. M02 has a simultaneous
+97.25 ms preview age, with a spike in relative delivery delay and worker cost.
+At the next sample about 0.51 seconds later, M01/M02 age is 14.17/13.66 ms and
+relative backlog is 4.69/4.50 ms. Early/late medians stay similar. This supports
+a transient stall rather than an accumulating queue; its exact cause and
+sub-sample duration are not established. A hard 50 ms bound is not claimed.
+The 30 FPS publication limit still yields about 25.37 preview updates/s while
+tracking runs at about 101 frames/s. These are relative image-age clocks, not
+absolute sensor-to-screen measurements.
+[Current distribution and adjacent samples](benchmarks/atlas-preview-age-20261104.json) ·
+[Current native report](benchmarks/atlas-live-four-20261104.json).
+
+The earlier **47° four-camera run on November 4** measures **27.30 ms median**,
 **44.84 ms p95**, **48.53 ms maximum** across 2796 samples. The maximum is M03 at
 148.42 seconds into the first phase, with relative capture backlog at 4.34 ms;
 the run-wide relative backlog maximum is 6.11 ms. Both three-minute phases remain

@@ -1,5 +1,70 @@
 # HejjéTrac validation evidence
 
+## Progressive atlas learning and early confirmation — 2026-11-04
+
+Formatting, strict locked workspace/all-target Clippy and **343 workspace tests**
+pass. Confident atlas labels are revisable after separated, supported views and
+a genuine surface revisit. Conflicting projections into one cell cannot cast
+contradictory votes. Faster views retain their anchors while learning unseen
+surface; later slow passes can refine established labels. Early uncertain fits
+can retry against the previous accepted image, and an independently verified
+four-image acceleration model avoids false gaps from sampling noise.
+[Exact policy, controlled tests and limits](atlas-learning.md).
+
+The serial release suite passes its original gates on the 120-image synthetic
+demo, 300-image sample, complete **5,157-image VR3**, complete **6,075-image 47°
+take**, and the **4,579-image fast 47°** take with both its full capture clock
+and controlled omissions. All **410 VR3 fast images**, all **337 post-hand VR3
+images** and all **3,413 clear fast images** in the other 47° take are tracked.
+The omission case retains 4,408 images, measures 4,407 relative increments and
+includes 57 extended intervals. Every original clear rolling-window gate passes.
+No decoder oracle, annotation or numerical accuracy tolerance changes.
+[Inputs, hashes, counts, error distributions, timing boundaries, toolchain and
+platform](benchmarks/atlas-learning-final-20261104.json).
+
+The same release desktop passes two serial 180-second phases on the four
+connected M01–M04 cameras, surrounding four calibration cycles. Each camera
+sustains **100.87–100.93 processed frames/s**. All **2,824 sampled** long-phase
+states are tracked; these phases do not record every numerical row. Exact
+binding link/unlink, pause/fresh resume, four actual stream reopenings and
+simultaneous recording also pass. Threads/FDs remain **20/52** during both long
+phases; RSS ends at 133,440 KiB after cache/path warmup.
+
+Four raw captures contain 8,205 images. Starting at each recorded empty-atlas
+initialization, all **8,162 replayed images** have identical live/file quality
+decisions. Compared numeric fields differ by at most **9.14×10⁻¹³**; MSE differs
+by at most **9.10×10⁻¹³**. Replay uses the exact capture clock from the native
+quality sidecar. Frame counters, the first initialization interval and a constant
+prior-epoch integrated-displacement offset are excluded as specified in the
+[live/cold-replay report](benchmarks/atlas-live-four-20261104.json). This verifies
+the live and file paths from the same empty atlas, without providing physical
+motion ground truth.
+
+The Intel HD Graphics 530 hardware Vulkan path passes real native input through
+manager minimize/restore, diagnostics, all four ball-outline drags/magnifiers,
+resize and a closed root window. Maximum measured button response is **71.23 ms**
+under the unchanged 250 ms gate; maximum observed UI interval is **159.04 ms**.
+[Native UI report](benchmarks/atlas-native-ui-20261104.json). Across 1,019 bridge
+commands, median/p95/maximum round trip is **7.75/27.70/93.09 ms**; these commands
+are separate from native pointer response measurements.
+
+Preview-image age is **26.50 ms median**, **45.56 ms p95**, **105.74 ms maximum**.
+The maximum occurs 144.25 seconds into the second phase, not startup. M01/M02
+delivery/worker delays spike together and return to ordinary values at the next
+sample about 0.51 seconds later. Nine of 2,824 samples exceed 50 ms; one exceeds
+100 ms. The evidence shows an isolated tail without growing delay; it does not
+identify the exact cause or establish a hard 50 ms limit. These are relative
+image-age measurements, not absolute sensor-to-screen latency.
+[Distributions and adjacent samples](benchmarks/atlas-preview-age-20261104.json) ·
+[Timing definitions](preview-age.md) ·
+[Build/check hashes and native screen capture](benchmarks/atlas-learning-evidence-20261104.json).
+
+These are Linux measurements and original-FicTrac agreement on the real takes,
+with independent prescribed rotations in the synthetic tests. They do not
+establish physical motion ground truth, universal hand recovery or native camera
+execution on other operating systems. The historical M02 recovery failure below
+remains retained separately.
+
 ## Minimized rig manager stalls UI — 2026-11-04
 
 The earlier sustained worker/command tests missed minimized-window presentation.

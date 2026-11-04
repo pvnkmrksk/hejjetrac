@@ -1,0 +1,205 @@
+{
+  "passed": true,
+  "binary_sha256": "6be8bab0f4ce1b8f3e612436060aa029d607e8544d91a1e994ab91b9745d56db",
+  "command": [
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/fictrac-desktop",
+    "--config",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/atlas-native-ui-20261104/VR1.txt",
+    "--array",
+    "--control-stdio",
+    "--grid",
+    "2x2",
+    "--window-size",
+    "832x468",
+    "--state-output",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/atlas-native-ui-20261104/state.json"
+  ],
+  "original_config_sha256": {
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR1.txt": "2a1960487b202dd800ef10c252e1ffa0e05c34c003afdff573c7f0f745a38f21",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR2.txt": "79236a88c698b90c4949857884b5cc9ed17c8475956ce0a53bc9baf35085bdde",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR3.txt": "4d38e3e14c7b63d455a82a86a1a8bbcad7bdac6c2f7bedb7ca63af672febb229",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR4.txt": "964a8cd82c1e64b4f5b05deb33e22c326dbc1caed108af7a3a01dedaa3e87bdb"
+  },
+  "captures": [
+    {
+      "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/atlas-native-ui-20261104/calibration-1.png",
+      "title": "VR1 \u00b7 ZMQ 9871 \u00b7 /dev/video4 \u00b7 UDP 1111 \u00b7 Hejj\u00e9Trac",
+      "window_id": "0x1600004",
+      "width": 832,
+      "height": 480,
+      "sha256": "ae7b0cfed7e117d5301a2822ac7f3a1c279e00013330f28d6fb6f054c88dcd1a",
+      "capture": "actual X11 native window pixels"
+    },
+    {
+      "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/atlas-native-ui-20261104/calibration-2.png",
+      "title": "VR2 \u00b7 ZMQ 9872 \u00b7 /dev/video0 \u00b7 UDP 1112 \u00b7 Hejj\u00e9Trac",
+      "window_id": "0x1600016",
+      "width": 832,
+      "height": 480,
+      "sha256": "46c02f1fa5647495509a516327ba704a84c0e7a4e35258cf0e90e56fcd45601e",
+      "capture": "actual X11 native window pixels"
+    },
+    {
+      "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/atlas-native-ui-20261104/calibration-3.png",
+      "title": "VR3 \u00b7 ZMQ 9873 \u00b7 /dev/video6 \u00b7 UDP 1113 \u00b7 Hejj\u00e9Trac",
+      "window_id": "0x1600028",
+      "width": 832,
+      "height": 480,
+      "sha256": "e9e18425e6fcfac45ff8597c15cb5fecb081c8555b71d94adbfd789109ec8dab",
+      "capture": "actual X11 native window pixels"
+    },
+    {
+      "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/atlas-native-ui-20261104/calibration-4.png",
+      "title": "VR4 \u00b7 ZMQ 9874 \u00b7 /dev/video2 \u00b7 UDP 1114 \u00b7 Hejj\u00e9Trac",
+      "window_id": "0x160003a",
+      "width": 832,
+      "height": 480,
+      "sha256": "db5f1e33163ff05415c84f77918c32bf229760f12346ebac69895aee6193ccdc",
+      "capture": "actual X11 native window pixels"
+    },
+    {
+      "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/atlas-native-ui-20261104/resized.png",
+      "title": "VR4 \u00b7 ZMQ 9874 \u00b7 /dev/video2 \u00b7 UDP 1114 \u00b7 Hejj\u00e9Trac \u00b7 Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+      "window_id": "0x160003a",
+      "width": 1200,
+      "height": 850,
+      "sha256": "4d0619ad6df0eaf3e8b804501475e6f7b7de621c0d2cf0d144350d86eb6462ad",
+      "capture": "actual X11 native window pixels"
+    }
+  ],
+  "scope": "Native X11 window/input timing on live copied rigs; no physical motion ground truth",
+  "native_input_seconds": [
+    0.04765213299833704,
+    0.07122572700609453,
+    0.06273968900495674,
+    0.06888980200164951,
+    0.06842474499717355,
+    0.048641893998137675
+  ],
+  "native_drags": [
+    {
+      "session": 1,
+      "expected_first_mark": [
+        126.25950695816589,
+        88.99521531100478
+      ],
+      "actual_first_mark": [
+        125.98931182937311,
+        89.19786096256685
+      ]
+    },
+    {
+      "session": 2,
+      "expected_first_mark": [
+        132.20377996561112,
+        97.91162397973544
+      ],
+      "actual_first_mark": [
+        132.40642465246066,
+        98.18181818181819
+      ]
+    },
+    {
+      "session": 3,
+      "expected_first_mark": [
+        250.55022532833743,
+        84.58137121877245
+      ],
+      "actual_first_mark": [
+        250.4812908055344,
+        84.70588235294117
+      ]
+    },
+    {
+      "session": 4,
+      "expected_first_mark": [
+        171.5845886399359,
+        62.24598930481283
+      ],
+      "actual_first_mark": [
+        171.55080308155758,
+        62.24598930481283
+      ]
+    }
+  ],
+  "maximum_ui_interval_ms": 159.038561,
+  "maximum_native_input_seconds": 0.07122572700609453,
+  "original_configs_unchanged": true,
+  "phases": {
+    "after-calibrations-covered-manager": {
+      "samples": 29,
+      "maximum_root_update_ms": 61.584829
+    },
+    "calibration-1-before-hover": {
+      "samples": 5,
+      "maximum_root_update_ms": 35.429832000000005
+    },
+    "calibration-1-hover": {
+      "samples": 24,
+      "maximum_root_update_ms": 18.380934
+    },
+    "calibration-2-before-hover": {
+      "samples": 4,
+      "maximum_root_update_ms": 15.521879
+    },
+    "calibration-2-hover": {
+      "samples": 25,
+      "maximum_root_update_ms": 21.682062
+    },
+    "calibration-3-before-hover": {
+      "samples": 5,
+      "maximum_root_update_ms": 16.462196
+    },
+    "calibration-3-hover": {
+      "samples": 23,
+      "maximum_root_update_ms": 20.618191
+    },
+    "calibration-4-before-hover": {
+      "samples": 5,
+      "maximum_root_update_ms": 30.859126
+    },
+    "calibration-4-hover": {
+      "samples": 24,
+      "maximum_root_update_ms": 19.380603
+    },
+    "diagnostics-untouched": {
+      "samples": 31,
+      "maximum_root_update_ms": 12.635039
+    },
+    "hidden-root-with-three-live-windows": {
+      "samples": 20,
+      "maximum_root_update_ms": 47.050830000000005
+    },
+    "large-resized-window": {
+      "samples": 24,
+      "maximum_root_update_ms": 22.934686
+    },
+    "minimized-rig-manager": {
+      "samples": 20,
+      "maximum_root_update_ms": 24.398229
+    },
+    "native-input-probe": {
+      "samples": 7,
+      "maximum_root_update_ms": 17.564381
+    },
+    "restored-rig-manager": {
+      "samples": 7,
+      "maximum_root_update_ms": 14.985632
+    },
+    "rig-manager-and-diagnostics": {
+      "samples": 19,
+      "maximum_root_update_ms": 14.895188000000001
+    },
+    "settings": {
+      "samples": 19,
+      "maximum_root_update_ms": 18.547162999999998
+    },
+    "startup": {
+      "samples": 4,
+      "maximum_root_update_ms": 109.27658199999999
+    }
+  },
+  "retained_full_report": "runs/atlas-native-ui-20261104/report.json",
+  "retained_full_report_sha256": "ef55cea596ea91391f1cf3b9c076f85d53591b8a37a7348106266f3d80679a2c",
+  "timing_sample_count": 295
+}

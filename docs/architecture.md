@@ -28,7 +28,7 @@ clock edits do not copy images. Map fitting reuses each prepared observation
 for its atlas/diagnostic commit and avoids unused pairwise pyramids.
 See [measured performance](performance.md).
 
-Legacy `.txt` configs default to map fitting. Image rays are recentered into FicTrac's ROI basis, sampled onto a square angular ROI and intersected with the sphere. Exclusion polygons mask source pixels. Local masked minima/maxima, `thr_ratio`, `thr_win_pc` and a median filter create a binary ROI. Visible surface points are projected onto a persistent equal-area sphere map. Initial pixels receive the original confidence bonus; subsequent binary evidence updates its saturated values.
+Legacy `.txt` configs default to map fitting. Image rays are recentered into FicTrac's ROI basis, sampled onto a square angular ROI and intersected with the sphere. Exclusion polygons mask source pixels. Local masked minima/maxima, `thr_ratio`, `thr_win_pc` and a median filter create a binary ROI. Visible surface points are projected onto a persistent equal-area sphere map. Initial pixels receive the original confidence bonus; later accepted passes consolidate or revise confidence under the learning policy.
 
 For each new frame, pure Rust PRIMA BOBYQA minimizes mean squared binary-map error against the accumulated atlas within `guess ± opt_bound` on each axis. `opt_tol`, `opt_max_evals`, `opt_max_err` and `q_factor` control the healthy local fit. A filtered previous delta supplies the next guess. The fitted map and the displayed accumulated map are the same state. The optimizer differs from upstream NLopt; compatibility is assessed against fixed rotation/trajectory gates, not numerical identity.
 
@@ -71,7 +71,22 @@ Resilient mode suppresses destructive `max_bad_frames` auto-clearing and can rea
 Current source also recognizes an acceleration ramp supported by three accepted
 velocity vectors and a fourth score-verified image, retains confirmed visible
 motion as the post-recovery predictor, and preserves spatial coverage in the
-256-view reference bank. Mature partial atlas cells acquire up to 16 times the
+256-view reference bank. Resilient saturated cells can now be revised after eight
+supported contrary observations from separated views and a genuine surface
+revisit. Every ROI sample projecting into the cell must agree, and revision
+waits for slow enough motion. Agreement clears pending contrary evidence;
+unlocked cells update at most once per image. This removes the permanent
+first-pass lock while protecting anchors during a first sweep and stationary
+repetition. [Atlas-learning policy](atlas-learning.md). Early uncertain fits may use the bounded
+previous-image refinement before motion history exists, while all final gates
+and history requirements for appearance acceptance remain active.
+A second continuous-ramp route requires three independently verified visible
+increments over four images; consistent acceleration and direction checks
+exclude isolated jumps. The ordinary longer-history route remains available.
+Known-view/coarse recovery probes are eligible every six missing-frame
+positions, sharing the same per-call evaluation cap and confirmation rules.
+[Atlas-learning evidence](atlas-learning.md).
+Mature partial atlas cells acquire up to 16 times the
 inertia against contradictory accepted votes, while new surface and agreeing
 evidence keep learning promptly. The legacy opt-out remains unchanged. Confirmed
 acceleration recovery may now initialize genuinely unseen cells during its

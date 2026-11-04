@@ -9,6 +9,7 @@ use std::f64::consts::TAU;
 const MAX_TRUSTED_POSES: usize = 256;
 const POSE_SEPARATION: f64 = 0.08;
 const MAX_RECOVERY_EVALUATIONS: usize = 768;
+const RECOVERY_SEARCH_PERIOD: u32 = 6;
 const HISTORY: usize = 32;
 const MIN_MOTION_HISTORY: usize = 8;
 // Per-frame angular allowance, not an FPS-independent physical velocity or
@@ -58,6 +59,7 @@ pub(crate) struct Recovery {
     recent_velocity: [DVec3; 3],
     recent_interval: [f64; 3],
     recent_motion_count: usize,
+    recent_temporal_support: [bool; 2],
     probation: usize,
     new_surface_probation: bool,
     edge_mean: f64,
@@ -83,6 +85,7 @@ impl Recovery {
         self.pending = None;
         self.pending_motion = None;
         self.recent_motion_count = 0;
+        self.recent_temporal_support = [false; 2];
         self.new_surface_probation = false;
     }
     pub fn reject_motion_candidate(&mut self, pose: DQuat, delta: DVec3, delta_ms: f64) {
@@ -211,6 +214,86 @@ impl Recovery {
         self.recent_velocity[2] = delta / delta_ms;
         self.recent_interval[2] = delta_ms;
         self.recent_motion_count = (self.recent_motion_count + 1).min(3);
+    }
+    pub fn observe_temporal_support(&mut self, verified: bool) {
+        self.recent_temporal_support.rotate_left(1);
+        self.recent_temporal_support[1] = verified;
+    }
+    /// Three independently supported visible increments span four images.
+    /// This can confirm a ramp whose first increment follows stationary jitter
+    /// without requiring a fourth increment from the preceding noise history.
+    pub fn verified_ramp_ok(
+        &self,
+        delta: DVec3,
+        delta_ms: f64,
+        evidence: &crate::TemporalEvidence,
+    ) -> bool {
+        if self.recent_motion_count < 2
+            || !self
+                .recent_temporal_support
+                .iter()
+                .all(|supported| *supported)
+            || !evidence.verified
+            || !delta.is_finite()
+            || !delta_ms.is_finite()
+            || delta_ms <= 0.0
+        {
+            return false;
+        }
+        let velocities = [
+            self.recent_velocity[1],
+            self.recent_velocity[2],
+            delta / delta_ms,
+        ];
+        let rates = velocities.map(DVec3::length);
+        let intervals = [self.recent_interval[1], self.recent_interval[2], delta_ms];
+        if !rates.iter().all(|rate| rate.is_finite() && *rate > 0.0)
+            || !intervals
+                .iter()
+                .all(|interval| interval.is_finite() && *interval > 0.0)
+            || rates[1] <= rates[0]
+        {
+            return false;
+        }
+        // Consecutive low-resolution fits have transverse quantization noise.
+        // Fit one acceleration to three independently verified velocities at
+        // their exposure-interval midpoints, rather than treating each noisy
+        // direction as exact. Keep the existing .006 rad and 35% consistency
+        // allowances, applied to each component's fit residual.
+        let times = [
+            -(intervals[0] + intervals[1]) * 0.5,
+            0.0,
+            (intervals[1] + intervals[2]) * 0.5,
+        ];
+        let time_mean = times.into_iter().sum::<f64>() / 3.0;
+        let mean = velocities.into_iter().sum::<DVec3>() / 3.0;
+        let denominator = times
+            .into_iter()
+            .map(|time| (time - time_mean).powi(2))
+            .sum::<f64>();
+        if !denominator.is_finite() || denominator <= 0.0 {
+            return false;
+        }
+        let acceleration = velocities
+            .into_iter()
+            .zip(times)
+            .map(|(velocity, time)| (velocity - mean) * (time - time_mean))
+            .sum::<DVec3>()
+            / denominator;
+        let fitted = times.map(|time| mean + acceleration * (time - time_mean));
+        let speeds = fitted.map(DVec3::length);
+        let mut sorted_rates = rates;
+        sorted_rates.sort_by(f64::total_cmp);
+        fitted.iter().all(|velocity| velocity.is_finite())
+            && speeds.iter().all(|speed| *speed > 0.0)
+            && speeds[0] < speeds[1]
+            && speeds[1] < speeds[2]
+            && (0..3).all(|i| {
+                (fitted[i] - velocities[i]).abs().max_element()
+                    <= 0.006 / intervals[i] + 0.35 * sorted_rates[1]
+            })
+            && (0..2).all(|i| fitted[i].dot(fitted[i + 1]) >= 0.75 * speeds[i] * speeds[i + 1])
+            && fitted[2].dot(velocities[2]) >= 0.75 * speeds[2] * rates[2]
     }
     /// Three already accepted, consistently accelerating visible measurements
     /// plus this complete-score-verified image can establish a new rate epoch
@@ -433,7 +516,7 @@ impl Recovery {
         }
         self.pending = None;
         self.pending_motion = None;
-        if self.lost_frames % 30 == 1 {
+        if self.lost_frames % RECOVERY_SEARCH_PERIOD == 1 {
             let (pose, error) = search(
                 objective,
                 previous,
@@ -720,6 +803,67 @@ mod tests {
 #[cfg(test)]
 mod motion_tests {
     use super::*;
+    #[test]
+    fn independent_temporal_ramp_needs_three_visible_increments_and_rejects_jumps() {
+        let evidence = crate::TemporalEvidence {
+            known_samples: 1000,
+            possible_samples: 1500,
+            binary_mse: Some(4000.),
+            spatially_supported_fraction: 1.,
+            verified: true,
+            persistent_known_samples: 1000,
+            persistent_chance_mse: Some(30_000.),
+        };
+        let mut recovery = Recovery::default();
+        let candidate = DVec3::X * 0.08;
+        recovery.observe_tracked_motion(DVec3::X * 0.02, 10.);
+        recovery.observe_temporal_support(true);
+        assert!(!recovery.verified_ramp_ok(candidate, 10., &evidence));
+        recovery.observe_tracked_motion(DVec3::X * 0.05, 10.);
+        assert!(!recovery.verified_ramp_ok(candidate, 10., &evidence));
+        recovery.observe_temporal_support(true);
+        assert!(recovery.verified_ramp_ok(candidate, 10., &evidence));
+        assert!(!recovery.accepted_ramp_ok(candidate, 10.));
+        assert!(!recovery.verified_ramp_ok(DVec3::Y * 0.08, 10., &evidence));
+        assert!(!recovery.verified_ramp_ok(DVec3::X * 0.5, 10., &evidence));
+        assert!(!recovery.verified_ramp_ok(candidate, 0., &evidence));
+        let unverified = crate::TemporalEvidence {
+            verified: false,
+            ..evidence.clone()
+        };
+        assert!(!recovery.verified_ramp_ok(candidate, 10., &unverified));
+        recovery.reject();
+        assert!(!recovery.verified_ramp_ok(candidate, 10., &evidence));
+        for _ in 0..3 {
+            recovery.observe_tracked_motion(DVec3::X * 0.02, 10.);
+            recovery.observe_temporal_support(true);
+        }
+        assert!(
+            !recovery.verified_ramp_ok(candidate, 10., &evidence),
+            "a lone jump is not a ramp"
+        );
+
+        // Known collinear acceleration with transverse sampling error. The
+        // individual noisy directions fail a pairwise cosine gate, while one
+        // bounded acceleration still explains the independently checked data.
+        let mut noisy = Recovery::default();
+        for delta in [DVec3::new(0.03, 0., 0.015), DVec3::new(0.05, 0., -0.015)] {
+            noisy.observe_tracked_motion(delta, 10.);
+            noisy.observe_temporal_support(true);
+        }
+        assert!(noisy.verified_ramp_ok(candidate, 10., &evidence));
+        assert!(!noisy.verified_ramp_ok(DVec3::Y * 0.08, 10., &evidence));
+
+        // Velocities are measured at interval midpoints; a longer delivered
+        // interval must not be mistaken for a different physical acceleration.
+        let mut irregular = Recovery::default();
+        for (delta, interval) in [(0.02, 10.), (0.12, 30.)] {
+            irregular.observe_tracked_motion(DVec3::X * delta, interval);
+            irregular.observe_temporal_support(true);
+        }
+        assert!(irregular.verified_ramp_ok(DVec3::X * 0.06, 10., &evidence));
+    }
+
     #[test]
     fn accepted_acceleration_ramp_needs_four_consistent_good_images() {
         let mut recovery = Recovery::default();

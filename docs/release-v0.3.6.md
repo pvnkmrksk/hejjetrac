@@ -1,4 +1,24 @@
-# v0.3.6 — camera freshness, exact bindings and calibration editing
+# v0.3.6 — progressive atlas learning and responsive calibration
+
+The atlas can now refine confident cells on later supported revisits, while
+protecting its anchors during a first sweep and rapid/blurred motion. Early
+consecutive-image fitting and verified acceleration confirmation reduce false
+gaps without raising image-error limits or changing reported motion.
+All **343 workspace tests** and the complete original high-speed video gates
+pass. [Atlas learning and limitations](atlas-learning.md) ·
+[Current numerical validation](benchmarks/atlas-learning-final-20261104.json).
+
+The updated build passes six minutes on all four live 47° cameras at
+100.87–100.93 processed frames/s, four calibration cycles and **8,162-image
+live/file parity from empty-atlas initialization**. Real native input checks
+include manager minimize/restore, all four ball drags, magnifiers, resize and a
+closed root window; maximum measured button response is **71.23 ms**.
+[Complete evidence and measured preview-age tails](validation.md#progressive-atlas-learning-and-early-confirmation--2026-11-04).
+
+Current atlas-build captures:
+[M01 live cold recording](images/atlas-live-M01-20261104.png) ·
+[M03 saved outline and atlas](images/atlas-live-debug-M03-20261104.png) ·
+[Three-second live native atlas screen recording](images/atlas-live-native-20261104.mp4).
 
 The minimized-rig-manager freeze is reproduced and corrected: the old OpenGL
 path took about **2.6 seconds** to paint a button response; the hardware-Vulkan
@@ -7,7 +27,7 @@ pointer tests include all four ball-outline drags, magnifiers, resize and a
 hidden root window. **334 workspace tests** pass. [Root cause and evidence](ui-rendering.md).
 The earlier live captures below predate this graphics-policy correction.
 
-Fresh final-build live captures:
+Earlier calibration-build live captures:
 [M01](images/edit-M01-20261104.png) · [M02](images/edit-M02-20261104.png) ·
 [M03](images/edit-M03-20261104.png) · [M04](images/edit-M04-20261104.png) ·
 [Three-second live native screen recording](images/live-native-20261104.mp4).
@@ -50,7 +70,7 @@ truth. [Calibration evidence](benchmarks/calibration-47-20261104.json) retains
 the pixel points, angular fits and exact native binary hash.
 
 Required checks pass: formatting, strict locked workspace/all-target Clippy and
-**334 workspace tests** (zero failures or ignored tests). The release synthetic
+**343 workspace tests** (zero failures or ignored tests). The release synthetic
 demo and real sample pass; existing scientific tolerances and oracles are unchanged.
 
 Preview-image age was **27.11 ms median**, **44.92 ms p95**, **48.86 ms maximum**

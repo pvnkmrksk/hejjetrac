@@ -4,16 +4,24 @@ use fictrac_io::{VideoSource, load_config};
 use std::{fs, io::Write, path::Path};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    if !(4..=6).contains(&args.len()) {
+    if !(4..=7).contains(&args.len()) {
         return Err(
-            "usage: replay_evidence VIDEO CONFIG MAX_FRAMES NEW_JSONL [SOURCE_DAT_CLOCK] [OMIT_PERIOD]".into(),
+            "usage: replay_evidence VIDEO CONFIG MAX_FRAMES NEW_JSONL [SOURCE_DAT_CLOCK] [OMIT_PERIOD=0] [START_FRAME=0]".into(),
         );
     }
-    let omit_period = args.get(5).map(|s| s.parse::<usize>()).transpose()?;
+    let omit_period = args
+        .get(5)
+        .map(|s| s.parse::<usize>())
+        .transpose()?
+        .filter(|period| *period != 0);
     if omit_period.is_some_and(|period| period < 4) {
         return Err("omit period must be at least four source images".into());
     }
     let maximum = args[2].parse::<usize>()?;
+    let start_frame = args.get(6).map_or(Ok(0), |s| s.parse::<usize>())?;
+    if start_frame >= maximum {
+        return Err("start frame must be below the positive maximum source-frame count".into());
+    }
     let timestamps = if let Some(path) = args.get(4) {
         Some(
             fs::read_to_string(path)?
@@ -47,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let Some(frame) = source.next_tracking_frame(channel)? else {
             break;
         };
-        if omit_period.is_some_and(|period| index % period >= period - 3) {
+        if index < start_frame || omit_period.is_some_and(|period| index % period >= period - 3) {
             continue;
         }
         let frame = if let Some(timestamps) = &timestamps {

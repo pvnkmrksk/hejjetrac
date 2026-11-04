@@ -275,6 +275,71 @@ def audit_take(directory, cli):
             "rust_decoder": inspected.stdout.strip()}
 
 
+def audit_cold_take(directory, cli, evidence_binary):
+    """Replay from the exact recorded image that seeded a deliberately reset atlas."""
+    result = audit_take(directory, cli)
+    data = dat_rows(directory / "epoch-0000-all-frames.dat")
+    with (directory / "epoch-0000-quality.csv").open(newline="") as stream:
+        quality = list(csv.DictReader(stream))
+    starts = [i for i, row in enumerate(quality) if row["status"] == "initializing"]
+    if len(starts) != 1:
+        raise RuntimeError(f"cold take needs exactly one recorded atlas initialization: {starts}")
+    start = starts[0]
+    # Native quality.csv retains round-trippable capture timestamps. Use those
+    # rather than the legacy DAT's fixed twelve-decimal text for exact replay.
+    clock = directory / "exact-clock.dat"
+    lines = (directory / "epoch-0000-all-frames.dat").read_text().splitlines()
+    if len(lines) != len(quality):
+        raise RuntimeError("native numeric/quality clock rows differ")
+    with clock.open("x") as stream:
+        for line, decision in zip(lines, quality):
+            fields = line.split(",")
+            fields[21] = fields[24] = decision["timestamp_ms"]
+            stream.write(",".join(fields) + "\n")
+    output = directory / "cold-replay.jsonl"
+    subprocess.run([str(evidence_binary), str(directory / "epoch-0000-media/raw.avi"),
+                    str(directory / "epoch-0000-config.txt"), str(len(data)), str(output),
+                    str(clock), "0", str(start)],
+                   check=True, timeout=180)
+    records = [json.loads(line) for line in output.read_text().splitlines()]
+    if [item["source_frame_index"] for item in records] != list(range(start, len(data))):
+        raise RuntimeError("cold replay omitted, duplicated or reordered an image")
+    maximum_numeric_error = 0.
+    maximum_score_error = 0.
+    for item in records:
+        index, row = item["source_frame_index"], item["row"]
+        if row["status"] != quality[index]["status"] or row["accepted"] != (quality[index]["accepted"] == "true"):
+            raise RuntimeError(f"live/replay quality differs at image {index}: {row}")
+        expected = data[index]
+        actual = (row["delta_camera"] + [row["error"]] + row["delta_lab"]
+                  + row["absolute_camera"] + row["absolute_lab"] + row["position"]
+                  + [row["heading"], row["direction"], row["speed"]] + row["integrated"]
+                  + [row["timestamp_ms"], row["sequence"], row["delta_ms"], row["timestamp_ms"]])
+        for column, value in enumerate(actual, 1):
+            if column == 23 and index == start:
+                # Manual reset retains the live source interval; a fresh tracker
+                # has no previous timestamp for its initialization row.
+                continue
+            reference = expected[column]
+            if column in [19, 20]:
+                reference -= data[start][column]
+            error = abs(value - reference)
+            if not math.isfinite(error):
+                raise RuntimeError("nonfinite live/replay numerical comparison")
+            if column == 4:
+                maximum_score_error = max(maximum_score_error, error)
+            else:
+                maximum_numeric_error = max(maximum_numeric_error, error)
+    if maximum_numeric_error > 1e-9 or maximum_score_error > 1e-7:
+        raise RuntimeError(f"live/replay differ beyond text serialization: numeric={maximum_numeric_error}, score={maximum_score_error}")
+    result.update({"initialization_source_image": start, "cold_replayed_images": len(records),
+                   "same_quality_every_image": True, "maximum_numeric_difference": maximum_numeric_error,
+                   "maximum_mse_difference": maximum_score_error,
+                   "exact_capture_clock_sha256": sha256(clock),
+                   "replay_sha256": sha256(output), "replay_binary_sha256": sha256(evidence_binary)})
+    return result
+
+
 def run(args):
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -342,6 +407,30 @@ def run(args):
                 raise RuntimeError(f"link/unlink changed unrelated configuration for {serial}")
             report["binding_roundtrips"].append({"session": identity, "before": before,
                                                   "unlinked": unlinked, "relinked": relinked})
+        cold_takes = {}
+        if args.cold_seconds > 0:
+            cold_takes = {identity: output / f"cold-take-VR{identity}" for identity in range(1, 5)}
+            for identity, directory in cold_takes.items():
+                bridge.request("record_start", identity, directory=str(directory),
+                               record_options={"raw": True, "debug": False}, recording_tuning={"encoding": "raw"})
+            wait(bridge, lambda states: all(s["recording"] for s in states))
+            for identity in range(1, 5):
+                bridge.request("reset", identity)
+            report["observations"]["cold_recording"] = observe(bridge, inventory, args.cold_seconds, "cold-recording", output)
+            report["snapshots_cold"] = snapshot_all(bridge, output, "cold")
+            for identity in range(1, 5):
+                bridge.request("record_stop", identity)
+            def cold_finalized(states):
+                for state in states:
+                    entries = [entry for entry in state["recording_finalizations"]
+                               if entry["directory"] == str(cold_takes[state["session"]])]
+                    if state["recording"] or not entries or entries[-1]["state"] in ["queued", "finalizing"]:
+                        return False
+                    entry = entries[-1]
+                    if entry["state"] != "complete" or entry["completion_error"] or entry["numeric_error"] or entry["media_warnings"]:
+                        raise RuntimeError(f"cold take did not finalize: {entry}")
+                return True
+            wait(bridge, cold_finalized, timeout=30)
         report["observations"]["before_calibration"] = observe(bridge, inventory, args.seconds, "before-calibration", output, clock_anchor)
         report["snapshots_before"] = snapshot_all(bridge, output, "before")
         for identity in range(1, 5):
@@ -450,6 +539,8 @@ def run(args):
         bridge.process.wait(timeout=15)
         if bridge.process.returncode != 0:
             raise RuntimeError(f"native test process exited {bridge.process.returncode}")
+        report["cold_takes"] = [audit_cold_take(directory, args.cli.resolve(), args.evidence_binary.resolve())
+                                for directory in cold_takes.values()]
         report["takes"] = [audit_take(directory, args.cli.resolve()) for directory in takes.values()]
         report["pause_boundary_take"] = audit_take(pause_take, args.cli.resolve())
         rows = dat_rows(pause_take / "epoch-0000-all-frames.dat")
@@ -503,6 +594,8 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--seconds", type=float, default=60, help="Observation seconds both before and after calibration reviews")
     parser.add_argument("--record-seconds", type=float, default=3)
+    parser.add_argument("--cold-seconds", type=float, default=0, help="Record and reset every atlas, then compare exact cold live/replay numerics")
+    parser.add_argument("--evidence-binary", type=Path, default=Path("target/release/examples/replay_evidence"))
     parser.add_argument("--pause-seconds", type=float, default=3)
     parser.add_argument("--max-command-seconds", type=float, default=1)
     parser.add_argument("--no-x11-captures", action="store_true", help="Retain built-in framebuffer and computed diagnostics only")

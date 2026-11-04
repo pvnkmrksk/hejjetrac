@@ -113,6 +113,9 @@ The companion CLI is in the extracted folder; on macOS it is inside `hejjetrac.a
 
 ## Tracking and validation
 
+[Atlas learning](docs/atlas-learning.md) describes early consecutive-image
+refinement and how later accepted passes can correct saturated map cells.
+
 HejjéTrac preserves FicTrac's legacy config text and data conventions, and checks the full supplied video against the supplied FicTrac output. Known-motion synthetic sequences cover rotation accuracy. The Rust optimizer and recovery policy differ from upstream; [compatibility](docs/parity.md), [validation](docs/validation.md) and [output semantics](docs/output.md) document those details and platform coverage. Rejected frames remain in the all-frame data; motion during a missing interval is left unmeasured.
 
 [VR3 replay validation](docs/vr3-validation.md) additionally checks the supplied

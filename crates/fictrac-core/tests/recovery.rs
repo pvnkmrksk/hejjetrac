@@ -1120,6 +1120,154 @@ fn cold_partial_atlas_keeps_learning_with_finer_atlas_and_generous_budget() -> R
     cold_partial_atlas_acceleration(150, 12)
 }
 
+#[test]
+fn moving_cold_atlas_tracks_after_a_blurred_first_view() -> Result {
+    for speed in [0.04, 0.08, 0.12, 0.16, 0.20] {
+        let mut c = config(false);
+        c.max_rotation = 0.35;
+        c.spherical_map = Some(MapSettings {
+            global_search: false,
+            ..MapSettings::default()
+        });
+        let texture = known_template()?;
+        let mut tracker = Tracker::new(c.clone())?;
+        let mut squared = DVec3::ZERO;
+        let mut measured = 0;
+        for i in 0..40 {
+            // One blurred initial exposure supplies the whole cold atlas;
+            // later sharp frames must track and improve it while already moving.
+            let mut pixels = vec![0.; c.width * c.height];
+            let samples = if i == 0 { 9 } else { 1 };
+            for sample in 0..samples {
+                let offset = if samples == 1 {
+                    0.
+                } else {
+                    (sample as f64 / 8. - 0.5) * 1.5
+                };
+                let image = render_template(
+                    &c,
+                    &texture,
+                    DQuat::from_rotation_x(speed * (i as f64 + offset)),
+                    i as f64 * 10.,
+                )?;
+                for (average, value) in pixels.iter_mut().zip(image.pixels()) {
+                    *average += *value / samples as f32;
+                }
+            }
+            let row =
+                tracker.process(GrayFrame::new(c.width, c.height, pixels, i as f64 * 10.)?)?;
+            if i > 0 && row.accepted && row.status == "tracked" {
+                let error = DVec3::from_array(row.delta_camera) - DVec3::X * speed;
+                squared += error * error;
+                measured += 1;
+            }
+            assert!(
+                row.accepted,
+                "cold speed {speed}, image {i}: {} {}",
+                row.status, row.error
+            );
+            assert_eq!(row.status, if i == 0 { "initializing" } else { "tracked" });
+        }
+        let rms = (squared / measured.max(1) as f64).to_array().map(f64::sqrt);
+        eprintln!("cold blurred-first-view speed={speed}, measured={measured}, RMS={rms:?}");
+        assert_eq!(measured, 39);
+        assert!(
+            rms.iter().all(|value| *value < 0.008),
+            "cold-start component RMS {rms:?}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn later_rotations_refine_a_mistaken_initial_patch_without_losing_motion() -> Result {
+    let mut c = config(false);
+    c.max_rotation = 0.35;
+    c.spherical_map = Some(MapSettings {
+        global_search: false,
+        ..MapSettings::default()
+    });
+    let texture = known_template()?;
+    let clean = render_template(&c, &texture, DQuat::IDENTITY, 0.)?;
+    let mut reference = Tracker::new(c.clone())?;
+    reference.process(clean.clone())?;
+    let reference_map = reference.sphere_template().ok_or("missing reference map")?;
+    // A small textured first-view defect, followed by many clean passes. The
+    // rest of the ball still supplies independent orientation information.
+    let mut pixels = clean.pixels().to_vec();
+    for y in 68..92 {
+        for x in 68..92 {
+            pixels[y * c.width + x] = 1. - pixels[y * c.width + x];
+        }
+    }
+    let flawed = GrayFrame::new(c.width, c.height, pixels, 0.)?;
+    let mut tracker = Tracker::new(c.clone())?;
+    for i in 0..100 {
+        let row = tracker.process(flawed.clone().with_timestamp(i as f64 * 10.)?)?;
+        assert!(row.accepted, "first view {i}: {} {}", row.status, row.error);
+    }
+    let first = tracker.sphere_template().ok_or("missing first map")?;
+    let mistaken: Vec<_> = first
+        .pixels
+        .iter()
+        .zip(&reference_map.pixels)
+        .enumerate()
+        .filter_map(|(i, (&actual, &expected))| {
+            ((actual == 0 && expected >= 160) || (actual == 255 && expected <= 96))
+                .then_some((i, expected > 128))
+        })
+        .collect();
+    assert!(
+        mistaken.len() >= 16,
+        "fixture did not consolidate its defect"
+    );
+    let mut squared = DVec3::ZERO;
+    let mut measured = 0;
+    let delta = DVec3::X * 0.02;
+    for i in 1..=700 {
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            DQuat::from_scaled_axis(delta * i as f64),
+            (99 + i) as f64 * 10.,
+        )?)?;
+        assert!(
+            row.accepted && row.status == "tracked",
+            "clean pass {i}: {} {}",
+            row.status,
+            row.error
+        );
+        let error = DVec3::from_array(row.delta_camera) - delta;
+        squared += error * error;
+        measured += 1;
+    }
+    let final_map = tracker.sphere_template().ok_or("missing refined map")?;
+    let corrected = mistaken
+        .iter()
+        .filter(|(index, white)| {
+            (final_map.pixels[*index] > 128) == *white && final_map.pixels[*index] != 128
+        })
+        .count();
+    let rms = (squared / measured as f64).to_array().map(f64::sqrt);
+    let revised = mistaken
+        .iter()
+        .filter(|(index, _)| final_map.pixels[*index] != first.pixels[*index])
+        .count();
+    eprintln!(
+        "refined {corrected}/{} first-pass defects ({revised} revised) over {measured} rotations; component RMS={rms:?}",
+        mistaken.len()
+    );
+    assert!(
+        corrected * 100 >= mistaken.len() * 80,
+        "repeated passes did not correct the initial patch"
+    );
+    assert!(
+        rms.iter().all(|value| *value < 0.008),
+        "refinement component RMS={rms:?}"
+    );
+    Ok(())
+}
+
 fn cold_partial_atlas_acceleration(evaluations: usize, quality: usize) -> Result {
     let mut c = config(false);
     c.max_rotation = 0.35;

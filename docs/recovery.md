@@ -98,6 +98,10 @@ is retained. It is selected only with spatial verification and at least 10%
 better temporal MSE, then scored against the complete persistent atlas. The
 same final motion, appearance and explicit-cap gates apply. Healthy local
 fitting and legacy opt-out retain their previous numerical objective.
+The bounded retry can also run before three accepted motion observations exist;
+an early uncertain fit does not have to wait for a mature motion history. This
+does not remove the separate history requirement for above-limit appearance
+acceptance, the clean-start texture guard or recovery confirmation.
 Each optimizer is capped by `opt_max_evals`; the fallback adds at most five
 complete comparison scores and two complete evidence passes. This is bounded
 extra computation, not an unchanged total per-frame evaluation count.
@@ -129,6 +133,25 @@ supplied VR3 fast spin, instead of declaring a false gap and withholding newly
 visible surface from the atlas. It is a temporal consistency policy, not a
 physical acceleration limit or permission to integrate an occluded interval.
 
+An additional route uses three independently verified visible increments over
+four consecutive images. The preceding two increments and the current one must
+all pass the existing distributed temporal-image checks. One acceleration is
+fitted at the three capture-interval midpoints; residuals in each velocity
+component must be within `0.006 / interval_ms + 0.35 × median_speed`. Fitted
+speeds must rise and adjacent fitted direction cosines must be at least 0.75.
+The measured increment is retained, without smoothing or rewriting earlier rows.
+This can identify the start
+of a real turn without including earlier stationary jitter in the ramp.
+It cannot authorize an isolated jump, unverified motion, a direction change or
+any motion across rejected images. The complete persistent score, texture and
+explicit user cap still apply.
+
+While recovering, bounded known-view/coarse searches are now eligible every six
+missing-frame positions instead of every thirty. A search still spends at most
+`min(opt_global_evals, 768)` objective evaluations, and confirmation requirements
+are unchanged. This increases recovery work to try fresh evidence sooner;
+it is not a guarantee of recovery within six images.
+
 Recovery retains the measured increment between its final visible confirmation
 images as the next optimizer seed. The relocalized output still has zero relative
 motion. The 256-view bank preserves spatially distinct older poses: a new pose
@@ -141,22 +164,49 @@ the complete ROI within the original 768-objective-evaluation cap.
 
 ## Mature atlas inertia
 
-The original confidence update already freezes saturated black/white cells
-(`0`/`255`) permanently. In resilient mode, the current branch also protects
-strong, partially consolidated cells against contradictory observations. Ages
+The legacy confidence update freezes saturated black/white cells (`0`/`255`)
+permanently. Resilient tracking now permits later accepted passes to revise
+those cells, so an early incorrect marking need not become permanent. Eight
+eligible contrary views separated by at least 0.08 rad can unlock an extreme
+after the material patch has faced away and is observed again; agreement clears that
+pending evidence. Colliding ROI samples cannot count as separate images.
+Revision requires three of four neighboring ROI samples to agree with the
+current sample and the preceding accepted image to agree within 0.1 normalized
+binary intensity after the measured warp. All current ROI samples that project
+into that atlas cell must agree too. Repeated stationary images, an ambiguous
+colliding sample and a first sweep cannot overturn the anchor. Unsupported observations defer
+revision. Revision also requires measured rotation no larger than one atlas
+longitude interval (`2π / map_width` radians/image), deferring changes to
+established labels during rapid motion/exposure smear. New-surface learning
+still follows the existing acceptance/probation rules. An unlocked cell changes
+confidence at most once per teaching image
+(four-value increments while young, one while mature, retaining the existing
+young-neutral consolidation bonus) until it
+consolidates again. Rejected frames and frozen/probation learning cannot unlock
+or revise known cells.
+
+Resilient mode also protects strong, partially consolidated cells against
+contradictory observations. Ages
 count distinct accepted teaching frames per cell, including colliding ROI
 samples only once. The first 1,024 teaching frames retain the original learning
-rate. Thereafter contradictory votes against values at least 160 or at most 96
-are applied every sixteen teaching frames.
-Agreement still consolidates at the original rate; near-neutral cells adapt at
-the original rate, and genuinely new cells retain their first-hit bonus.
+rate for ordinary unsaturated cells. Thereafter contrary votes against values
+at least 160 or at most 96 are eligible every sixteen teaching frames. The same
+phase applies to unlocking a mature extreme: eight contrary eligible frames
+take at least 128 teaching images. Mature cells therefore remain resistant to
+short bad runs while sustained later evidence can still correct them.
+Ordinary agreement and near-neutral cells retain their confidence update;
+genuinely new cells retain their first-hit bonus.
 A mature observed cell crossing neutral `128` does not receive another first-hit
 bonus; younger cells retain the original update behavior.
 
 This adds inertia when a few unreliable observations pass the quality checks;
 it does not establish that an arbitrary accepted occluder is safe. A regression
 explicitly supplies 300 accepted contradictory images to mature, unsaturated
-cells. Rejected/recovering frames remain unable to teach anything. Per-cell
+cells. Further regressions verify correction of both saturated extremes,
+distinct-image confirmation, mature-cell resistance and eventual revision,
+and actual known-motion tracking while later rotations correct an initial
+textured defect. [Current atlas-learning evidence](atlas-learning.md).
+Rejected/recovering frames remain unable to teach anything. Per-cell
 ages and frame stamps are bounded and their wrap behavior is tested. A valid
 reset/template import resets age history; PNG confidence maps do not serialize
 ages, so imported partial cells rebuild maturity over 1,024 teaching frames.
