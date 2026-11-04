@@ -4,6 +4,7 @@
 
 # Getting started
 
+- [v0.3.6 changes and captures](release-v0.3.6.md)
 - [Download and install](install.md)
 - [Experimental setup](hardware.md)
 - [Your first session](quick-start.md)
@@ -34,6 +35,7 @@
 # Scientific and implementation reference
 
 - [Tracking-stage latency](tracking-performance.md)
+- [Preview age and display cadence](preview-age.md)
 - [Recording throughput and limits](recording-performance.md)
 - [VR3 tracking validation](vr3-validation.md)
 - [VR3 motion structure](vr3-motion-structure.md)
@@ -55,3 +57,7 @@
 - [Release guide](releases.md)
 - [Building and contributing](development.md)
 - [Citation and license](citing.md)
+
+# Appendix
+
+- [Example cameras and Arducam serial programming](appendix-cameras.md)

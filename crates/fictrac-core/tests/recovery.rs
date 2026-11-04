@@ -213,6 +213,142 @@ fn manual_reset_retains_integrated_displacement_and_counter() -> Result {
     Ok(())
 }
 #[test]
+fn discarded_camera_interval_reanchors_without_inventing_near_rest_motion() -> Result {
+    let template = known_template()?;
+    for resilient in [true, false] {
+        let mut c = config(false);
+        if let Some(map) = &mut c.spherical_map {
+            map.resilient = resilient;
+            // Explicit source discontinuities must retain the atlas and path
+            // even with the legacy immediate bad-frame-reset setting.
+            map.max_bad_frames = 0;
+        }
+        let mut tracker = Tracker::new(c.clone())?;
+        tracker.load_sphere_template(template.clone())?;
+        let quiet_delta = DVec3::new(0.0004, -0.0006, 0.0003);
+        let mut before = tracker.process(render_template(&c, &template, DQuat::IDENTITY, 0.)?)?;
+        for index in 1..=12 {
+            before = tracker.process(render_template(
+                &c,
+                &template,
+                DQuat::from_scaled_axis(quiet_delta * index as f64),
+                index as f64 * 10.,
+            )?)?;
+            assert!(
+                before.accepted,
+                "near-rest frame {index}: {}",
+                before.status
+            );
+        }
+        assert!(before.integrated.iter().any(|value| value.abs() > 0.001));
+        let retained = tracker.sphere_template();
+        tracker.mark_source_discontinuity();
+        assert_eq!(tracker.sphere_template(), retained);
+        // The source advanced for three seconds without measurement. Its net
+        // orientation change is intentionally small enough for an ordinary local
+        // fit to succeed; that must still not become measured missing motion.
+        let returned_pose = DQuat::from_scaled_axis(DVec3::new(0.07, -0.05, 0.03))
+            * DQuat::from_scaled_axis(quiet_delta * 12.);
+        let mut recovered_at = None;
+        // Reuse the existing bounded recovery search cadence rather than
+        // requiring a particular optimizer seed to fit in the first two rows.
+        // Two 30-image search cycles bound this fixture's recovery wait.
+        for index in 0..60 {
+            let row = tracker.process(render_template(
+                &c,
+                &template,
+                returned_pose,
+                3120. + index as f64 * 10.,
+            )?)?;
+            assert!(
+                matches!(row.status, "recovering" | "relocalized"),
+                "resilient={resilient}, error={}",
+                row.error
+            );
+            assert_eq!(row.accepted, row.status == "relocalized");
+            assert_eq!(row.delta_camera, [0.; 3]);
+            assert_eq!(row.delta_lab, [0.; 3]);
+            assert_eq!(row.position, before.position);
+            assert_eq!(row.integrated, before.integrated);
+            assert_eq!(row.heading, before.heading);
+            assert_eq!(row.frame, before.frame + index + 1);
+            assert_eq!(row.sequence, before.sequence + index + 1);
+            assert_eq!(row.timestamp_ms, 3120. + index as f64 * 10.);
+            assert_eq!(
+                row.delta_ms,
+                if row.accepted || index == 0 {
+                    row.timestamp_ms - before.timestamp_ms
+                } else {
+                    10.
+                }
+            );
+            assert_eq!(tracker.sphere_template(), retained);
+            if row.status == "relocalized" {
+                recovered_at = Some(row.timestamp_ms);
+                break;
+            }
+        }
+        let recovered_at = recovered_at.ok_or("discarded interval never confirmed a fresh pose")?;
+        let delta = DVec3::new(0.006, -0.009, 0.004);
+        let moving = tracker.process(render_template(
+            &c,
+            &template,
+            DQuat::from_scaled_axis(delta) * returned_pose,
+            recovered_at + 10.,
+        )?)?;
+        assert_eq!(moving.status, "tracked");
+        assert!(moving.accepted);
+        assert!(
+            (DVec3::from_array(moving.delta_camera) - delta).length() < 0.008,
+            "fresh post-pause motion {:?}",
+            moving.delta_camera
+        );
+        assert!(DVec3::from_array(moving.delta_camera).length() > 0.005);
+        assert_ne!(moving.position, before.position);
+        assert_ne!(moving.integrated, before.integrated);
+    }
+    Ok(())
+}
+#[test]
+fn discarded_pairwise_interval_initializes_a_fresh_relative_reference() -> Result {
+    let c = Config::default();
+    let mut tracker = Tracker::new(c.clone())?;
+    tracker.process(synthetic::render(&c, [0.; 3], 0.)?)?;
+    let before = tracker.process(synthetic::render(&c, [0.008, -0.011, 0.005], 10.)?)?;
+    assert!(before.accepted);
+    assert!(before.integrated.iter().any(|value| value.abs() > 0.001));
+    tracker.mark_source_discontinuity();
+    let returned_pose = DQuat::from_scaled_axis(DVec3::new(0.1, -0.08, 0.06));
+    let row = tracker.process(synthetic::render(
+        &c,
+        returned_pose.to_scaled_axis().to_array(),
+        3010.,
+    )?)?;
+    assert!(row.accepted);
+    assert_eq!(row.status, "initializing");
+    assert_eq!(row.delta_camera, [0.; 3]);
+    assert_eq!(row.position, before.position);
+    assert_eq!(row.integrated, before.integrated);
+    assert_eq!(row.heading, before.heading);
+    assert_eq!(row.frame, before.frame + 1);
+    assert_eq!(row.sequence, before.sequence + 1);
+    assert_eq!(row.timestamp_ms, 3010.);
+    assert_eq!(row.delta_ms, 3000.);
+    let delta = DVec3::new(0.006, -0.009, 0.004);
+    let moving = tracker.process(synthetic::render(
+        &c,
+        (DQuat::from_scaled_axis(delta) * returned_pose)
+            .to_scaled_axis()
+            .to_array(),
+        3020.,
+    )?)?;
+    assert_eq!(moving.status, "tracked");
+    assert!(moving.accepted);
+    assert!((DVec3::from_array(moving.delta_camera) - delta).length() < 0.008);
+    assert_ne!(moving.integrated, before.integrated);
+    Ok(())
+}
+#[test]
 fn invalid_import_and_recovery_settings_do_not_mutate_state() -> Result {
     let c = config(true);
     let mut tracker = Tracker::new(c.clone())?;

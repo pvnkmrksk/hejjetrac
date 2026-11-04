@@ -398,7 +398,12 @@ impl Controller {
         schema::validate_arguments(&r.command, a)?;
         if matches!(
             r.command.as_str(),
-            "view" | "camera_status" | "camera_set" | "camera_format"
+            "view"
+                | "start_array"
+                | "camera_list"
+                | "camera_status"
+                | "camera_set"
+                | "camera_format"
         ) {
             return Err(format!(
                 "{} requires a native desktop session; this headless controller processes recorded video and has no live camera or rendered view",

@@ -1,0 +1,89 @@
+{
+  "definition": "Monotonic age of the latest published source image relative to fastest observed delivery; not absolute sensor/display latency.",
+  "selection": "Both 180-second steady-state phases; intentional calibration holds and short recording phase excluded.",
+  "percentile": "p95 uses nearest rank; median averages the two middle samples when count is even",
+  "aggregate": {
+    "samples": 2796,
+    "median_ms": 27.110485,
+    "p95_ms": 44.923897999999994,
+    "maximum_ms": 48.855805000000004
+  },
+  "per_camera": {
+    "1": {
+      "samples": 699,
+      "median_ms": 27.780176,
+      "p95_ms": 44.923897999999994,
+      "maximum_ms": 48.088533000000005
+    },
+    "2": {
+      "samples": 699,
+      "median_ms": 27.367582000000002,
+      "p95_ms": 45.126760000000004,
+      "maximum_ms": 48.176552
+    },
+    "3": {
+      "samples": 699,
+      "median_ms": 27.541216,
+      "p95_ms": 44.998205,
+      "maximum_ms": 48.855805000000004
+    },
+    "4": {
+      "samples": 699,
+      "median_ms": 26.152337000000003,
+      "p95_ms": 44.852166,
+      "maximum_ms": 47.853505
+    }
+  },
+  "per_phase": {
+    "before-calibration": {
+      "samples": 1396,
+      "median_ms": 27.1274805,
+      "p95_ms": 44.923897999999994,
+      "maximum_ms": 48.855805000000004,
+      "first_20_seconds": {
+        "samples": 152,
+        "median_ms": 27.002527,
+        "p95_ms": 44.699166,
+        "maximum_ms": 47.902616
+      },
+      "last_20_seconds": {
+        "samples": 160,
+        "median_ms": 28.6851375,
+        "p95_ms": 44.725527,
+        "maximum_ms": 47.430890000000005
+      }
+    },
+    "after-calibration": {
+      "samples": 1400,
+      "median_ms": 27.0507995,
+      "p95_ms": 44.908952,
+      "maximum_ms": 48.088533000000005,
+      "first_20_seconds": {
+        "samples": 152,
+        "median_ms": 28.066093000000002,
+        "p95_ms": 43.219521,
+        "maximum_ms": 46.962509
+      },
+      "last_20_seconds": {
+        "samples": 160,
+        "median_ms": 25.499254,
+        "p95_ms": 44.744137,
+        "maximum_ms": 47.58829
+      }
+    }
+  },
+  "maximum_observation": {
+    "phase": "before-calibration",
+    "elapsed_seconds": 82.7779942850002,
+    "session": 3,
+    "age_ms": 48.855805000000004,
+    "backlog_ms": 4.304194,
+    "preview_fps": 25.144107733532774,
+    "worker_ms": 3.8449090915608237,
+    "tracking_ms": 3.012272876485119
+  },
+  "maximum_relative_capture_backlog_ms": 7.029901,
+  "median_observed_preview_fps": 25.339153676667333,
+  "configured_display_limit_fps": 30,
+  "explanation": "At approximately 100 input FPS, the 33.33 ms publication minimum is tested on discrete source arrivals; previews commonly publish every fourth arrival (about 40 ms, roughly 25 FPS). Source delivery/conversion, fitting and the time until the next image publication/read contribute to preview age. The maximum is in steady state, not only startup. Flat early/late distributions and bounded capture backlog argue against an accumulating queue on this fixture."
+}

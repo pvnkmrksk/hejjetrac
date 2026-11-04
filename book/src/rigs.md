@@ -2,18 +2,29 @@
 
 Each native window owns an independent source, calibration, tracker, output state and recording. The bundled `VR1.txt`–`VR4.txt` derive from the original BR rig configurations.
 
-| Instance | Saved camera ID | UDP destination port | Local ZeroMQ PUB bind |
-|---|---:|---:|---:|
-| VR1 | 0 | 1111 | 9871 |
-| VR2 | 2 | 1112 | 9872 |
-| VR3 | 4 | 1113 | 9873 |
-| VR4 | 6 | 1114 | 9874 |
+| Instance | Serial link | Historical numeric ID | UDP destination port | Local ZeroMQ PUB bind |
+|---|---|---:|---:|---:|
+| VR1 | M01 | 0 | 1111 | 9871 |
+| VR2 | M02 | 2 | 1112 | 9872 |
+| VR3 | M03 | 4 | 1113 | 9873 |
+| VR4 | M04 | 6 | 1114 | 9874 |
 
 These are examples for their original physical setup, not calibration for arbitrary cameras. Check every device and source geometry before using its data.
 
+The serial link resolves the current device number. Our observed M01/M02/M03/M04
+nodes were 6/2/4/0, illustrating why saved numeric order is unreliable. In
+**Source & camera**, identify the serial, use the link/unlink icon and save the
+rig. [The camera appendix](appendix-cameras.md) gives the optional one-time
+Arducam serial procedure. Other suitable cameras work without programming.
+
 ## Creating windows
 
-A new instance selects the next existing numbered VR/BR config. After those are exhausted, a copy increments its numeric camera ID, enabled output ports and instance name. A video path remains a video path. Disabled outputs remain disabled. Unsaved copies have no inherited save path, preventing accidental overwrite of the parent config.
+Numbered desktop windows follow their saved VR/BR slots. A requested missing or
+malformed slot stays visible as a failed rig; subsequent slots still start.
+Unnumbered documents retain the copy workflow, incrementing numeric camera ID,
+enabled ports and instance name; video paths remain paths. Unsaved copies do not
+inherit a save path or camera binding. The recorded-video headless controller
+retains its existing sibling/copy workflow.
 
 Closing one native tracking window, including the first one opened, leaves the other sessions running. Each remaining window retains its source, clock, outputs and recording. Explicit application shutdown/quit closes all sessions; normal per-window close still observes unsaved-state and recording finalization rules.
 
@@ -21,12 +32,28 @@ Closing one native tracking window, including the first one opened, leaves the o
 
 In current source, open **More → Rig manager** to see every running session. Each row opens that rig's **Settings** or its read-only **Full config** text. Review source IDs, calibration and output ports here before an experiment. Save changes through the inspector for that rig.
 
-**Start all** resumes paused sessions, replays finished files and retries sources that failed to open. A session being calibrated stays paused until its calibration is finished. **Open four rigs** creates the next saved VR/BR sessions; **Arrange in a grid** tiles the open windows. Published v0.1.3 uses the per-window controls and CLI grid launch below.
+Choose **More → Start saved rig array**, or **Start saved array** in the manager.
+It opens all existing VR1–VR16 or BR1–BR16 sibling files, starts each independently
+and arranges their windows. Failed entries remain labelled **Did not start** with
+their individual error. Working rigs continue with their own ports. A missing
+camera, duplicate binding, malformed file or busy device never substitutes a stock
+video. A single-window sample fallback is stopped and its saved camera config is
+restored before joining the array. Explicitly configured video files remain video
+sources.
+
+**Start all** resumes existing paused sessions and retries stopped sources.
+**Arrange in a grid** tiles the open windows. Save one config per rig before
+starting the array; review calibration, bindings and output ports for each rig.
+The four provisioned OV9281s inspected on 2026-11-03 expose distinct M01–M04
+serials. Earlier unprovisioned units shared `UC762`; identical serials require
+an explicit USB socket binding or verified unique provisioning.
+[Binding details and hardware limits](configuration.md#optional-camera-binding).
 
 ## A compact tiled grid
 
 ```sh
 ./hejjetrac --windows 16 --grid 4x4
+./hejjetrac --config VR1.txt --array
 ./hejjetrac --config VR1.txt --window-size 360x260 --window-position=0,24
 ```
 

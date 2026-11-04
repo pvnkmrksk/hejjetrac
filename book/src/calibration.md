@@ -18,6 +18,8 @@ Incomplete or invalid drafts cannot replace a saved calibration. Saving to disk 
 
 ## 1. Ball outline
 
+The supplied M01–M04 rig templates use **47°** vertical FOV for the current lenses at 320×240. This is camera-specific; verify it after a lens or crop change. Changing `vfov` requires refitting the ball: old `roi_c`/`roi_r` otherwise retain their previous angular geometry.
+
 Set `vfov` to the vertical field of view of the **whole delivered image**, in degrees. It is not the ball diameter or the lens’s diagonal FOV. The [hardware guide](hardware.md#measure-field-of-view-before-mounting) explains a bench measurement. Select the supported equidistant `fisheye` model only for a matching lens; ordinary rectilinear lenses use the pinhole model.
 
 Click **at least three well-separated points on the ball silhouette**. The green fitted outline appears automatically after the third valid point and updates with every further mark. Rim points are never joined by straight segments. Two points cannot define a unique circle; place the third away from their line. Add points around the visible rim rather than clustering them together.
@@ -52,7 +54,7 @@ Before collecting data, rotate the ball in known forward, sideways and turning d
 
 **Diagnostics** shows the complete input image with the saved ball outline, exclusion masks, square and axes. Use **Redraw ball**, **Redraw exclusions** or **Redraw lab** to replace just that layer. **Full configuration…** opens the complete config text in the inspector.
 
-For occasional point adjustments, Settings also offers **Review saved layer** and **Edit saved marks**. This secondary editor supports dragging and right-click deletion. If a file contains only fitted angular geometry or rotation, there are no historical points to edit; use Redraw instead. In the saved Lab editor, **F** tries the reflected-seed alternate pose. A distinct valid branch is not always available; failure preserves the prior configuration.
+For occasional point adjustments, Settings also offers **Review saved layer** and **Edit saved marks**. The direct **Edit ball** action opens saved marks for dragging; grab a numbered rim mark and move it. The editor selects from the original press position, including when the first motion crosses the hit radius. It also supports right-click deletion. If a file contains only fitted angular geometry or rotation, there are no historical points to edit; use Redraw instead. In the saved Lab editor, **F** tries the reflected-seed alternate pose. A distinct valid branch is not always available; failure preserves the prior configuration.
 
 Check the thresholded ROI and map for useful contrast, then save the config for that physical rig. Saved `roi_c`/`roi_r` and `c2a_r` take precedence over old click fields. Editing only old points as raw text does not implicitly refit the saved geometry: use the corresponding calibration tool.
 

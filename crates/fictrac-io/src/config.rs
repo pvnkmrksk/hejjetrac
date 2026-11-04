@@ -22,6 +22,16 @@ pub(crate) fn legacy(text: &str) -> Result<BTreeMap<String, String>> {
         let (k, v) = line
             .split_once(':')
             .ok_or_else(|| Error::Config(format!("expected key : value on line {}", i + 1)))?;
+        if k.trim().is_empty()
+            || k.chars()
+                .chain(v.chars())
+                .any(|c| c.is_control() && c != '\t')
+        {
+            return Err(Error::Config(format!(
+                "invalid parameter name or control character on line {}",
+                i + 1
+            )));
+        }
         if fields
             .insert(k.trim().to_owned(), v.trim().to_owned())
             .is_some()
@@ -39,7 +49,7 @@ fn parse<T: serde::de::DeserializeOwned>(value: &str) -> Result<T> {
 pub fn load_source_hint(path: &Path) -> Result<Option<String>> {
     let text = read(path)?;
     if text.trim_start().starts_with('{') {
-        return Ok(serde_json::from_str::<Config>(&text)?.source);
+        return Ok(modern_config(&text)?.config.source);
     }
     Ok(legacy(&text)?.get("src_fn").cloned())
 }
@@ -48,17 +58,17 @@ pub fn load_config(path: &Path, width: usize, height: usize) -> Result<LoadedCon
     load_config_text(&text, width, height)
 }
 pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<LoadedConfig> {
+    if text.len() > 1_000_000 {
+        return Err(Error::Config("config exceeds 1 MB".into()));
+    }
     if text.trim_start().starts_with('{') {
-        let config: Config = serde_json::from_str(text)?;
-        config.validate()?;
-        if config.width != width || config.height != height {
+        let loaded = modern_config(text)?;
+        if loaded.config.width != width || loaded.config.height != height {
             return Err(Error::Config("video dimensions differ from config".into()));
         }
-        return Ok(LoadedConfig {
-            config,
-            warnings: vec![],
-        });
+        return Ok(loaded);
     }
+    crate::ConfigDocument::parse(text.to_owned())?.validate_frontend()?;
     let mut values = legacy(text)?;
     crate::zmq_output::ZmqSettings::parse(
         values.get("zmq_port").map(String::as_str),
@@ -259,6 +269,7 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
         "rust_instance_name",
         "rust_camera_width",
         "rust_camera_height",
+        "rust_camera_id",
         "rust_calibration_size",
         "rust_calibration_vfov",
         "rust_calibration_fisheye",
@@ -296,10 +307,161 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
     Ok(LoadedConfig { config, warnings })
 }
 
+/// Unknown JSON settings are warnings at the file boundary. Known values retain
+/// the strict typed deserializer and numerical validation before any state edit.
+fn modern_config(text: &str) -> Result<LoadedConfig> {
+    let mut parser = serde_json::Deserializer::from_str(text);
+    let mut value = <UniqueJson as serde::Deserialize>::deserialize(&mut parser)?.0;
+    parser.end()?;
+    let defaults = serde_json::to_value(Config::default())?;
+    let map_defaults = serde_json::to_value(MapSettings::default())?;
+    let mut warnings = Vec::new();
+    for (path, allowed) in [
+        ("", &defaults),
+        ("sphere", &defaults["sphere"]),
+        ("spherical_map", &map_defaults),
+    ] {
+        let object = if path.is_empty() {
+            value.as_object_mut()
+        } else {
+            value
+                .get_mut(path)
+                .and_then(serde_json::Value::as_object_mut)
+        };
+        if let Some(object) = object {
+            object.retain(|key, _| {
+                let known = allowed.get(key).is_some();
+                if !known {
+                    warnings.push(format!(
+                        "unknown parameter '{}{key}' ignored",
+                        if path.is_empty() {
+                            String::new()
+                        } else {
+                            format!("{path}.")
+                        }
+                    ));
+                }
+                known
+            });
+        }
+    }
+    let config: Config = serde_json::from_value(value)?;
+    config.validate()?;
+    Ok(LoadedConfig { config, warnings })
+}
+
+// serde_json::Value ordinarily keeps the last duplicate key. Reject duplicates
+// before filtering unknown settings so malformed hand edits remain unambiguous.
+struct UniqueJson(serde_json::Value);
+impl<'de> serde::Deserialize<'de> for UniqueJson {
+    fn deserialize<D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> std::result::Result<Self, D::Error> {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = UniqueJson;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("JSON without duplicate object keys")
+            }
+            fn visit_bool<E: serde::de::Error>(
+                self,
+                value: bool,
+            ) -> std::result::Result<UniqueJson, E> {
+                Ok(UniqueJson(value.into()))
+            }
+            fn visit_i64<E: serde::de::Error>(
+                self,
+                value: i64,
+            ) -> std::result::Result<UniqueJson, E> {
+                Ok(UniqueJson(value.into()))
+            }
+            fn visit_u64<E: serde::de::Error>(
+                self,
+                value: u64,
+            ) -> std::result::Result<UniqueJson, E> {
+                Ok(UniqueJson(value.into()))
+            }
+            fn visit_f64<E: serde::de::Error>(
+                self,
+                value: f64,
+            ) -> std::result::Result<UniqueJson, E> {
+                serde_json::Number::from_f64(value)
+                    .map(|n| UniqueJson(n.into()))
+                    .ok_or_else(|| E::custom("nonfinite JSON number"))
+            }
+            fn visit_str<E: serde::de::Error>(
+                self,
+                value: &str,
+            ) -> std::result::Result<UniqueJson, E> {
+                Ok(UniqueJson(value.into()))
+            }
+            fn visit_unit<E: serde::de::Error>(self) -> std::result::Result<UniqueJson, E> {
+                Ok(UniqueJson(serde_json::Value::Null))
+            }
+            fn visit_seq<A: serde::de::SeqAccess<'de>>(
+                self,
+                mut access: A,
+            ) -> std::result::Result<UniqueJson, A::Error> {
+                let mut values = Vec::new();
+                while let Some(value) = access.next_element::<UniqueJson>()? {
+                    values.push(value.0);
+                }
+                Ok(UniqueJson(values.into()))
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut access: A,
+            ) -> std::result::Result<UniqueJson, A::Error> {
+                let mut values = serde_json::Map::new();
+                while let Some(key) = access.next_key::<String>()? {
+                    if values.contains_key(&key) {
+                        return Err(serde::de::Error::custom(format!("duplicate field {key:?}")));
+                    }
+                    values.insert(key, access.next_value::<UniqueJson>()?.0);
+                }
+                Ok(UniqueJson(values.into()))
+            }
+        }
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
 fn values_engine(text: &str) -> Result<bool> {
     match legacy(text)?.get("rust_engine").map(String::as_str) {
         None | Some("spherical") => Ok(true),
         Some("pairwise") => Ok(false),
         Some(other) => Err(Error::Config(format!("unknown rust_engine {other}"))),
+    }
+}
+
+#[cfg(test)]
+mod boundary_tests {
+    use super::*;
+    #[test]
+    fn unknown_json_settings_warn_while_known_bad_values_and_duplicates_are_rejected() -> Result<()>
+    {
+        let mut value = serde_json::to_value(Config::default())?;
+        value["future_setting"] = serde_json::json!({"do_not_execute":"$(anything)"});
+        value["sphere"]["future_setting"] = true.into();
+        let loaded = load_config_text(&value.to_string(), 160, 160)?;
+        assert_eq!(loaded.warnings.len(), 2);
+        assert_eq!(loaded.config.width, 160);
+        for bad in [
+            serde_json::json!("NaN"),
+            serde_json::json!(-1),
+            serde_json::Value::Null,
+        ] {
+            value["width"] = bad;
+            assert!(load_config_text(&value.to_string(), 160, 160).is_err());
+        }
+        for text in [
+            r#"{"width":160,"width":160,"unknown":true}"#,
+            r#"{"sphere":{"centre":[0,0,1],"centre":[0,0,1]}}"#,
+            "{bad json",
+            "{\"width\":1e999}",
+        ] {
+            assert!(load_config_text(text, 160, 160).is_err());
+        }
+        Ok(())
     }
 }

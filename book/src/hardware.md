@@ -2,6 +2,12 @@
 
 A good image makes calibration easier and tracking more reliable. Choose the ball pattern, lens and lighting together, then fix the camera settings before saving a calibration.
 
+A suitable regular USB webcam can work. For a compact, inexpensive global-shutter
+example with high frame rates and M12 optics, see the [Arducam hardware and serial
+programming appendix](appendix-cameras.md). It records the OV9281/B0332-family
+board used here, mounting dimensions, vendor links and the optional Windows
+serial-number procedure. This model is an example, not a hardware requirement.
+
 This guide adapts the [FicTrac hardware recommendations](https://github.com/pvnkmrksk/fictrac/blob/10fc4472af1fc9062b9bf5a92738e835b98cc3ec/doc/requirements.md), by R. J. D. Moore and collaborators, under CC BY-NC-SA 3.0. The [complete original setup and algorithm guide](upstream-setup.md) is also preserved in this manual. Additional lighting and field-of-view notes are identified below.
 
 ## Pattern the ball
@@ -62,7 +68,10 @@ Choose the lowest native resolution that preserves a sharp, distinctive pattern.
 
 A 100, 120 or 240 Hz source has a frame interval of 10, 8.33 or 4.17 ms. That budget includes acquisition, conversion, tracking and outputs. Watch delivered FPS, processing time and capture skips during a full-length test with your intended recording settings.
 
-Each session tracks on CPU; the GPU draws the native preview. More cores help independent rigs, but USB bandwidth, drivers, storage and encoding still matter. Spread cameras across suitable host controllers where needed and test all sources together. [Several rigs](rigs.md) covers grid launch and distinct output ports.
+For simultaneous rigs, USB bandwidth, drivers, storage, graphics and encoding
+all matter. Spread cameras across suitable host controllers where needed and
+test all sources together. [Several rigs](rigs.md) covers grid launch, persistent
+camera links and distinct output ports.
 
 ## Save a reproducible setup
 

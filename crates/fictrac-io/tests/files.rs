@@ -126,11 +126,26 @@ fn rejects_corrupt_mp4_without_panicking() -> Result {
     Ok(())
 }
 #[test]
-fn config_rejects_unknown_json_fields_and_duplicate_legacy_keys() -> Result {
+fn config_warns_on_unknown_json_fields_and_rejects_duplicate_or_malformed_values() -> Result {
     let temp = Temp::new()?;
     let p = temp.0.join("config.json");
     fs::write(&p, "{\"widht\":160}")?;
-    assert!(load_config(&p, 160, 160).is_err());
+    let loaded = load_config(&p, 160, 160)?;
+    assert_eq!(loaded.config.width, 160);
+    assert!(
+        loaded
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("widht"))
+    );
+    for text in [
+        "{\"width\":\"not a number\"}",
+        "{\"width\":160,\"width\":160}",
+        "{bad json",
+    ] {
+        fs::write(&p, text)?;
+        assert!(load_config(&p, 160, 160).is_err());
+    }
     fs::write(&p, "vfov : 45\nvfov : 90\n")?;
     assert!(load_config(&p, 160, 160).is_err());
     Ok(())

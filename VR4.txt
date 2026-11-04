@@ -1,4 +1,5 @@
-# VR4: calibration from the physical rig config, 2026-10-26.
+# VR4: 47-degree rim refit, 2026-11-04; reviewed against retained 2026-11-03 camera image.
+# Verify outline after moving the camera. Existing physical lab orientation is preserved.
 # Pixel marks were measured at 320x240; keep this capture size.
 # UDP 1114 and direct ZMQ 9874 are enabled; use only one publisher per port.
 # scripts/run_four_bridged.sh disables direct ZMQ in temporary copies for republishers.
@@ -16,10 +17,10 @@ opt_max_err      : -1.000000
 opt_max_evals    : 50
 opt_tol          : 0.001
 q_factor         : 6
-roi_c            : {-0.0048595613011512065,-0.015065285390126783,0.999874703070377}
-roi_circ         : {85.69659874473537,141.91950464396285,233.56037846713497,97.3374613003096,192.6935015409489,176.8421052631579,99.81424713741784,53.4984520123839}
-roi_ignr         : { { 125.8204415449908,28.978328173374614,197.1517062965328,14.860681114551083,186.7492398713046,79.50464396284829,159.25697721187035,92.87925696594428,133.99381693022804,92.13622291021672,129.5356121746441,62.414860681114554 } }
-roi_r            : 0.09705263213139234
+roi_c            : {0.04691700932881289, 0.06533251205498315, 0.996759979686296}
+roi_circ         : {155.54180658221705, 56.470588235294116, 259.56657287470796, 146.37770897832817, 224.6439689559671, 208.79256965944273, 91.64087175218062, 117.39938080495357}
+roi_ignr         : { { 204.58204755583938,34.922600619195045,211.26935468921528,97.3374613003096,178.5758644860674,127.80185758513932,136.96595343395066,99.56656346749226,128.79257804871344,69.10216718266254,123.59133916719884,39.38080495356037 } }
+roi_r            : 0.298722241841861
 save_debug       : n
 save_raw         : n
 sock_host        : 127.0.0.1
@@ -28,10 +29,11 @@ src_fn           : 6
 src_fps          : 100
 thr_ratio        : 1.25
 thr_win_pc       : 0.25
-vfov             : 17
+vfov             : 47
 
 rust_instance_name : VR4
 rust_resilient     : y
 rust_camera_width  : 320
 rust_camera_height : 240
 zmq_port           : 9874
+rust_camera_id     : usb:0c45:6366:M04:video:0

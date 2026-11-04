@@ -50,6 +50,52 @@ impl ConfigDocument {
         self.get(key)
             .is_some_and(|v| matches!(v, "y" | "Y" | "true" | "1"))
     }
+    /// Empty/absent means unbound. A binding never changes src_fn or output ports.
+    pub fn camera_binding(&self) -> Result<Option<&str>> {
+        let Some(value) = self.get("rust_camera_id").filter(|v| !v.is_empty()) else {
+            return Ok(None);
+        };
+        if value.len() > 512
+            || value.trim() != value
+            || value.chars().any(|c| c.is_control() || c == '#')
+        {
+            return Err(Error::Config("rust_camera_id must be a hardware ID of at most 512 bytes without control characters or #".into()));
+        }
+        Ok(Some(value))
+    }
+    pub fn validate_frontend(&self) -> Result<()> {
+        self.camera_binding()?;
+        for key in ["save_raw", "save_debug", "do_display", "fisheye"] {
+            if let Some(value) = self.get(key)
+                && !matches!(value, "y" | "Y" | "n" | "N" | "true" | "false" | "1" | "0")
+            {
+                return Err(Error::Config(format!("{key} requires y or n")));
+            }
+        }
+        if let Some(value) = self.get("src_fps") {
+            let rate = value
+                .parse::<f64>()
+                .map_err(|_| Error::Config("src_fps must be a finite number".into()))?;
+            if !rate.is_finite() || rate > 10000.0 {
+                return Err(Error::Config(
+                    "src_fps must be finite and at most 10000; nonpositive uses the source clock"
+                        .into(),
+                ));
+            }
+        }
+        for key in ["rust_camera_width", "rust_camera_height"] {
+            if let Some(value) = self.get(key)
+                && !value
+                    .parse::<usize>()
+                    .is_ok_and(|n| n == 0 || (2..=8192).contains(&n))
+            {
+                return Err(Error::Config(format!(
+                    "{key} must be an integer, 2..8192 or 0 for automatic"
+                )));
+            }
+        }
+        Ok(())
+    }
     pub fn vector<T: serde::de::DeserializeOwned>(&self, key: &str) -> Result<T> {
         let value = self
             .get(key)
@@ -105,6 +151,7 @@ impl ConfigDocument {
         Ok(())
     }
     pub fn source(&self, config_path: Option<&Path>) -> Result<SourceSpec> {
+        self.validate_frontend()?;
         let value = self
             .get("src_fn")
             .ok_or_else(|| Error::Config("missing src_fn".into()))?;
@@ -178,6 +225,10 @@ impl ConfigDocument {
             }
         }
         let mut next = self.clone();
+        // A copied, unsaved rig must not silently claim the original rig's camera.
+        if self.camera_binding()?.is_some() {
+            next.set("rust_camera_id", "")?;
+        }
         if let Some(value) = self.get("src_fn")
             && let Ok(id) = value.parse::<u32>()
         {
@@ -281,6 +332,10 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
             "Camera",
             "Exact native capture dimensions. Select only advertised formats; a format change reopens the camera and requires matching calibration.",
         ),
+        "rust_camera_id" => (
+            "Camera",
+            "Optional exact hardware binding. Empty means unbound. Missing or duplicate IDs stop this rig; another camera or sample video is never substituted. Output ports stay with the rig.",
+        ),
         "rust_calibration_size" | "rust_calibration_vfov" | "rust_calibration_fisheye" => (
             "Geometry",
             "Explicit calibration reference dimensions, vertical field of view and projection. Same-aspect, same-FOV resizing scales only saved pixel marks; legacy angular geometry remains untouched.",
@@ -368,7 +423,7 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
         ),
         "save_raw" | "save_debug" => (
             "Recording",
-            "Record source RGB / calibrated six-panel debug frames when a recording run is active. Encoded media finalize explicitly; incomplete files retain .partial.",
+            "Legacy startup recording flags: source RGB / calibrated debug video. Both n disables automatic recording. The desktop Record action independently requires raw, debug or both and defaults to raw. Incomplete media retain .partial.",
         ),
         "vid_codec" => (
             "Recording",

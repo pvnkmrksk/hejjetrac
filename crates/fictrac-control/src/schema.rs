@@ -22,7 +22,10 @@ fn descriptor(command: &str, args: Value) -> Value {
         || args.get("anyOf").is_some()
         || args.get("oneOf").is_some();
     let mut properties = json!({"command":{"const":command},"id":{},"args":args,"session":{"type":"integer","minimum":1}});
-    let global = matches!(command, "open" | "schema" | "discover" | "sessions");
+    let global = matches!(
+        command,
+        "open" | "schema" | "discover" | "sessions" | "camera_list"
+    );
     if global && let Some(p) = properties.as_object_mut() {
         p.remove("session");
     }
@@ -42,6 +45,8 @@ pub fn request_schema() -> Value {
     let mut variants = vec![];
     for command in [
         "schema",
+        "camera_list",
+        "start_array",
         "discover",
         "sessions",
         "new_instance",
@@ -145,7 +150,7 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
             "window_size",
             "display_fps",
         ],
-        "camera_status" => &[],
+        "camera_status" | "camera_list" | "start_array" => &[],
         "camera_format" => &["width", "height", "fps"],
         "camera_set" => &["control", "mode", "value"],
         "step" | "run" => &["frames"],
@@ -330,7 +335,14 @@ pub fn headless_request_schema() -> Value {
         variants.retain(|v| {
             !matches!(
                 v["properties"]["command"]["const"].as_str(),
-                Some("view" | "camera_status" | "camera_set" | "camera_format")
+                Some(
+                    "view"
+                        | "start_array"
+                        | "camera_list"
+                        | "camera_status"
+                        | "camera_set"
+                        | "camera_format"
+                )
             )
         });
     }

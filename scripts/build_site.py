@@ -16,12 +16,13 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 REPORTS = (
+    "release-v0.3.6.md",
     "agent-control.md", "architecture.md", "camera-controls.md", "output.md",
     "parity.md", "performance.md", "tracking-performance.md", "ui-design.md",
     "validation.md", "resources.md", "recovery.md", "matrex-vr.md",
     "linux-native-validation.md", "overnight-validation.md", "recording-performance.md",
     "storage-retention.md", "vr3-motion-structure.md", "vr3-validation.md",
-    "raw-video-validation.md", "masking-validation.md", "take-validation.md",
+    "raw-video-validation.md", "masking-validation.md", "take-validation.md", "preview-age.md",
 )
 REPOSITORY = "https://github.com/pvnkmrksk/hejjetrak"
 
@@ -127,6 +128,7 @@ def build(output: Path, mdbook: str, url: str):
             text = (ROOT / "docs" / report).read_text()
             # The website is a staged view; preserve the source reports verbatim.
             text = text.replace("../vendor/oxideav-h264/HEJJETRAK_PATCHES.md", "https://github.com/pvnkmrksk/hejjetrak/blob/main/vendor/oxideav-h264/HEJJETRAK_PATCHES.md")
+            text = text.replace("../book/src/", "")
             (stage / "src" / report).write_text(text)
         shutil.copytree(ROOT / "docs" / "images", stage / "src" / "images")
         shutil.copytree(ROOT / "docs" / "benchmarks", stage / "src" / "benchmarks")

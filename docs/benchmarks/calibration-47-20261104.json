@@ -1,0 +1,238 @@
+{
+  "basis": "Retained 2026-11-03 live source images; no cameras enumerated on 2026-11-04. User supplied 47-degree vertical FOV. Lab rotation and exclusions retained; physical lab axes need motion verification.",
+  "rigs": {
+    "1": {
+      "fov": 47,
+      "points": [
+        [
+          110.21672490044702,
+          83.21981424148606
+        ],
+        [
+          236.5325149708576,
+          139.69040247678018
+        ],
+        [
+          222.41486657817512,
+          218.45201238390092
+        ],
+        [
+          73.06501860391421,
+          208.04953560371516
+        ]
+      ],
+      "sphere": {
+        "centre": [
+          -0.02977824539967527,
+          0.14224573564173615,
+          0.9893833467330336
+        ],
+        "angular_radius": 0.3095791471392858
+      },
+      "image": "runs/live-four-final-stress-20261103/before-VR1/input.png",
+      "changed_marks": false
+    },
+    "2": {
+      "fov": 47,
+      "points": [
+        [
+          116.16099790789227,
+          92.13622291021672
+        ],
+        [
+          252.87926574133203,
+          109.96904024767802
+        ],
+        [
+          89.41176937438864,
+          154.55108359133126
+        ],
+        [
+          242.47678797830284,
+          214.73684210526315
+        ]
+      ],
+      "sphere": {
+        "centre": [
+          0.05721411098188449,
+          0.11497806150269287,
+          0.9917190080247709
+        ],
+        "angular_radius": 0.3048312210213906
+      },
+      "image": "runs/live-four-final-stress-20261103/before-VR2/input.png",
+      "changed_marks": false
+    },
+    "3": {
+      "fov": 47,
+      "points": [
+        [
+          177,
+          65
+        ],
+        [
+          119,
+          89
+        ],
+        [
+          95,
+          148
+        ],
+        [
+          116,
+          208
+        ],
+        [
+          248,
+          204
+        ],
+        [
+          272,
+          145
+        ],
+        [
+          243,
+          90
+        ]
+      ],
+      "sphere": {
+        "centre": [
+          0.07191865546494065,
+          0.10080707056491117,
+          0.992303200398062
+        ],
+        "angular_radius": 0.30217387978288196
+      },
+      "image": "runs/live-four-final-stress-20261103/before-VR3/input.png",
+      "changed_marks": true
+    },
+    "4": {
+      "fov": 47,
+      "points": [
+        [
+          155.54180658221705,
+          56.470588235294116
+        ],
+        [
+          259.56657287470796,
+          146.37770897832817
+        ],
+        [
+          224.6439689559671,
+          208.79256965944273
+        ],
+        [
+          91.64087175218062,
+          117.39938080495357
+        ]
+      ],
+      "sphere": {
+        "centre": [
+          0.04691700932881289,
+          0.06533251205498315,
+          0.996759979686296
+        ],
+        "angular_radius": 0.298722241841861
+      },
+      "image": "runs/live-four-final-stress-20261103/before-VR4/input.png",
+      "changed_marks": false
+    }
+  },
+  "native_review": "runs/calibration-47-native-20261104/rerun-1793794935208403704/report.json",
+  "native_binary_sha256": "0ae13b7c490ff1354f89e601cc83ad823756b007468976fc9f20a293929f79f1",
+  "full_take_replay": {
+    "scope": "Serial release replay of complete retained camera takes; observed airflow jitter, no motion ground truth",
+    "rigs": [
+      {
+        "rig": 1,
+        "frames": 320,
+        "statuses": {
+          "initializing": 1,
+          "tracked": 319
+        },
+        "wall_seconds": 0.9950157640050747
+      },
+      {
+        "rig": 2,
+        "frames": 321,
+        "statuses": {
+          "initializing": 1,
+          "tracked": 320
+        },
+        "wall_seconds": 0.912849661996006
+      },
+      {
+        "rig": 3,
+        "frames": 320,
+        "statuses": {
+          "initializing": 1,
+          "tracked": 319
+        },
+        "wall_seconds": 0.9583496310006012
+      },
+      {
+        "rig": 4,
+        "frames": 320,
+        "statuses": {
+          "initializing": 1,
+          "tracked": 319
+        },
+        "wall_seconds": 0.9728117699996801
+      }
+    ]
+  },
+  "release_smoke": [
+    {
+      "case": "synthetic",
+      "command": [
+        "target/release/fictrac",
+        "demo",
+        "--frames",
+        "120",
+        "--output",
+        "runs/v036-release-smoke-20261104/synthetic"
+      ],
+      "elapsed_seconds": 0.6993715460048406,
+      "exit_code": 0,
+      "output": "{\n  \"version\": \"0.3.6\",\n  \"input\": \"/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/v036-release-smoke-20261104/synthetic/sphere.y4m\",\n  \"video\": {\n    \"width\": 160,\n    \"height\": 160,\n    \"fps\": 60.0,\n    \"codec\": \"y4m/mono\",\n    \"duration_ms\": null\n  },\n  \"effective_config\": {\n    \"spherical_map\": null,\n    \"width\": 160,\n    \"height\": 160,\n    \"vfov_deg\": 45.0,\n    \"fisheye\": false,\n    \"sphere\": {\n      \"centre\": [\n        0.0,\n        0.0,\n        1.0\n      ],\n      \"angular_radius\": 0.29\n    },\n    \"camera_to_lab\": [\n      0.0,\n      0.0,\n      0.0\n    ],\n    \"legacy_roi_coordinates\": false,\n    \"ignore_polygons\": [],\n    \"max_rotation\": 0.35,\n    \"max_error\": 0.16,\n    \"sample_stride\": 2,\n    \"iterations\": 20,\n    \"source\": \"sphere.y4m\"\n  },\n  \"frames\": 120,\n  \"tracked\": 119,\n  \"relocalized\": 0,\n  \"rejected\": 0,\n  \"initializing\": 1,\n  \"mean_error\": 0.016496092142655572,\n  \"max_error\": 0.01765047398049396,\n  \"wall_seconds\": 0.513065855,\n  \"end_to_end_fps\": 233.8881038965261,\n  \"tracking_fps\": 255.7556269306993,\n  \"input_duration_ms\": 1983.3333333333333,\n  \"final_position\": [\n    -1.1854370684376982,\n    -0.39796415863398\n  ],\n  \"final_heading\": 5.757645264329963,\n  \"estimator\": \"perspective pairwise robust photometric SO(3)\",\n  \"error_metric\": \"normalized luma RMSE (0..1)\",\n  \"warnings\": []\n}\n{\n  \"expected_delta\": [\n    0.006,\n    -0.009,\n    0.004\n  ],\n  \"passed\": true,\n  \"rotation_component_rmse_rad\": 0.0003040496948914138,\n  \"tolerance_rad\": 0.003\n}\n100 frames \u00b7 0 rejected\n"
+    },
+    {
+      "case": "sample",
+      "command": [
+        "target/release/fictrac",
+        "track",
+        "--config",
+        "examples/upstream-config.txt",
+        "--input",
+        "examples/sample.mp4",
+        "--max-frames",
+        "300",
+        "--no-zmq",
+        "--output",
+        "runs/v036-release-smoke-20261104/sample"
+      ],
+      "elapsed_seconds": 2.090093368999078,
+      "exit_code": 0,
+      "output": "{\n  \"version\": \"0.3.6\",\n  \"input\": \"/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/sample.mp4\",\n  \"video\": {\n    \"width\": 384,\n    \"height\": 288,\n    \"fps\": null,\n    \"codec\": \"h264 (pure Rust)\",\n    \"duration_ms\": 10000.0\n  },\n  \"effective_config\": {\n    \"spherical_map\": {\n      \"resilient\": true,\n      \"resilient_error_floor\": 10000.0,\n      \"global_search\": false,\n      \"max_bad_frames\": -1,\n      \"global_evaluations\": 100000,\n      \"channel\": null,\n      \"quality\": 6,\n      \"threshold_ratio\": 1.25,\n      \"threshold_window\": 0.25,\n      \"max_evaluations\": 50,\n      \"tolerance\": 0.001,\n      \"max_error\": -1.0\n    },\n    \"width\": 384,\n    \"height\": 288,\n    \"vfov_deg\": 45.0,\n    \"fisheye\": false,\n    \"sphere\": {\n      \"centre\": [\n        -0.22938965658632302,\n        0.09996809470952124,\n        0.9681873607372475\n      ],\n      \"angular_radius\": 0.12481674439688094\n    },\n    \"camera_to_lab\": [\n      0.722445,\n      -0.131314,\n      -0.460878\n    ],\n    \"legacy_roi_coordinates\": true,\n    \"ignore_polygons\": [\n      [\n        [\n          96.0,\n          156.0\n        ],\n        [\n          113.0,\n          147.0\n        ],\n        [\n          106.0,\n          128.0\n        ],\n        [\n          82.0,\n          130.0\n        ],\n        [\n          81.0,\n          150.0\n        ]\n      ],\n      [\n        [\n          71.0,\n          213.0\n        ],\n        [\n          90.0,\n          219.0\n        ],\n        [\n          114.0,\n          218.0\n        ],\n        [\n          135.0,\n          211.0\n        ],\n        [\n          154.0,\n          196.0\n        ],\n        [\n          150.0,\n          217.0\n        ],\n        [\n          121.0,\n          228.0\n        ],\n        [\n          99.0,\n          234.0\n        ],\n        [\n          75.0,\n          225.0\n        ]\n      ]\n    ],\n    \"max_rotation\": 0.35,\n    \"max_error\": 0.16,\n    \"sample_stride\": 2,\n    \"iterations\": 20,\n    \"source\": \"sample.mp4\"\n  },\n  \"frames\": 300,\n  \"tracked\": 299,\n  \"relocalized\": 0,\n  \"rejected\": 0,\n  \"initializing\": 1,\n  \"mean_error\": 6424.500252392103,\n  \"max_error\": 8268.539271610356,\n  \"wall_seconds\": 2.087906583,\n  \"end_to_end_fps\": 143.68458935981045,\n  \"tracking_fps\": 298.52404695979084,\n  \"input_duration_ms\": 9966.666666666666,\n  \"final_position\": [\n    3.620053461636342,\n    -2.6272963157111424\n  ],\n  \"final_heading\": 6.177704995564479,\n  \"estimator\": \"accumulated spherical map / pure Rust BOBYQA\",\n  \"error_metric\": \"mean squared binary intensity (0..65025)\",\n  \"warnings\": []\n}\n100 frames \u00b7 0 rejected\n200 frames \u00b7 0 rejected\n300 frames \u00b7 0 rejected\n"
+    }
+  ],
+  "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+  "toolchain": "Rust 1.99.1, release thin LTO, one codegen unit",
+  "cli_sha256": "ecf72795181114b4042f6d190bb4e8a6c172a4992a7457ea60e67ca407f336d1",
+  "required_checks": {
+    "workspace_tests_passed": 331,
+    "ignored": 0,
+    "fmt": "passed",
+    "clippy": "workspace all-targets locked -D warnings passed",
+    "logs": {
+      "workspace-tests.log": "33197a23be6ec8a94c280c16fe894b031197ba6257dceab59dcfb953658e8a02",
+      "workspace-clippy.log": "2abd811d1b58a892d01778ae4371806576f8c2bb67dbf17569a9048ae3ea3f0b"
+    }
+  },
+  "saved_profiles": {
+    "VR1.txt": "667e4961ad11431a95a803da4f4ca851ea712e831767c26fe93bab4998d89392",
+    "VR2.txt": "4c10a4bec0ed6a0f31f6f075f43b0219bbe867e85a52ce4b9b56883ef5c52e11",
+    "VR3.txt": "d704676640c3fc919b2d7bc683af6e077c00cae6316286f077646ddc8f8e4f7f",
+    "VR4.txt": "923601f1d11cf667be4f5e0a2d88a97e39aac98253ed536eaf636674163f63b5"
+  }
+}

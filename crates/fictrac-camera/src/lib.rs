@@ -1,6 +1,8 @@
 //! OS-native capture. The only FFI implementation is isolated in macos.rs.
 use fictrac_core::GrayFrame;
+mod binding;
 mod controls;
+pub use binding::{resolve_camera, validate_hardware_id};
 #[cfg(any(target_os = "linux", test))]
 mod identity;
 #[cfg(any(not(target_os = "macos"), test))]
@@ -20,6 +22,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub struct CameraInfo {
     pub id: u32,
     pub name: String,
+    /// Persistent hardware identity, absent when the backend cannot establish one.
+    pub hardware_id: Option<String>,
+    /// Explicit USB socket binding alternative; identifies the connector, not the camera.
+    pub port_id: Option<String>,
 }
 #[derive(Debug)]
 pub struct CameraFrame {

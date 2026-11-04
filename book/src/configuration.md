@@ -99,6 +99,14 @@ when the floor alone is raised.
 
 ## Transport
 
+The desktop keeps routine source, recording and output-port controls in the main
+inspector. **Advanced settings · change with care** contains the numerical
+FicTrac parameters, exact calibration fields, compatibility fields and transport
+overrides, including `zmq_host` and `zmq_queue_capacity`. Omitted supported
+parameters show their effective defaults without writing them into the file.
+Unset calibration fields remain unset until explicitly edited. Unknown legacy
+fields are preserved for round trips and ignored by the engine with a warning.
+
 | Field | Meaning |
 |---|---|
 | `sock_host`, `sock_port` | UDP destination; nonpositive port disables |
@@ -119,4 +127,91 @@ Ports and external handles reconfigure transactionally. Unchanged healthy publis
 
 With no output path, `config` prints the edited document. Graphical calibration updates coupled values atomically. Numerical edits start a new tracking epoch on the current source image; unchanged input keeps its decoder position and clock continuity. A failed edit leaves state unchanged. Explicit Save writes the chosen file; external conflicts remain visible.
 
-The [attributed upstream parameter table](upstream-parameters.md) is preserved as historical reference. Its defaults and implementation notes describe upstream, so use this chapter and the discovered current schema for HejjéTrac-specific behavior. Strict JSON is supported by the CLI for modern configurations; the desktop canonical editor uses legacy text.
+The [attributed upstream parameter table](upstream-parameters.md) is preserved as historical reference. Its defaults and implementation notes describe upstream, so use this chapter and the discovered current schema for HejjéTrac-specific behavior. The CLI accepts modern JSON configurations; unknown keys at the configuration, sphere and map levels are ignored with warnings. Known values remain strictly typed and validated; duplicate keys, invalid JSON and invalid geometry return errors. The desktop canonical editor uses legacy text. Invalid agent edits retain the active configuration and source; protocol errors return structured responses without terminating the command loop.
+
+## Optional camera binding
+
+Under **Source & camera**, use the link/unlink icon to bind the current camera's
+serial or remove that binding while keeping the live camera. **Save
+configuration** persists the choice. The default is unbound. **Exact camera ID /
+USB socket** expands the manual field: **Link ID** applies it and **Discard
+edit** cancels the draft. A manually supplied ID must be copied in full from the
+inventory, not the display name or current device number.
+
+```text
+src_fn         : 0
+rust_camera_id : usb:0c45:6366:M01:video:0
+sock_port      : 1111
+zmq_port       : 9871
+```
+
+This example is the provisioned M01 identity observed on the development Arducam
+OV9281; every physical rig needs its own camera's identity. For camera sources,
+`rust_camera_id` overrides the volatile numeric selection in `src_fn`. Empty or
+absent means ordinary numeric selection. Video files ignore the camera binding.
+Ports and calibration stay with the rig. A missing or duplicated identity blocks
+only that rig; it never opens another camera or falls back to the sample. Saved
+sibling rig files retain their own bindings; an unsaved clone clears the binding
+so it cannot claim the original rig's camera.
+
+Linux identities combine the USB vendor/product, actual serial descriptor and
+V4L capture-interface index; bus address, USB socket and `/dev/videoN` are excluded.
+Devices without a serial have no binding ID. macOS exposes an AVFoundation ID,
+whose persistence depends on the device/backend; native validation of this new
+binding path is pending. The Windows adapter currently exposes no binding ID and
+retains numeric selection. One camera cannot establish uniqueness for a whole
+batch: inspect all sixteen serials before deployment. Duplicate IDs fail closed.
+
+Before provisioning, two development OV9281s reported the same `UC762` serial.
+Their USB descriptor blocks and UVC extension GUIDs were identical. Standard
+USB, udev and V4L metadata exposed no distinct physical camera identifier for
+those unprovisioned devices. Their connection paths differed.
+**Use this USB socket ID instead** deliberately selects a `usb-port:` binding,
+which remains independent of `/dev/videoN` and the changing USB device address.
+It follows the same connector/controller topology on this computer, accepts any
+camera plugged into that socket, and stops if that socket is missing. It is never
+an automatic substitute for a serial binding. Moving or replacing the hub changes
+the topology and may require an explicit rebind.
+
+For true camera identity across connector changes, Arducam's
+[serial-number tool guide](https://docs.arducam.com/UVC-Camera/Serial-Number-Tool-Guide/)
+lists OV9281 **B0332** as supporting serial-number changes with its USB 2.0 tool.
+The physical board SKU/firmware must be confirmed before using that utility;
+the USB product name alone does not prove support. Verify each assigned serial
+after unplugging and changing ports. HejjéTrac never rewrites camera firmware.
+
+Use `hejjetrac --camera-list`, or the native `--control-stdio` bridge's
+`camera_list` command, to inspect IDs. The same bridge supports atomic `set`
+edits to `rust_camera_id`; an empty string unlinks. Poll native status after
+queued actions before treating them as complete.
+
+## Provisioned serials and live calibration
+
+After provisioning, the four cameras inspected on 2026-11-03 expose distinct
+`M01`–`M04` serials. The saved VR1–VR4 files use those exact serial bindings.
+Their current capture-node order is M04, M02, M03, M01; that order is not a rig
+assignment and may change again. Unlinking keeps the camera currently open,
+updating its numeric selection if USB enumeration changed. Relinking that same
+camera preserves the atlas and tracking epoch. The earlier `UC762` collision
+above describes the devices before the user's firmware provisioning.
+
+While calibrating a live camera, the displayed image and tracking state stay
+still while acquisition continues. Resuming returns to the live feed. Any motion
+during the pause remains unmeasured. The status tooltip exposes preview age and
+capture-clock backlog independently of FPS; those clocks do not establish
+absolute sensor-to-screen latency.
+
+## Recording selection
+
+The desktop Record action offers **Raw video**, **Debug video**, or **Raw + debug
+video**. With no selected video in the saved legacy flags, the interactive default
+is raw. There is no interactive data-only selection. The native bridge rejects
+explicit `record_options` with both booleans false before starting a take; omitted
+options select video automatically. Each take still retains numeric data, all-frame
+quality evidence and its effective configuration. Encoder/storage failures remain
+explicit partial recordings and do not erase numeric evidence.
+
+The advanced legacy `save_raw`/`save_debug` flags still control automatic recording
+on startup; both `n` means do not start automatically. Changing the interactive
+selector does not rewrite these flags. The deterministic headless controller
+retains explicit numeric-only recording for offline workflows.

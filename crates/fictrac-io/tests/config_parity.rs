@@ -6,6 +6,51 @@ fn fixture() -> std::result::Result<ConfigDocument, Box<dyn std::error::Error>> 
     )?)
 }
 #[test]
+fn optional_binding_is_preserved_while_unsaved_rig_clones_are_unbound() -> Result {
+    let mut doc = fixture()?;
+    assert!(doc.camera_binding()?.is_none());
+    doc.set("src_fn", "14")?;
+    doc.set("rust_camera_id", "usb:0c45:6366:UC762:video:0")?;
+    doc.set("sock_port", "1114")?;
+    doc.set("zmq_port", "9874")?;
+    assert_eq!(doc.camera_binding()?, Some("usb:0c45:6366:UC762:video:0"));
+    assert!(
+        !load_config_text(doc.text(), 384, 288)?
+            .warnings
+            .iter()
+            .any(|w| w.contains("rust_camera_id"))
+    );
+    let round_trip = ConfigDocument::parse(doc.text().to_owned())?;
+    assert_eq!(round_trip.camera_binding()?, doc.camera_binding()?);
+    let (next, _) = doc.next_instance(None)?;
+    assert!(next.camera_binding()?.is_none());
+    assert_eq!(next.get("src_fn"), Some("15"));
+    assert_eq!(doc.get("sock_port"), Some("1114"));
+    assert_eq!(doc.get("zmq_port"), Some("9874"));
+    doc.set("rust_camera_id", "")?;
+    assert!(doc.camera_binding()?.is_none());
+    for (key, value) in [
+        ("save_raw", "perhaps"),
+        ("save_debug", "null"),
+        ("rust_camera_width", "NaN"),
+        ("rust_camera_height", "-10"),
+        ("src_fps", "NaN"),
+        ("rust_camera_id", &"x".repeat(513)),
+    ] {
+        let mut invalid = doc.clone();
+        invalid.set(key, value)?;
+        assert!(
+            load_config_text(invalid.text(), 384, 288).is_err(),
+            "accepted invalid {key}"
+        );
+    }
+    let mut unknown = doc.clone();
+    unknown.set("future_option", "{anything: is data}")?;
+    let loaded = load_config_text(unknown.text(), 384, 288)?;
+    assert!(loaded.warnings.iter().any(|w| w.contains("future_option")));
+    Ok(())
+}
+#[test]
 fn document_booleans_agree_with_legacy_projection_and_reference_metadata() -> Result {
     for value in ["y", "Y", "1", "true", "n", "N", "0", "false"] {
         let mut doc = fixture()?;

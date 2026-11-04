@@ -155,6 +155,20 @@ and independently decoded frame counts establish completed-file alignment.
 
 Serial and UDP receive the same accepted-only newline-terminated `FT, ` plus full 25-column row, including the independent sequence counter. Serial defaults to 115200 baud, 8-N-1, no flow control. Output failures remain visible and do not manufacture measurements. Headless summary separates tracked, relocalized, initializing and rejected counts. Native GUI JSONL acknowledgments are queued; inspect actual revision/frame/advance/recording status before reporting completion.
 
+## Live camera pauses
+
+Pausing a live camera holds the displayed image and numerical state while
+continuing to drain acquisition. Discarded paused images are not measurements
+and are not recorded. The next emitted timestamp retains the real source gap.
+An explicit shared-core discontinuity prevents fitting the pre-pause image as
+relative movement: map tracking requires fresh `recovering` confirmation followed
+by a zero-relative-motion `relocalized` row, preserving the atlas, path, heading
+and integrated displacement. Normal relative motion resumes between fresh
+images. The pairwise alternative initializes a fresh reference with zero motion.
+All resumed quality decisions remain in the all-frame numeric/quality output;
+frozen position through the pause is missing motion, not measured standstill.
+Recorded-file pauses retain the decoder position and need no source discontinuity.
+
 ## Simultaneous UDP and ZeroMQ PUB
 
 HejjéTrac can publish the same accepted measurement over UDP and ZeroMQ at the same time. Set the ordinary `sock_host`/`sock_port` for UDP and these additional legacy-text fields for ZeroMQ:

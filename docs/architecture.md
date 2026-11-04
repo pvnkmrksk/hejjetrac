@@ -94,13 +94,33 @@ Both estimates feed the same quaternion and path integrator. Camera physical coo
 
 Rim fitting solves a calibrated angular circle in ray space. Saved `roi_c`/`roi_r` take precedence over historical `roi_circ`, matching legacy behavior. A graphical rim refit updates all three atomically. Square calibration solves a planar homography with FicTrac's unit square/corner ordering and extracts an orthonormal pose. Forward dragging preserves the existing down axis.
 
-Graphical calibration is a thin adapter over shared rim/exclusion/square operations. Calibrate again pauses the source and immediately opens an empty Ball draft, then advances through Exclusions and Lab. Rim drafts preview a fitted outline from three marks and never connect rim points with straight lines; lab-square drafts preview from four corners. Continue validates the complete candidate before committing one undoable layer and opening the next draft. Keep saved skips a layer without changing its fields; cancellation discards the current draft and restores playback from wizard entry. Add this region commits one exclusion polygon and keeps drawing active for the next. Saved-point review and editing remain secondary inspector controls. Diagnostics renders the full input and offers direct layer redraw and complete config access. Saved calibration layers respect Show outline even in diagnostics; an active calibration draft remains visible while editing. A 240-pixel precision loupe magnifies the current view 4× and retains geometry/mark labels. Hit-testing converts through the actual crop/scale back to source coordinates. Preview zoom, full-image display and window size never alter the numerical frame.
+Saved-point drag hit testing uses the primary pointer's press origin, then maps
+subsequent positions to source coordinates. This preserves selection when the
+first delivered movement crosses the mark's hit radius. Editing a ball mark
+refits the shared numerical geometry while retaining the configured FOV.
+
+Graphical calibration is a thin adapter over shared rim/exclusion/square operations. Calibrate again holds the displayed image and numerical state and immediately opens an empty Ball draft, then advances through Exclusions and Lab. Rim drafts preview a fitted outline from three marks and never connect rim points with straight lines; lab-square drafts preview from four corners. Continue validates the complete candidate before committing one undoable layer and opening the next draft. Keep saved skips a layer without changing its fields; cancellation discards the current draft and restores playback from wizard entry. Add this region commits one exclusion polygon and keeps drawing active for the next. Saved-point review and editing remain secondary inspector controls. Diagnostics renders the full input and offers direct layer redraw and complete config access. Saved calibration layers respect Show outline even in diagnostics; an active calibration draft remains visible while editing. A 240-pixel precision loupe magnifies the current view 4× and retains geometry/mark labels. Hit-testing converts through the actual crop/scale back to source coordinates. Preview zoom, full-image display and window size never alter the numerical frame.
 
 Resolution portability is explicit. `resolution_reference` retains ordinary legacy pixel fields and records source dimensions, configured FOV/projection and normalized extension copies. `resolution_apply` validates the reference and regenerates only legacy pixel marks for identical aspect ratio and configured FOV/projection. Angular `roi_c`/`roi_r` and `c2a_r`/`c2a_t` stay exactly as written. Stale marks or incompatible framing fail atomically. Metadata-free legacy files are not silently normalized; optical changes and undocumented camera crops still need physical review/refitting.
 
 Raw configuration text is canonical. Editing one field changes only that field's value, retaining unknown data and unrelated formatting. Graphical edits use the same operation and history. Disk reload occurs only when clean; conflicts remain visible. Corner-only configurations use the same square solver as the GUI and agent frontend. Saved `c2a_r` retains precedence. Pinhole and equidistant fisheye square calibration are tested on XY/YZ/XZ planes with the original unit-square scale.
 
 ## Bounds and failure semantics
+
+During a live-camera pause or calibration draft, acquisition continues draining
+the native driver while the displayed image, tracker and recording remain held.
+Recorded files retain their exact decoder position. Resuming keeps capture
+timestamps and treats the paused interval as missing motion; it does not drain
+pre-pause images through the estimator. Preview age advances from a monotonic
+clock even when a worker stops publishing. Camera lag is relative to the fastest
+observed delivery, not an absolute sensor-to-display measurement.
+The native status bridge exposes both separately from FPS.
+
+Opened cameras retain their verified hardware/socket identity and numeric device
+ID. Link/unlink changes on that same physical stream preserve the numerical
+epoch and atlas. Unlink adopts the opened device number so an obsolete saved
+ordinal cannot switch the user's camera. Different devices still reopen and
+require their own calibration.
 
 Core/I/O/GUI forbid unsafe and deny panic/unwrap/expect/todo paths. Native capture validates dimensions, stride and buffer lengths. Configuration validates finite values and bounds before mutation. Images are capped at 32 million pixels and 8192 per axis; camera copies at 8 million pixels; configs at 1 MB. Calibration supports at most 4096 rim points and 64 polygons of 256 vertices. The pairwise sampler caps sites per level; map quality and optimization budgets are bounded.
 

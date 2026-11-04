@@ -40,6 +40,8 @@ const COMMANDS: &[&str] = &[
     "record_start",
     "view",
     "camera_status",
+    "camera_list",
+    "start_array",
     "camera_set",
     "camera_format",
     "record_stop",
@@ -193,6 +195,15 @@ fn read_request(reader: &mut impl BufRead) -> Result<Option<Request>> {
 fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
     fictrac_control::validate_request_arguments(&r.command, &r.args)?;
     match r.command.as_str() {
+        "camera_list" => {
+            let cameras = fictrac_camera::list_cameras().map_err(display)?;
+            let result = json!(cameras.iter().map(|camera| json!({"id":camera.id,"name":camera.name,"hardware_id":camera.hardware_id,"port_id":camera.port_id,
+                "hardware_id_ambiguous":camera.hardware_id.as_ref().is_some_and(|id| cameras.iter().filter(|c| c.hardware_id.as_ref() == Some(id)).count()>1)})).collect::<Vec<_>>());
+            for session in &mut app.sessions {
+                session.cameras = cameras.clone();
+            }
+            return Ok(result);
+        }
         "discover" | "schema" => {
             let mut schema = fictrac_control::request_schema();
             if let Some(variants) = schema.get_mut("oneOf").and_then(Value::as_array_mut) {
@@ -201,11 +212,21 @@ fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
                         .as_str()
                         .is_some_and(|s| COMMANDS.contains(&s))
                 });
+                for variant in variants {
+                    if variant["properties"]["command"]["const"] == "record_start" {
+                        variant["properties"]["args"]["properties"]["record_options"]["anyOf"] = json!([
+                            {"properties":{"raw":{"const":true}}},
+                            {"properties":{"debug":{"const":true}}}
+                        ]);
+                    }
+                }
             }
             return Ok(
                 json!({"protocol_version":1,"transport":"native-gui-jsonl","commands":COMMANDS,
                 "execution":"GUI-thread config edits are immediate. Worker commands return queued:true. Poll status until frames/revision/paused/recording/notice confirm the requested change; queued is not completion. Each native session closes independently, including the first window. discard:true discards only the selected session's unsaved edits. The application exits after the last session closes.",
-                "request_schema":schema,"snapshot":"computed diagnostic images, not an operating-system screenshot"}),
+                "request_schema":schema,"snapshot":"computed diagnostic images, not an operating-system screenshot",
+                "camera_binding":{"field":"rust_camera_id","default":null,"edit":"set fields.rust_camera_id to the exact hardware ID from camera_list; empty unlinks","missing_or_duplicate":"rig does not start; never substitutes another camera or sample"},
+                "interactive_recording":"raw, debug or both; explicit empty selection is rejected; default raw"}),
             );
         }
         "sessions" => {
@@ -270,6 +291,12 @@ fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
         .iter()
         .position(|s| s.id == id && !s.closed)
         .ok_or_else(|| format!("unknown native session {id}"))?;
+    if r.command == "start_array" {
+        app.start_saved_array(index);
+        return Ok(
+            json!({"queued":true,"sessions":app.sessions.iter_mut().filter(|s| !s.closed).map(status).collect::<Vec<_>>(),"completion":"Poll sessions: each rig reports its own launch_state, error and frame progress. Failed rigs never substitute a stock video."}),
+        );
+    }
     if r.command == "new_instance" {
         let before = app.sessions.len();
         app.spawn_from(index);
@@ -309,12 +336,32 @@ fn status(s: &mut Session) -> Value {
         "record_options":s.snapshot.record_options,"camera":s.snapshot.camera,"outputs":s.snapshot.outputs,
         "processing_ms":s.snapshot.processing_ms,"tracking_ms":s.snapshot.tracking_ms,"tracking_samples":s.snapshot.tracking_samples,"actual_fps":s.snapshot.actual_fps,"source_fps":s.snapshot.source_fps,"headroom_percent":s.snapshot.headroom_percent,
         "view":view,"source_label":s.snapshot.source_label,"resources":s.snapshot.resources});
+    state["camera_devices"] = json!(
+        s.cameras
+            .iter()
+            .map(
+                |camera| json!({"id":camera.id,"name":camera.name,"hardware_id":camera.hardware_id,"port_id":camera.port_id})
+            )
+            .collect::<Vec<_>>()
+    );
+    state["camera_binding"] = json!(s.document().ok().and_then(|doc| {
+        doc.get("rust_camera_id")
+            .filter(|v| !v.is_empty())
+            .map(str::to_owned)
+    }));
+    state["running_camera_binding"] = json!(s.running_camera_binding);
+    state["launch_state"] = json!(s.launch_state());
+    state["sample_fallback_active"] = json!(s.sample_fallback_active);
     state["window_max_inner_size"] = json!([s.max_window_inner_size.x, s.max_window_inner_size.y]);
     state["recording_encoding"] = json!(s.recording_encoding);
     state["media_recording"] = json!(s.snapshot.media_recording);
     state["recording_finalizations"] = json!(s.snapshot.recording_finalizations);
     state["media_warnings"] = json!(s.snapshot.media_warnings);
     state["preview_fps"] = json!(s.snapshot.preview_fps);
+    state["preview_age_ms"] = json!(s.snapshot.preview_age_ms);
+    state["camera_lag_ms"] = json!(s.snapshot.camera_lag_ms);
+    state["actual_camera_id"] = json!(s.snapshot.actual_camera_id);
+    state["path_points"] = json!(s.snapshot.path.len());
     state["preview_target_fps"] = json!(s.snapshot.display_fps);
     let calibration_layers = [
         ("ball", crate::session::Tool::Rim),
@@ -323,7 +370,7 @@ fn status(s: &mut Session) -> Value {
     ].map(|(step, tool)| json!({"step":step,"saved":s.saved_layer_available(tool),"saved_marks":s.saved_mark_count_for(tool),"summary":s.saved_calibration_summary_for(tool)}));
     state["calibration_summary"] = json!({
         "visual_check_required": true,
-        "configuration_valid": s.core_config().is_ok(),
+        "configuration_valid": s.document().is_ok() && s.core_config().is_ok(),
         "source_dimensions": s.snapshot.image.as_ref().map(|image| [image.width, image.height]),
         "layers": calibration_layers
     });
@@ -504,6 +551,11 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             }
             let tuning = fictrac_control::recording_tuning(a)?;
             if let Some(options) = fictrac_control::record_options(a)? {
+                if !options.raw && !options.debug {
+                    return Err(
+                        "Choose raw video, debug video, or both before starting a recording".into(),
+                    );
+                }
                 let mut result = send(s, Command::RecordOptions(path, options, tuning))?;
                 s.record_raw = options.raw;
                 s.record_debug = options.debug;
@@ -515,7 +567,8 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
                 result["requested_recording_tuning"] = json!({"encoding": tuning.encoding});
                 Ok(result)
             } else if a.get("recording_tuning").is_some() {
-                let options = fictrac_control::RecordOptions::from_document(&s.document()?);
+                let options =
+                    fictrac_control::RecordOptions::from_document(&s.document()?).with_video();
                 let mut result = send(s, Command::RecordOptions(path, options, tuning))?;
                 s.record_raw = options.raw;
                 s.record_debug = options.debug;
@@ -951,6 +1004,91 @@ fn display(error: impl std::fmt::Display) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn saved_array_keeps_broken_slots_visible_while_real_video_peers_run() -> TestResult {
+        use clap::Parser;
+        let directory = temp()?;
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut document = ConfigDocument::parse(fs::read_to_string(
+            root.join("examples/upstream-config.txt"),
+        )?)?;
+        for (key, value) in [
+            (
+                "src_fn",
+                root.join("examples/sample.mp4")
+                    .to_string_lossy()
+                    .into_owned(),
+            ),
+            ("save_raw", "n".into()),
+            ("save_debug", "n".into()),
+            ("sock_port", "0".into()),
+            ("zmq_port", "0".into()),
+        ] {
+            document.set(key, &value)?;
+        }
+        fs::write(directory.join("VR1.txt"), "malformed first rig\n")?;
+        for i in [2, 4] {
+            fs::write(directory.join(format!("VR{i}.txt")), document.text())?;
+        }
+        let mut missing = document.clone();
+        missing.set("src_fn", "99999")?;
+        missing.set("rust_camera_id", "usb:ffff:ffff:missing:video:0")?;
+        fs::write(directory.join("VR3.txt"), missing.text())?;
+        let first = Session::from_config_path(1, directory.join("VR1.txt"))?;
+        let mut app = Desktop {
+            sessions: vec![first],
+            next_id: 2,
+            args: crate::Args::try_parse_from(["hejjetrac", "--array"])?,
+            start: std::time::Instant::now(),
+            requested_screenshot: false,
+            last_state: std::time::Instant::now(),
+            control: None,
+            tile_columns: 2,
+            window_origin: crate::Pair(12., 36.),
+            window_size: crate::Pair(520., 480.),
+            root_hidden: false,
+            startup_notice: String::new(),
+            startup_frames: 0,
+            tile_array_requested: false,
+        };
+        app.start_saved_array(0);
+        assert_eq!(app.sessions.len(), 4);
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
+        loop {
+            for s in &mut app.sessions {
+                s.update();
+            }
+            if [1, 3].iter().all(|&i| app.sessions[i].snapshot.frames >= 3) {
+                break;
+            }
+            if std::time::Instant::now() > deadline {
+                return Err("healthy array peers did not process the real sample".into());
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        for i in [0, 2] {
+            assert_eq!(app.sessions[i].launch_state(), "Did not start");
+            assert!(app.sessions[i].worker.is_none());
+            assert!(!app.sessions[i].error.is_empty());
+        }
+        for i in [1, 3] {
+            assert!(app.sessions[i].snapshot.row.is_some());
+            assert!(app.sessions[i].error.is_empty());
+        }
+        for s in &app.sessions {
+            assert!(!s.sample_fallback_active);
+            assert!(s.startup_fallback.is_none());
+        }
+        assert_eq!(
+            fs::read_to_string(directory.join("VR1.txt"))?,
+            "malformed first rig\n"
+        );
+        for s in &mut app.sessions {
+            s.worker = None;
+        }
+        fs::remove_dir_all(directory)?;
+        Ok(())
+    }
     use std::{
         io::Cursor,
         sync::{
@@ -1111,6 +1249,7 @@ mod tests {
             root_hidden: false,
             startup_notice: String::new(),
             startup_frames: 0,
+            tile_array_requested: false,
         };
         let request =
             serde_json::from_value(json!({"id":"root-close","command":"close","session":1}))?;
@@ -1517,12 +1656,27 @@ mod tests {
             assert_eq!(status(&mut s)["view"], previous_view);
         }
         let directory = temp()?.join("record");
+        assert!(
+            execute_session(
+                &mut s,
+                "record_start",
+                &json!({
+                    "directory":directory,"record_options":{"raw":false,"debug":false}
+                })
+            )
+            .is_err()
+        );
+        assert!(!directory.exists());
+        assert!(!s.snapshot.recording);
+        assert_eq!(s.history.text, before);
+        assert_eq!(s.revision, revision);
+        assert_eq!(s.snapshot.frames, paused_frames);
         let record = execute_session(
             &mut s,
             "record_start",
-            &json!({"directory":directory,"record_options":{"raw":true,"debug":false},"recording_tuning":{"encoding":"raw"}}),
+            &json!({"directory":directory,"recording_tuning":{"encoding":"raw"}}),
         )?;
-        assert_eq!(record["requested_record_options"]["raw"], true);
+        assert_eq!(record["requested_recording_tuning"]["encoding"], "raw");
         wait(&mut s, |snapshot| {
             snapshot.recording
                 && snapshot.record_options

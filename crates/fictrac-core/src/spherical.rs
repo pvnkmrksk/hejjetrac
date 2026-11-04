@@ -59,6 +59,7 @@ pub(crate) struct MapTracker {
     temporal_map: Vec<u8>,
     temporal_valid: bool,
     prepared_temporal: Option<TemporalEvidence>,
+    reanchoring: bool,
     recovery: crate::resilience::Recovery,
     pub views: Option<DebugViews>,
 }
@@ -144,11 +145,25 @@ impl MapTracker {
             temporal_map,
             temporal_valid: false,
             prepared_temporal: None,
+            reanchoring: false,
             recovery: crate::resilience::Recovery::default(),
             views: None,
         })
     }
+    pub fn mark_source_discontinuity(&mut self) {
+        self.guess = DVec3::ZERO;
+        self.temporal_valid = false;
+        self.prepared_temporal = None;
+        if self.ready {
+            self.reanchoring = true;
+            self.recovery.reject();
+        }
+    }
+    pub fn is_reanchoring(&self) -> bool {
+        self.reanchoring
+    }
     pub fn reset(&mut self) {
+        self.reanchoring = false;
         self.temporal_valid = false;
         self.prepared_temporal = None;
         if !self.settings.global_search {
@@ -174,6 +189,7 @@ impl MapTracker {
             )));
         }
         self.template = template.pixels;
+        self.reanchoring = false;
         self.temporal_valid = false;
         self.prepared_temporal = None;
         self.sampler.map.clone_from(&self.template);
@@ -253,7 +269,7 @@ impl MapTracker {
         let white = roi.iter().filter(|v| **v == 255).count();
         if black < 8 || white < 8 {
             self.guess = DVec3::ZERO;
-            if self.settings.resilient && self.ready {
+            if (self.settings.resilient || self.reanchoring) && self.ready {
                 self.recovery.reject();
             }
             return failure(65025.0);
@@ -300,7 +316,7 @@ impl MapTracker {
             return failure(objective.cost(orientation, 1));
         }
         let extended_interval = matches!(prediction, CapturePrediction::Extended);
-        if self.settings.resilient && self.recovery.lost_frames > 0 {
+        if self.reanchoring || (self.settings.resilient && self.recovery.lost_frames > 0) {
             let (pose, error) = self.recovery.reacquire(
                 &objective,
                 orientation,
@@ -509,13 +525,18 @@ impl MapTracker {
     }
     pub fn commit(&mut self, frame: &GrayFrame, row: &TrackRow, legacy: bool) {
         self.temporal_valid = false;
-        let learning = if !row.accepted {
+        let mut learning = if !row.accepted {
             LearningPolicy::Frozen
         } else if self.settings.resilient {
             self.recovery.learning_policy(row.status)
         } else {
             LearningPolicy::Full
         };
+        if self.reanchoring {
+            // Fresh confirmation can anchor pose but never teach the atlas or
+            // reconstruct displacement through deliberately discarded images.
+            learning = LearningPolicy::Frozen;
+        }
         if row.accepted {
             let absolute = DQuat::from_scaled_axis(DVec3::from_array(row.absolute_camera));
             self.orientation = if legacy {
@@ -567,6 +588,9 @@ impl MapTracker {
         } else {
             self.sampler.update(frame, Some(row))
         });
+        if self.reanchoring && row.accepted && row.status == "relocalized" {
+            self.reanchoring = false;
+        }
     }
 }
 fn acceptable(error: f64, threshold: f64) -> bool {

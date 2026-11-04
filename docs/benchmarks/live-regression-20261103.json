@@ -1,0 +1,618 @@
+{
+  "passed": true,
+  "date": "2026-11-03",
+  "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+  "rustc_verbose": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.1\nLLVM version: 23.1.1",
+  "cpu": "Intel(R) Core(TM) i7-6700K CPU @ 4.00GHz",
+  "build_profile": {
+    "profile": "release",
+    "lto": "thin",
+    "codegen_units": 1,
+    "locked": true
+  },
+  "source_commit": "c1c2ed2b8479afa26a6037f3b320cb58fc6651c3",
+  "source_state": "working tree; existing edits preserved; no rollback or installed application replacement",
+  "application_source_sha256": {
+    "apps/fictrac-desktop/src/array.rs": "ef362618cc6722691907cce30aefd33cee82fb5c43f31a4865f967ce1b646462",
+    "apps/fictrac-desktop/src/calibration.rs": "c2abfb81f94e65f4db1529a2952b5fffc87f42cd475238bb12a24af27e5e11cf",
+    "apps/fictrac-desktop/src/control.rs": "47c6add6ec1b85fca9da91d01ed57221a3030a8c3989685788aa2cc9a73f3af7",
+    "apps/fictrac-desktop/src/graphics.rs": "00f27250a124a0a5830454f154e45a23d20b4d3cac66989159f25812cf7716ef",
+    "apps/fictrac-desktop/src/icons.rs": "94fca8f61c4f26aaa0c0229fa760c14af453d54b011de59d8b2b2e104d5404c6",
+    "apps/fictrac-desktop/src/launch.rs": "c6263a2bd54dad772c63a25ce5ceeab69d85ad7cf7cedaeacaa4b9d8ebb4413c",
+    "apps/fictrac-desktop/src/main.rs": "f610c96449869a9413367e957cdef0ef8bb879706793297e762de3a8fbee7656",
+    "apps/fictrac-desktop/src/runtime.rs": "523828242ead766586fe0be95ceabed27edd157d70f71e704256e7f0e1ce41dd",
+    "apps/fictrac-desktop/src/session.rs": "802d41bb2d5f8dca4642f63771585bb06a3448357bef6410a357658d30c81e5c",
+    "apps/fictrac-desktop/src/startup.rs": "c62c6b1a2fbb88966328f8564f75921ebf74c313d31c3a501e617c2a0c92e867",
+    "apps/fictrac-desktop/src/ui.rs": "716a3458a85a2016736ddf94c1fa395c95346edd688485c088bb8e06861d8bb0",
+    "crates/fictrac-camera/src/binding.rs": "60cfcb13187ffd91b0e742d2f2c1556c55dacd1cbcb114d66bc34a5eacc7ae4d",
+    "crates/fictrac-camera/src/clock.rs": "cf1f31a00eee3f660fce14ad4c70aac3eb5a23265b2a750b52120ae09e03d8d4",
+    "crates/fictrac-camera/src/controls.rs": "5563d4458e306c182a249333fb47afab89e322e0d93e6d8d7bc50c6e498605e6",
+    "crates/fictrac-camera/src/identity.rs": "a133ce26300a316da57550eed369671e2be6a26065a7dff5dd9349f21afe3f48",
+    "crates/fictrac-camera/src/jpeg.rs": "d7163dacc355581991295c779e40e2e013d01377a0eff3582eb5a29d17fb7a1c",
+    "crates/fictrac-camera/src/lib.rs": "1175df74608ecdfef6a40175f6b49742810c0464be3731c3d029e91123e99494",
+    "crates/fictrac-camera/src/macos.rs": "f05849bce727883e1d5da6a99c0a024df7b426bb98c71e408a5e6b26d2ce51bf",
+    "crates/fictrac-camera/src/native.rs": "46602215f5b4313007a129590360a741181f694eb8ef7a169d78aebc3ea04484",
+    "crates/fictrac-camera/src/packed.rs": "2aea771f49636d862addf79db5f165f3986f1432010b1b551f32bf63eaf5997f",
+    "crates/fictrac-camera/src/selection.rs": "b4f09522240eaefd7214b18c2399c4b631888f021658f9ba9ba73138c7e00c95",
+    "crates/fictrac-core/src/calibration.rs": "6c81097ec61c9b620b3918eb4492f541a6f0b531837260e473b97550f9350e82",
+    "crates/fictrac-core/src/config.rs": "751a6ab8da1e8f9800a2fec6f0da88691f701bb18f1394243c842e4f2ae3adbc",
+    "crates/fictrac-core/src/diagnostics.rs": "7ab3d9ca2d65ff90b1450241d667330349bf356e51c5531c215fcff61c15668f",
+    "crates/fictrac-core/src/frame.rs": "a4ca945eb614424f564bbc24e410f27b0116fb24ce487f919c88437b722abc02",
+    "crates/fictrac-core/src/geometry.rs": "d0a67a1d3e3e0253d0d8b8298bfd06caad47a4000ec1511a63d40126d803c36d",
+    "crates/fictrac-core/src/lib.rs": "81b6b8884c6dce9b55469145149f3945a1fae6ed487103760cd894f4d4146580",
+    "crates/fictrac-core/src/resilience.rs": "734d7bf65796e75d68c0cd1fcabae2c5070398652afc0fb3ac6928fdd6336b66",
+    "crates/fictrac-core/src/spherical.rs": "62b862ac4ff272fb6e6d96570cddcbf10c31798bff7d7f0e2f89b3565ac5eee0",
+    "crates/fictrac-core/src/synthetic.rs": "3cc9b84434d5360bb0dc06c74d5f24b0c488f326f3cd1b25867aa19dc8b0da05",
+    "crates/fictrac-core/src/tracker.rs": "15ead39d1329dc130ac4d969c7fd0750b7ae3852c598266d74c906bca3de503a"
+  },
+  "desktop_binary_sha256": "3dfff82dbc6a48e760ec5b561d4a9b95c919f377be570d904dd508afd8efbc58",
+  "cli_binary_sha256": "9ef3a781bf8b7f5ce7586e4f87aa5d1df35861016ebed0cdb599b9b0e14d4a12",
+  "branch_audit": {
+    "scope": "available local and cached remote refs; no remote fetch",
+    "refs": [
+      {
+        "ref": "codex/raw-video-robustness",
+        "main_only_commits": 7,
+        "ref_only_commits": 0,
+        "tracking_capture_diff_files": [
+          "apps/fictrac-desktop/src/runtime.rs"
+        ]
+      },
+      {
+        "ref": "codex/robust-multicamera",
+        "main_only_commits": 24,
+        "ref_only_commits": 0,
+        "tracking_capture_diff_files": [
+          "apps/fictrac-desktop/src/runtime.rs",
+          "crates/fictrac-camera/src/lib.rs",
+          "crates/fictrac-camera/src/native.rs",
+          "crates/fictrac-camera/src/packed.rs",
+          "crates/fictrac-core/src/config.rs",
+          "crates/fictrac-core/src/diagnostics.rs",
+          "crates/fictrac-core/src/lib.rs",
+          "crates/fictrac-core/src/resilience.rs",
+          "crates/fictrac-core/src/spherical.rs",
+          "crates/fictrac-core/src/tracker.rs",
+          "crates/fictrac-core/tests/partial_occlusion.rs",
+          "crates/fictrac-core/tests/recovery.rs",
+          "crates/fictrac-core/tests/support/occlusion.rs"
+        ]
+      },
+      {
+        "ref": "main",
+        "main_only_commits": 0,
+        "ref_only_commits": 0,
+        "tracking_capture_diff_files": []
+      },
+      {
+        "ref": "origin/codex/linux-graphics-fallback",
+        "main_only_commits": 12,
+        "ref_only_commits": 0,
+        "tracking_capture_diff_files": [
+          "apps/fictrac-desktop/src/runtime.rs",
+          "crates/fictrac-core/src/config.rs",
+          "crates/fictrac-core/src/diagnostics.rs",
+          "crates/fictrac-core/src/lib.rs",
+          "crates/fictrac-core/src/resilience.rs",
+          "crates/fictrac-core/src/spherical.rs",
+          "crates/fictrac-core/src/tracker.rs",
+          "crates/fictrac-core/tests/partial_occlusion.rs",
+          "crates/fictrac-core/tests/recovery.rs",
+          "crates/fictrac-core/tests/support/occlusion.rs"
+        ]
+      },
+      {
+        "ref": "origin/codex/matrex-legacy-output",
+        "main_only_commits": 50,
+        "ref_only_commits": 0,
+        "tracking_capture_diff_files": [
+          "apps/fictrac-desktop/src/runtime.rs",
+          "crates/fictrac-camera/Cargo.toml",
+          "crates/fictrac-camera/examples/camera_probe.rs",
+          "crates/fictrac-camera/src/clock.rs",
+          "crates/fictrac-camera/src/jpeg.rs",
+          "crates/fictrac-camera/src/lib.rs",
+          "crates/fictrac-camera/src/native.rs",
+          "crates/fictrac-camera/src/packed.rs",
+          "crates/fictrac-camera/src/selection.rs",
+          "crates/fictrac-core/src/config.rs",
+          "crates/fictrac-core/src/diagnostics.rs",
+          "crates/fictrac-core/src/lib.rs",
+          "crates/fictrac-core/src/resilience.rs",
+          "crates/fictrac-core/src/spherical.rs",
+          "crates/fictrac-core/src/tracker.rs",
+          "crates/fictrac-core/tests/partial_occlusion.rs",
+          "crates/fictrac-core/tests/recovery.rs",
+          "crates/fictrac-core/tests/support/occlusion.rs"
+        ]
+      },
+      {
+        "ref": "origin/codex/ubuntu22-compat-ci",
+        "main_only_commits": 47,
+        "ref_only_commits": 0,
+        "tracking_capture_diff_files": [
+          "apps/fictrac-desktop/src/runtime.rs",
+          "crates/fictrac-camera/examples/camera_probe.rs",
+          "crates/fictrac-camera/src/clock.rs",
+          "crates/fictrac-camera/src/lib.rs",
+          "crates/fictrac-camera/src/native.rs",
+          "crates/fictrac-camera/src/packed.rs",
+          "crates/fictrac-core/src/config.rs",
+          "crates/fictrac-core/src/diagnostics.rs",
+          "crates/fictrac-core/src/lib.rs",
+          "crates/fictrac-core/src/resilience.rs",
+          "crates/fictrac-core/src/spherical.rs",
+          "crates/fictrac-core/src/tracker.rs",
+          "crates/fictrac-core/tests/partial_occlusion.rs",
+          "crates/fictrac-core/tests/recovery.rs",
+          "crates/fictrac-core/tests/support/occlusion.rs"
+        ]
+      },
+      {
+        "ref": "origin/main",
+        "main_only_commits": 0,
+        "ref_only_commits": 0,
+        "tracking_capture_diff_files": []
+      }
+    ],
+    "all_refs_are_ancestors_of_main": true,
+    "last_numerical_change_before_this_fix": "bd7d699",
+    "guided_calibration_change": "3598c73",
+    "old_pause_branch_origin": "81c9240",
+    "serial_binding_feature_was_uncommitted": true
+  },
+  "reproduced_failure": {
+    "report": "runs/live-four-before/report.json",
+    "paused_wall_seconds": 3.041,
+    "first_resumed_source_advance_ms": 12,
+    "explanation": "paused camera worker stopped reading driver frames; first resume consumed an old queued image"
+  },
+  "fixes": [
+    "drain live acquisition while paused without teaching or recording discarded images",
+    "explicit shared-core source discontinuity preserves atlas/path and requires zero-relative-motion reanchoring",
+    "retain identity verified at camera open; strict missing/duplicate handling",
+    "unlink adopts actual opened camera ID and metadata-only same-camera rebind retains engine epoch",
+    "serial labels and link/unlink controls; no numeric fallback highlight for unresolved binding",
+    "monotonic preview age and fastest-observed-delivery backlog are separate from FPS"
+  ],
+  "checks": {
+    "format": "passed",
+    "clippy": "workspace all-targets locked -D warnings passed",
+    "workspace_tests": {
+      "passed": 330,
+      "failed": 0,
+      "ignored": 0
+    },
+    "logs": "runs/live-four-final-stress-20261103"
+  },
+  "numerical": {
+    "report": "docs/benchmarks/tracking-regression-20261103-final.json",
+    "report_sha256": "5dcca764baec2e6d11dee483bf7f65219a05c65733475d6b9e4b23cf9b1b4717",
+    "passed": true,
+    "fast47_complete_and_gap_byte_identical_to_pre_binding": true
+  },
+  "live": {
+    "report": "runs/live-four-final-stress-20261103/report.json",
+    "format": "four independent 320x240, 100 FPS requests; no exposure/gain or firmware changes",
+    "inventory": {
+      "M04": {
+        "id": 0,
+        "path": "/dev/video0",
+        "serial": "M04",
+        "hardware_id": "usb:0c45:6366:M04:video:0",
+        "sysfs_path": "/sys/devices/pci0000:00/0000:00:14.0/usb1/1-4/1-4.1/1-4.1.4/1-4.1.4:1.0/video4linux/video0"
+      },
+      "M02": {
+        "id": 2,
+        "path": "/dev/video2",
+        "serial": "M02",
+        "hardware_id": "usb:0c45:6366:M02:video:0",
+        "sysfs_path": "/sys/devices/pci0000:00/0000:00:14.0/usb1/1-4/1-4.1/1-4.1.2/1-4.1.2:1.0/video4linux/video2"
+      },
+      "M03": {
+        "id": 4,
+        "path": "/dev/video4",
+        "serial": "M03",
+        "hardware_id": "usb:0c45:6366:M03:video:0",
+        "sysfs_path": "/sys/devices/pci0000:00/0000:00:14.0/usb1/1-4/1-4.1/1-4.1.3/1-4.1.3:1.0/video4linux/video4"
+      },
+      "M01": {
+        "id": 6,
+        "path": "/dev/video6",
+        "serial": "M01",
+        "hardware_id": "usb:0c45:6366:M01:video:0",
+        "sysfs_path": "/sys/devices/pci0000:00/0000:00:14.0/usb1/1-4/1-4.1/1-4.1.1/1-4.1.1:1.0/video4linux/video6"
+      }
+    },
+    "native_inventory": [
+      {
+        "hardware_id": "usb:0c45:6366:M04:video:0",
+        "hardware_id_ambiguous": false,
+        "id": 0,
+        "name": "Arducam OV9281 USB Camera: Ardu",
+        "port_id": "usb-port:0000:00:14.0:4.1.4:video:0"
+      },
+      {
+        "hardware_id": "usb:0c45:6366:M02:video:0",
+        "hardware_id_ambiguous": false,
+        "id": 2,
+        "name": "Arducam OV9281 USB Camera: Ardu",
+        "port_id": "usb-port:0000:00:14.0:4.1.2:video:0"
+      },
+      {
+        "hardware_id": "usb:0c45:6366:M03:video:0",
+        "hardware_id_ambiguous": false,
+        "id": 4,
+        "name": "Arducam OV9281 USB Camera: Ardu",
+        "port_id": "usb-port:0000:00:14.0:4.1.3:video:0"
+      },
+      {
+        "hardware_id": "usb:0c45:6366:M01:video:0",
+        "hardware_id_ambiguous": false,
+        "id": 6,
+        "name": "Arducam OV9281 USB Camera: Ardu",
+        "port_id": "usb-port:0000:00:14.0:4.1.1:video:0"
+      }
+    ],
+    "observations": {
+      "before_calibration": {
+        "elapsed_seconds": 180.02038553000057,
+        "progress": [
+          {
+            "session": 1,
+            "serial": "M01",
+            "frames": 18170,
+            "processed_fps": 100.93301348347548,
+            "source_seconds": 180.04543998900002,
+            "source_to_wall_ratio": 1.0001391756768305
+          },
+          {
+            "session": 2,
+            "serial": "M02",
+            "frames": 18165,
+            "processed_fps": 100.90523885125657,
+            "source_seconds": 180.00148299399999,
+            "source_to_wall_ratio": 0.9998949978029159
+          },
+          {
+            "session": 3,
+            "serial": "M03",
+            "frames": 18167,
+            "processed_fps": 100.91634870414413,
+            "source_seconds": 180.01744401299996,
+            "source_to_wall_ratio": 0.9999836600894285
+          },
+          {
+            "session": 4,
+            "serial": "M04",
+            "frames": 18164,
+            "processed_fps": 100.89968392481279,
+            "source_seconds": 179.98947299800002,
+            "source_to_wall_ratio": 0.999828283158546
+          }
+        ],
+        "process_initial": {
+          "rss_kib": 123264,
+          "threads": 14,
+          "open_fds": 19
+        },
+        "process_final": {
+          "rss_kib": 135084,
+          "threads": 14,
+          "open_fds": 19
+        },
+        "peak_rss_kib": 135084
+      },
+      "after_calibration": {
+        "elapsed_seconds": 180.01554009900065,
+        "progress": [
+          {
+            "session": 1,
+            "serial": "M01",
+            "frames": 18168,
+            "processed_fps": 100.92462011895417,
+            "source_seconds": 180.02531499800003,
+            "source_to_wall_ratio": 1.0000543003064848
+          },
+          {
+            "session": 2,
+            "serial": "M02",
+            "frames": 18166,
+            "processed_fps": 100.9135099670256,
+            "source_seconds": 180.00532999799998,
+            "source_to_wall_ratio": 0.9999432821133384
+          },
+          {
+            "session": 3,
+            "serial": "M03",
+            "frames": 18167,
+            "processed_fps": 100.91906504298989,
+            "source_seconds": 180.01331800900005,
+            "source_to_wall_ratio": 0.9999876561212472
+          },
+          {
+            "session": 4,
+            "serial": "M04",
+            "frames": 18166,
+            "processed_fps": 100.9135099670256,
+            "source_seconds": 180.009318017,
+            "source_to_wall_ratio": 0.9999654358618304
+          }
+        ],
+        "process_initial": {
+          "rss_kib": 136472,
+          "threads": 14,
+          "open_fds": 19
+        },
+        "process_final": {
+          "rss_kib": 136900,
+          "threads": 14,
+          "open_fds": 19
+        },
+        "peak_rss_kib": 136920
+      },
+      "recording": {
+        "elapsed_seconds": 3.006109146000199,
+        "progress": [
+          {
+            "session": 1,
+            "serial": "M01",
+            "frames": 300,
+            "processed_fps": 99.79677564241713,
+            "source_seconds": 2.97202301,
+            "source_to_wall_ratio": 0.9886610451102374
+          },
+          {
+            "session": 2,
+            "serial": "M02",
+            "frames": 303,
+            "processed_fps": 100.79474339884129,
+            "source_seconds": 3.0040160059999996,
+            "source_to_wall_ratio": 0.9993037045900398
+          },
+          {
+            "session": 3,
+            "serial": "M03",
+            "frames": 306,
+            "processed_fps": 101.79271115526547,
+            "source_seconds": 3.0320250100000012,
+            "source_to_wall_ratio": 1.008621065550559
+          },
+          {
+            "session": 4,
+            "serial": "M04",
+            "frames": 304,
+            "processed_fps": 101.12739931764935,
+            "source_seconds": 3.0120140039999996,
+            "source_to_wall_ratio": 1.0019642859633549
+          }
+        ],
+        "process_initial": {
+          "rss_kib": 141132,
+          "threads": 18,
+          "open_fds": 39
+        },
+        "process_final": {
+          "rss_kib": 141132,
+          "threads": 18,
+          "open_fds": 39
+        },
+        "peak_rss_kib": 141132
+      }
+    },
+    "command_latency_seconds": {
+      "count": 927,
+      "p50": 0.01685917199938558,
+      "p95": 0.02304980999997497,
+      "maximum": 0.054060884000136866,
+      "limit": 1
+    },
+    "max_sampled_preview_age_ms": 48.855805000000004,
+    "max_sampled_relative_capture_backlog_ms": 7.029901,
+    "max_sampled_source_clock_lag_growth_ms": 38.5345469998839,
+    "max_sampled_path_points": 19999,
+    "sampled_quality_statuses": {
+      "tracked": 2820
+    },
+    "binding_roundtrip_actual_ids": {
+      "1": 6,
+      "2": 2,
+      "3": 4,
+      "4": 0
+    },
+    "final_process_resources": {
+      "rss_kib": 143024,
+      "threads": 14,
+      "open_fds": 19
+    },
+    "takes": [
+      {
+        "directory": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/take-VR1",
+        "rows": 320,
+        "accepted_rows": 320,
+        "quality_statuses": {
+          "tracked": 320
+        },
+        "first_timestamp_ms": 4053.765614,
+        "last_timestamp_ms": 7213.789608,
+        "observed_nonzero_rotation_rows": 320,
+        "rotation_delta_rad_p50": 0.0010821252268448608,
+        "rotation_delta_rad_p95": 0.0025120220064088353,
+        "rotation_delta_rad_max": 0.003982456028836218,
+        "raw_video_sha256": "958f555807559850e75f5505ed8dde62dd54dbc23a0e41584634f2c3023b649a",
+        "rust_decoder": "{\n  \"width\": 320,\n  \"height\": 240,\n  \"fps\": 100.0,\n  \"codec\": \"avi/raw (pure Rust)\",\n  \"duration_ms\": 3200.0\n}\ndecoded_frames=320 last_timestamp_ms=3190.000000"
+      },
+      {
+        "directory": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/take-VR2",
+        "rows": 321,
+        "accepted_rows": 321,
+        "quality_statuses": {
+          "tracked": 321
+        },
+        "first_timestamp_ms": 2901.977712,
+        "last_timestamp_ms": 6073.999706000001,
+        "observed_nonzero_rotation_rows": 321,
+        "rotation_delta_rad_p50": 0.0016316090446294766,
+        "rotation_delta_rad_p95": 0.004043517395554053,
+        "rotation_delta_rad_max": 0.011041401256352912,
+        "raw_video_sha256": "3a70be13ebd0f2a3f1cff58c0e31e50543da2afa54e2efb62385ca2f9503ee29",
+        "rust_decoder": "{\n  \"width\": 320,\n  \"height\": 240,\n  \"fps\": 100.0,\n  \"codec\": \"avi/raw (pure Rust)\",\n  \"duration_ms\": 3210.0\n}\ndecoded_frames=321 last_timestamp_ms=3200.000000"
+      },
+      {
+        "directory": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/take-VR3",
+        "rows": 320,
+        "accepted_rows": 320,
+        "quality_statuses": {
+          "tracked": 320
+        },
+        "first_timestamp_ms": 1781.512365,
+        "last_timestamp_ms": 4945.536346000001,
+        "observed_nonzero_rotation_rows": 320,
+        "rotation_delta_rad_p50": 0.0007632175454594601,
+        "rotation_delta_rad_p95": 0.0019987018407625,
+        "rotation_delta_rad_max": 0.004887919841258481,
+        "raw_video_sha256": "d32447a52943cc71a0a5006c9467d199f60dde7cbb269825df925b3889abc369",
+        "rust_decoder": "{\n  \"width\": 320,\n  \"height\": 240,\n  \"fps\": 100.0,\n  \"codec\": \"avi/raw (pure Rust)\",\n  \"duration_ms\": 3200.0\n}\ndecoded_frames=320 last_timestamp_ms=3190.000000"
+      },
+      {
+        "directory": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/take-VR4",
+        "rows": 320,
+        "accepted_rows": 320,
+        "quality_statuses": {
+          "tracked": 320
+        },
+        "first_timestamp_ms": 653.87573,
+        "last_timestamp_ms": 3813.890736,
+        "observed_nonzero_rotation_rows": 320,
+        "rotation_delta_rad_p50": 0.0007510290756809838,
+        "rotation_delta_rad_p95": 0.0016529494403547988,
+        "rotation_delta_rad_max": 0.00324881926586474,
+        "raw_video_sha256": "9e379a1542b92839017a8bd2935aeb4e2edba5aa9590cb48fc8229bcb4e585ca",
+        "rust_decoder": "{\n  \"width\": 320,\n  \"height\": 240,\n  \"fps\": 100.0,\n  \"codec\": \"avi/raw (pure Rust)\",\n  \"duration_ms\": 3200.0\n}\ndecoded_frames=320 last_timestamp_ms=3190.000000"
+      }
+    ],
+    "pause_boundary_take": {
+      "directory": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/pause-boundary-take",
+      "rows": 54,
+      "accepted_rows": 53,
+      "quality_statuses": {
+        "tracked": 52,
+        "recovering": 1,
+        "relocalized": 1
+      },
+      "first_timestamp_ms": 381491.71722600004,
+      "last_timestamp_ms": 385087.741236,
+      "observed_nonzero_rotation_rows": 52,
+      "rotation_delta_rad_p50": 0.0024848833077320684,
+      "rotation_delta_rad_p95": 0.005537397941368032,
+      "rotation_delta_rad_max": 0.008131027974999266,
+      "raw_video_sha256": "67899bd041556dd43e9ffa4b3da37a5ae3dec926f7fc091a0e1e1070ad7629d9",
+      "rust_decoder": "{\n  \"width\": 320,\n  \"height\": 240,\n  \"fps\": 100.0,\n  \"codec\": \"avi/raw (pure Rust)\",\n  \"duration_ms\": 540.0\n}\ndecoded_frames=54 last_timestamp_ms=530.000000",
+      "resume_statuses": [
+        "recovering",
+        "relocalized"
+      ],
+      "source_gap_ms": 3084.019014999969
+    },
+    "original_configs_unchanged": true,
+    "exit_code": 0,
+    "captures": [
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/calibration-VR1.png",
+        "title": "Hejj\u00e9Trac \u00b7 VR1 calibration",
+        "window_id": "0x1400009",
+        "width": 440,
+        "height": 640,
+        "sha256": "d88e42f17c2228ef75eb1a9ea42ea8c6e1b12fcda0e1cc89c319b3807f9a270b",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/calibration-frame-VR1.png",
+        "title": "VR1 \u00b7 Outputs off \u00b7 /dev/video6",
+        "window_id": "0x1400004",
+        "width": 480,
+        "height": 360,
+        "sha256": "af7972c35b79f925ef67dafb9b3d76b39f12d0efd4777b9250f76d1f6d187b33",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/calibration-VR2.png",
+        "title": "Hejj\u00e9Trac \u00b7 VR2 calibration",
+        "window_id": "0x140000a",
+        "width": 440,
+        "height": 640,
+        "sha256": "d88e42f17c2228ef75eb1a9ea42ea8c6e1b12fcda0e1cc89c319b3807f9a270b",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/calibration-frame-VR2.png",
+        "title": "VR2 \u00b7 Outputs off \u00b7 /dev/video2",
+        "window_id": "0x1400005",
+        "width": 480,
+        "height": 360,
+        "sha256": "cc8b4b5d1f545e3d5bdc81196494d2022cae85346c99a40096227865e30e4040",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/calibration-VR3.png",
+        "title": "Hejj\u00e9Trac \u00b7 VR3 calibration",
+        "window_id": "0x140000b",
+        "width": 440,
+        "height": 640,
+        "sha256": "ce2a5fe5b901ca5e550e359fe6804c300c7cce4f790b1705aba77172cd04df07",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/calibration-frame-VR3.png",
+        "title": "VR3 \u00b7 Outputs off \u00b7 /dev/video4",
+        "window_id": "0x1400006",
+        "width": 480,
+        "height": 360,
+        "sha256": "5f8f9a2b5365d25329021a4345fc4a514115c7e6209435039cc57df6346e11b6",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/calibration-VR4.png",
+        "title": "Hejj\u00e9Trac \u00b7 VR4 calibration",
+        "window_id": "0x140000c",
+        "width": 440,
+        "height": 640,
+        "sha256": "d88e42f17c2228ef75eb1a9ea42ea8c6e1b12fcda0e1cc89c319b3807f9a270b",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/calibration-frame-VR4.png",
+        "title": "VR4 \u00b7 Outputs off \u00b7 /dev/video0",
+        "window_id": "0x1400007",
+        "width": 480,
+        "height": 360,
+        "sha256": "46f52f187722d4388225ec27c5fb207345bbeb9f1efe087b4a382bf7a8dbee47",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-four-final-stress-20261103/camera-link-controls.png",
+        "title": "Hejj\u00e9Trac \u00b7 VR1 configuration",
+        "window_id": "0x140000d",
+        "width": 440,
+        "height": 640,
+        "sha256": "ff8e70815a50190b51597cbc825479143376f0ab60e6a0d9fcbe58b67690f72d",
+        "capture": "actual X11 native window pixels"
+      }
+    ]
+  },
+  "failure_isolation": {
+    "report": "runs/array-binding-file-validation/rerun-1793737055243428075/report.json",
+    "passed": true,
+    "healthy_real_file_peers_advance_beside_missing_and_malformed_rigs": true,
+    "no_sample_fallback": true,
+    "recorded_frames_independently_decoded": 5
+  },
+  "timing_scope": "Live rate = processed-frame delta / external monotonic observation wall time, under native UI and bridge polling. Cases run serially, without build or numerical benchmark workloads. Source/preview clocks detect relative delay, not absolute sensor-to-display latency. Sampled quality states do not replace the complete numeric/quality logs of each recorded take.",
+  "limits": [
+    "live motion was airflow jitter, not controlled physical high-speed ground truth",
+    "high-speed accuracy uses complete retained real recordings and fixed original FicTrac comparisons",
+    "no continuing 5-10 second lag reproduced in these release runs; stale first-frame after pause was reproduced and fixed",
+    "native execution Linux only; Windows/macOS binding not newly validated",
+    "delivered-frame counters do not establish zero sensor/kernel frame loss"
+  ]
+}

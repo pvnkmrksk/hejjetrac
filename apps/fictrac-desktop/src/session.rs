@@ -14,6 +14,8 @@ pub enum Tool {
 pub struct Session {
     pub source_base: Option<PathBuf>,
     pub running_source: String,
+    pub running_camera_binding: Option<String>,
+    pub camera_binding_draft: Option<String>,
     pub running_fps: f64,
     pub id: u64,
     pub history: DocumentHistory,
@@ -41,6 +43,8 @@ pub struct Session {
     pub record_debug: bool,
     pub recording_encoding: fictrac_control::RecordingEncoding,
     pub startup_fallback: Option<ConfigDocument>,
+    pub sample_fallback_active: bool,
+    pub start_array_request: bool,
     pub fallback_notice: String,
     pub temporary_config: bool,
     pub paused: bool,
@@ -86,6 +90,8 @@ impl Session {
         Self {
             source_base: path.clone(),
             running_source: String::new(),
+            running_camera_binding: None,
+            camera_binding_draft: None,
             running_fps: -1.0,
             id,
             history: DocumentHistory::new(text.clone()),
@@ -110,10 +116,14 @@ impl Session {
             camera_edit: None,
             camera_error: String::new(),
             zmq_resume_port: None,
-            record_raw: doc.boolean("save_raw"),
+            record_raw: fictrac_control::RecordOptions::from_document(&doc)
+                .with_video()
+                .raw,
             record_debug: doc.boolean("save_debug"),
             recording_encoding: fictrac_control::RecordingEncoding::Configured,
             startup_fallback: None,
+            sample_fallback_active: false,
+            start_array_request: false,
             fallback_notice: String::new(),
             temporary_config: false,
             paused: false,
@@ -156,7 +166,16 @@ impl Session {
         }
     }
     pub fn use_fallback(&mut self, reason: &str) {
+        if self
+            .document()
+            .is_ok_and(|doc| doc.camera_binding().ok().flatten().is_some())
+        {
+            self.startup_fallback = None;
+            self.error = reason.into();
+            return;
+        }
         if let Some(doc) = self.startup_fallback.take() {
+            self.sample_fallback_active = true;
             self.history = DocumentHistory::new(doc.text().to_owned());
             self.source_edit = doc.get("src_fn").unwrap_or("").to_owned();
             self.temporary_config = true;
@@ -164,6 +183,42 @@ impl Session {
             self.fallback_notice = format!("Camera unavailable ({reason}); playing sample video");
             let result = self.start();
             self.report(result);
+        }
+    }
+    pub fn from_config_path(id: u64, path: PathBuf) -> Result<Self, String> {
+        let text = crate::array::read_text(&path);
+        let parsed = text.as_ref().map_err(Clone::clone).and_then(|text| {
+            ConfigDocument::parse(text.clone()).map_err(|e| format!("{}: {e}", path.display()))
+        });
+        match parsed {
+            Ok(document) => Ok(Self::new(id, document, Some(path))),
+            Err(error) => {
+                let mut failed = Self::new(
+                    id,
+                    ConfigDocument::parse("src_fn:\n".into()).map_err(|e| e.to_string())?,
+                    Some(path),
+                );
+                let original = text.unwrap_or_else(|_| "Configuration unavailable\nLoad or repair the saved rig file before retrying.\n".into());
+                failed.history = DocumentHistory::new(original.clone());
+                failed.saved = original;
+                failed.error = format!("Rig did not start: {error}");
+                Ok(failed)
+            }
+        }
+    }
+    pub fn launch_state(&self) -> &'static str {
+        if self.worker.is_none() || (self.snapshot.ended && self.snapshot.frames == 0) {
+            "Did not start"
+        } else if self.snapshot.ended {
+            "Stopped"
+        } else if self.snapshot.frames == 0 {
+            "Opening"
+        } else if self.tool != Tool::Inspect {
+            "Calibrating"
+        } else if self.paused {
+            "Paused"
+        } else {
+            "Running"
         }
     }
     pub fn camera_format(
@@ -259,6 +314,12 @@ impl Session {
         }
     }
     pub fn begin_recording(&mut self) {
+        let options = fictrac_control::RecordOptions {
+            raw: self.record_raw,
+            debug: self.record_debug,
+        }
+        .with_video();
+        self.record_raw = options.raw;
         let stamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos())
@@ -266,10 +327,7 @@ impl Session {
         let path = PathBuf::from(&self.recording_path).join(format!("take-{stamp}"));
         self.send(Command::RecordOptions(
             path,
-            fictrac_control::RecordOptions {
-                raw: self.record_raw,
-                debug: self.record_debug,
-            },
+            options,
             fictrac_control::MediaRecordingTuning {
                 encoding: self.recording_encoding,
                 ..fictrac_control::MediaRecordingTuning::default()
@@ -432,6 +490,10 @@ impl Session {
         self.texture_image = None;
         self.texture_frame = u64::MAX;
         self.running_source = doc.get("src_fn").unwrap_or("").into();
+        self.running_camera_binding = doc
+            .camera_binding()
+            .map_err(|e| e.to_string())?
+            .map(str::to_owned);
         self.running_fps = doc.number("src_fps", -1.0);
         self.worker = Some(Worker::start_at(
             source,
@@ -448,9 +510,20 @@ impl Session {
         Ok(())
     }
     pub fn ensure_source_available(&self, doc: &ConfigDocument) -> Result<(), String> {
-        if let Some(id) = doc
+        let id = doc
             .get("src_fn")
-            .and_then(|source| source.parse::<u32>().ok())
+            .and_then(|source| source.parse::<u32>().ok());
+        let id = match (id, doc.camera_binding().map_err(|e| e.to_string())?) {
+            (Some(_), Some(binding)) => Some(
+                fictrac_camera::resolve_camera(
+                    &fictrac_camera::list_cameras().map_err(|e| e.to_string())?,
+                    binding,
+                )
+                .map_err(|e| e.to_string())?,
+            ),
+            (id, _) => id,
+        };
+        if let Some(id) = id
             && let Some(owner) = self.occupied_cameras.get(&id)
         {
             return Err(format!(
@@ -461,6 +534,21 @@ impl Session {
     }
     pub fn select_camera(&mut self, id: u32) -> Result<(), String> {
         let mut doc = self.document()?;
+        if let Some(binding) = doc.camera_binding().map_err(|e| e.to_string())? {
+            let selected = self.cameras.iter().find(|c| c.id == id);
+            if !selected.is_some_and(|camera| {
+                camera.hardware_id.as_deref() == Some(binding)
+                    || camera.port_id.as_deref() == Some(binding)
+            }) {
+                return Err("This rig is bound to another camera. Unlink it before selecting a replacement.".into());
+            }
+            if self.running_camera_binding.as_deref() == Some(binding)
+                && self.worker.is_some()
+                && !self.snapshot.ended
+            {
+                return Ok(());
+            }
+        }
         doc.set("src_fn", &id.to_string())
             .map_err(|e| e.to_string())?;
         self.ensure_source_available(&doc)?;
@@ -478,29 +566,76 @@ impl Session {
         self.source_edit = id.to_string();
         self.start()
     }
+    pub fn bind_camera(&mut self, hardware_id: Option<&str>) -> Result<(), String> {
+        let mut doc = self.document()?;
+        if let Some(value) = hardware_id {
+            fictrac_camera::validate_hardware_id(value).map_err(|e| e.to_string())?;
+            if !doc.get("src_fn").is_some_and(|v| v.parse::<u32>().is_ok()) {
+                return Err("Select a camera before linking this rig to hardware".into());
+            }
+        } else if doc.camera_binding().map_err(|e| e.to_string())?.is_some()
+            && let Some(id) = self.snapshot.actual_camera_id
+        {
+            // The saved ordinal may predate USB renumbering. Unlink the stream
+            // the user is actually viewing, never jump to that stale ordinal.
+            doc.set("src_fn", &id.to_string())
+                .map_err(|e| e.to_string())?;
+        }
+        doc.set("rust_camera_id", hardware_id.unwrap_or(""))
+            .map_err(|e| e.to_string())?;
+        self.ensure_source_available(&doc)?;
+        self.edit(doc.text().to_owned());
+        self.camera_binding_draft = None;
+        self.apply()
+    }
     pub fn apply(&mut self) -> Result<(), String> {
         let doc = self.document()?;
         let source = doc.get("src_fn").unwrap_or("");
-        if self.worker.is_some()
-            && (source != self.running_source
-                || (source.parse::<u32>().is_ok()
-                    && doc.number("src_fps", -1.0) != self.running_fps))
-        {
-            return self.start();
+        let binding = doc.camera_binding().map_err(|e| e.to_string())?;
+        let assignment_changed =
+            source != self.running_source || binding != self.running_camera_binding.as_deref();
+        if self.worker.is_some() {
+            if source.parse::<u32>().is_ok() && doc.number("src_fps", -1.0) != self.running_fps {
+                return self.start();
+            }
+            if assignment_changed {
+                let next_camera = match (source.parse::<u32>().ok(), binding) {
+                    (Some(_), Some(binding)) => Some(
+                        fictrac_camera::resolve_camera(
+                            &fictrac_camera::list_cameras().map_err(|e| e.to_string())?,
+                            binding,
+                        )
+                        .map_err(|e| e.to_string())?,
+                    ),
+                    (id, _) => id,
+                };
+                if next_camera.is_none() || next_camera != self.snapshot.actual_camera_id {
+                    return self.start();
+                }
+            }
         }
+        let next_source = source.to_owned();
+        let next_binding = binding.map(str::to_owned);
         self.revision += 1;
         if let Some(worker) = &self.worker {
             worker.send(Command::Configure(doc, self.revision))?;
         }
+        self.running_source = next_source;
+        self.running_camera_binding = next_binding;
+        self.source_edit = self.running_source.clone();
         self.changed = None;
         Ok(())
     }
     pub fn load(&mut self, path: PathBuf) -> Result<(), String> {
-        let text = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        let text = crate::array::read_text(&path)?;
         let doc = ConfigDocument::parse(text).map_err(|e| e.to_string())?;
         self.worker = None;
-        self.record_raw = doc.boolean("save_raw");
+        self.sample_fallback_active = false;
+        self.record_raw = fictrac_control::RecordOptions::from_document(&doc)
+            .with_video()
+            .raw;
         self.record_debug = doc.boolean("save_debug");
+        self.camera_binding_draft = None;
         self.recording_encoding = fictrac_control::RecordingEncoding::Configured;
         self.history = DocumentHistory::new(doc.text().to_owned());
         self.zmq_resume_port = None;
@@ -678,6 +813,37 @@ pub(crate) struct CalibrationCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unlink_keeps_the_open_camera_after_device_numbers_change() -> Result<(), String> {
+        let doc = ConfigDocument::parse("src_fn:0\nrust_camera_id:usb:0c45:6366:M01:video:0\nsock_port:1111\nzmq_port:9871\nroi_r:0.11\n".into()).map_err(|e| e.to_string())?;
+        let mut session = Session::new(1, doc, None);
+        session.snapshot.actual_camera_id = Some(6);
+        session.bind_camera(None)?;
+        let unlinked = session.document()?;
+        assert_eq!(unlinked.get("src_fn"), Some("6"));
+        assert_eq!(unlinked.camera_binding().map_err(|e| e.to_string())?, None);
+        assert_eq!(unlinked.get("sock_port"), Some("1111"));
+        assert_eq!(unlinked.get("zmq_port"), Some("9871"));
+        assert_eq!(unlinked.get("roi_r"), Some("0.11"));
+        Ok(())
+    }
+    #[test]
+    fn a_bound_missing_camera_never_uses_startup_sample_and_invalid_binding_is_atomic()
+    -> Result<(), String> {
+        let text = "src_fn:99999\nrust_camera_id:usb:ffff:ffff:missing:video:0\nsock_port:1114\nzmq_port:9874\n";
+        let document = ConfigDocument::parse(text.into()).map_err(|e| e.to_string())?;
+        let mut session = Session::new(4, document, None);
+        session.startup_fallback =
+            Some(ConfigDocument::parse("src_fn:sample.mp4\n".into()).map_err(|e| e.to_string())?);
+        session.use_fallback("required camera missing");
+        assert!(session.worker.is_none());
+        assert!(session.startup_fallback.is_none());
+        assert_eq!(session.history.text, text);
+        assert_eq!(session.error, "required camera missing");
+        assert!(session.bind_camera(Some("bad#id")).is_err());
+        assert_eq!(session.history.text, text);
+        Ok(())
+    }
     #[test]
     fn successful_configuration_ack_clears_only_the_superseded_command_error()
     -> Result<(), Box<dyn std::error::Error>> {
@@ -914,7 +1080,7 @@ mod tests {
         let path = directory.join("config.txt");
         fs::write(&path, doc.text()).map_err(|error| error.to_string())?;
         session.load(path)?;
-        assert!(!session.record_raw && !session.record_debug);
+        assert!(session.record_raw && !session.record_debug);
         let deadline = Instant::now() + std::time::Duration::from_secs(15);
         while session.snapshot.frames < 2 {
             session.update();
@@ -945,7 +1111,7 @@ mod tests {
                 ))
                 .map_err(|error| error.to_string())?;
                 let session = Session::new(1, doc, None);
-                assert_eq!(session.record_raw, raw);
+                assert_eq!(session.record_raw, raw || !debug);
                 assert_eq!(session.record_debug, debug);
             }
         }

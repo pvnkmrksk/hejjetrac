@@ -528,8 +528,15 @@ fn root_vr_configs_and_fallback_use_independent_ports_labels_and_sources() -> Te
         );
         assert_eq!(document.get("rust_camera_width"), Some("320"));
         assert_eq!(document.get("rust_camera_height"), Some("240"));
-        assert_eq!(document.get("vfov"), Some("17"));
-        load_config_text(document.text(), 320, 240)?;
+        assert_eq!(document.get("vfov"), Some("47"));
+        let loaded = load_config_text(document.text(), 320, 240)?;
+        let coordinates: Vec<f64> = document.vector("roi_circ")?;
+        let points = coordinates.as_chunks::<2>().0;
+        let fitted = fictrac_core::calibration::fit_rim(&loaded.config, points)?;
+        for (stored, fitted) in loaded.config.sphere.centre.into_iter().zip(fitted.centre) {
+            assert!((stored - fitted).abs() < 1e-12);
+        }
+        assert!((loaded.config.sphere.angular_radius - fitted.angular_radius).abs() < 1e-12);
         (document, path) = document.next_instance(path.as_deref())?;
     }
     // Saved rigs cycle rather than inventing a fifth metadata-only camera.

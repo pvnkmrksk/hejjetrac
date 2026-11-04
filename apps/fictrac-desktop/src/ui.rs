@@ -52,6 +52,29 @@ pub(crate) fn constrain_framebuffer(ctx: &egui::Context, texture_limit: u32) -> 
     }
     limit
 }
+fn live_preview_delay(snapshot: &crate::runtime::Snapshot) -> Option<f64> {
+    if snapshot.paused || snapshot.ended || snapshot.actual_camera_id.is_none() {
+        return None;
+    }
+    [snapshot.preview_age_ms, snapshot.camera_lag_ms]
+        .into_iter()
+        .flatten()
+        .filter(|ms| ms.is_finite() && *ms >= 0.0)
+        .reduce(f64::max)
+}
+fn camera_choice_label(camera: &fictrac_camera::CameraInfo) -> String {
+    let serial = camera
+        .hardware_id
+        .as_deref()
+        .and_then(|id| id.strip_prefix("usb:"))
+        .and_then(|id| id.splitn(3, ':').nth(2))
+        .and_then(|id| id.rsplit_once(":video:").map(|(serial, _)| serial));
+    if let Some(serial) = serial {
+        format!("{serial} · {} · {}", camera.id, camera.name)
+    } else {
+        format!("{} · {}", camera.id, camera.name)
+    }
+}
 impl Session {
     pub fn show(&mut self, ctx: &egui::Context) {
         self.update();
@@ -64,7 +87,7 @@ impl Session {
         self.window_inner_size = Some([size.x, size.y]);
         if self.tool != Tool::Inspect
             && self.calibration_preview_size.is_none()
-            && (size.x < 480.0 || size.y < 360.0)
+            && (size.x < 640.0 || size.y < 480.0)
         {
             self.calibration_preview_size = Some(size);
             ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(640.0, 480.0)));
@@ -418,9 +441,12 @@ impl Session {
     fn status_bar(&mut self, ui: &mut egui::Ui) {
         let quality = self.snapshot.row.as_ref().is_some_and(|r| r.accepted);
         let overloaded = self.snapshot.headroom_percent < 0.0;
+        let lag = live_preview_delay(&self.snapshot);
         let color = if self.snapshot.ended {
             ui.visuals().weak_text_color()
-        } else if !quality {
+        } else if lag.is_some_and(|ms| ms >= 1000.0) {
+            ui.visuals().error_fg_color
+        } else if !quality || lag.is_some_and(|ms| ms >= 250.0) {
             ui.visuals().warn_fg_color
         } else if overloaded {
             ui.visuals().error_fg_color
@@ -430,9 +456,11 @@ impl Session {
             Color32::from_rgb(96, 210, 158)
         };
         let text = format!(
-            "{:.1} fps · {:.2} ms track{}",
+            "{:.1} fps · {:.2} ms track{}{}",
             self.snapshot.actual_fps,
             self.snapshot.tracking_ms,
+            lag.map(|ms| format!(" · {ms:.0} ms view"))
+                .unwrap_or_default(),
             if self.snapshot.dropped_running > 0 {
                 format!(" · drop {}", self.snapshot.dropped_running)
             } else {
@@ -463,6 +491,17 @@ impl Session {
             self.error,
             self.fallback_notice
         );
+        let detail = format!(
+            "{detail}\nPreview image age: {}\nCapture backlog change: {} (relative to fastest observed delivery, not absolute sensor latency)",
+            self.snapshot
+                .preview_age_ms
+                .map(|ms| format!("{ms:.1} ms"))
+                .unwrap_or_else(|| "not a running camera".into()),
+            self.snapshot
+                .camera_lag_ms
+                .map(|ms| format!("{ms:.1} ms"))
+                .unwrap_or_else(|| "unavailable".into()),
+        );
         ui.horizontal(|ui| {
             let (indicator, _) = ui.allocate_exact_size(Vec2::new(7.0, 12.0), egui::Sense::hover());
             ui.painter().circle_filled(indicator.center(), 2.5, color);
@@ -472,6 +511,10 @@ impl Session {
                 ui.label("Paused");
             } else if self.snapshot.ended {
                 ui.label("Done");
+            } else if lag.is_some_and(|ms| ms >= 1000.0) {
+                ui.colored_label(ui.visuals().error_fg_color, "Stale preview");
+            } else if lag.is_some_and(|ms| ms >= 250.0) {
+                ui.colored_label(ui.visuals().warn_fg_color, "Preview delayed");
             } else if !quality && self.snapshot.row.is_some() {
                 ui.label("Lost").on_hover_text(
                     "Motion is unmeasured while tracking is unreliable. Inspect calibration if loss persists.",
@@ -543,9 +586,22 @@ impl Session {
     fn recording_menu(&mut self, ui: &mut egui::Ui) {
         use fictrac_control::RecordingEncoding;
         ui.strong("Next recording");
-        ui.checkbox(&mut self.record_raw,"Raw video").on_hover_text("Original pixels at source resolution; recording starts on the next measured frame.");
-        ui.checkbox(&mut self.record_debug, "Processed video")
-            .on_hover_text("FicTrac diagnostic panels with measured motion and quality.");
+        let mut selection = if self.record_raw && self.record_debug {
+            2
+        } else if self.record_debug {
+            1
+        } else {
+            0
+        };
+        egui::ComboBox::from_id_salt(("record-streams", self.id, ui.id()))
+            .selected_text(["Raw video", "Debug video", "Raw + debug video"][selection])
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut selection, 0, "Raw video");
+                ui.selectable_value(&mut selection, 1, "Debug video");
+                ui.selectable_value(&mut selection, 2, "Raw + debug video");
+            });
+        self.record_raw = selection != 1;
+        self.record_debug = selection != 0;
         let mut encoding = match self.recording_encoding {
             RecordingEncoding::Configured => 0,
             RecordingEncoding::Mjpeg => 1,
@@ -613,14 +669,15 @@ impl Session {
             self.spawn_request = 1;
             ui.close();
         }
-        if ui.button("Open four windows").clicked() {
-            self.spawn_request = 3;
+        if ui.button("Start saved rig array").clicked() {
+            self.start_array_request = true;
+            self.show_rigs = true;
             ui.close();
         }
         if ui
             .button("Rig manager…")
             .on_hover_text(
-                "See each session and its config, resume them together or open four rig windows.",
+                "See every rig's startup result, retry stopped rigs, or start the saved array.",
             )
             .clicked()
         {
@@ -790,6 +847,10 @@ impl Session {
                     }
                     if ui.button(format!("Redraw {short}")).on_hover_text("Replace only this step. Other saved calibration layers remain intact.").clicked() {
                         self.redraw_calibration(tool);
+                    }
+                    if ui.add_enabled(self.saved_mark_count_for(tool) > 0, egui::Button::new(format!("Edit {short}"))).on_hover_text("Move the saved marks directly in the full image; right-click removes a mark.").clicked() {
+                        let result = self.review_calibration_step(tool).and_then(|()| self.choose_calibration_action("edit"));
+                        self.report(result);
                     }
                 });
             });
@@ -1025,6 +1086,14 @@ impl Session {
             }
         });
         let cameras = self.cameras.clone();
+        let selected_camera_id = self
+            .document()
+            .ok()
+            .and_then(|doc| match doc.camera_binding() {
+                Ok(Some(binding)) => fictrac_camera::resolve_camera(&cameras, binding).ok(),
+                Ok(None) => self.source_edit.parse::<u32>().ok(),
+                Err(_) => None,
+            });
         egui::ScrollArea::vertical()
             .max_height(180.0)
             .id_salt(("camera-list", self.id))
@@ -1037,8 +1106,8 @@ impl Session {
                     let response = ui.add_enabled(
                         owner.is_none(),
                         egui::Button::selectable(
-                            self.source_edit == camera.id.to_string(),
-                            format!("{} · {}", camera.id, camera.name),
+                            selected_camera_id == Some(camera.id),
+                            camera_choice_label(&camera),
                         ),
                     );
                     let response = if let Some(owner) = owner {
@@ -1046,6 +1115,13 @@ impl Session {
                     } else {
                         response
                     };
+                    let response = response.on_hover_text(format!(
+                        "Hardware ID: {}",
+                        camera
+                            .hardware_id
+                            .as_deref()
+                            .unwrap_or("unavailable; this backend cannot bind this camera")
+                    ));
                     if response.clicked() {
                         let result = self.select_camera(camera.id);
                         self.report(result);
@@ -1160,10 +1236,13 @@ impl Session {
             self.config_text(ui);
             return;
         }
-        egui::CollapsingHeader::new("Source & camera").show(ui, |ui| {
-            self.source_controls(ui);
-            self.camera_controls(ui);
-        });
+        egui::CollapsingHeader::new("Source & camera")
+            .default_open(true)
+            .show(ui, |ui| {
+                self.source_controls(ui);
+                self.camera_binding_controls(ui);
+                self.camera_controls(ui);
+            });
         egui::CollapsingHeader::new("Display")
             .default_open(true)
             .show(ui, |ui| self.display_rate_control(ui));
@@ -1176,6 +1255,11 @@ impl Session {
             }
         });
         let fields = self.document().map(|d| settings_fields(&d));
+        egui::CollapsingHeader::new("Output ports")
+            .default_open(true)
+            .show(ui, |ui| self.zmq_controls(ui));
+        egui::CollapsingHeader::new("Advanced settings · change with care").show(ui, |ui| {
+        ui.small("Defaults suit most rigs. These controls affect calibration, fitting, recording startup and transport. Apply validates edits before using them.");
         match fields {
             Ok(fields) => {
                 for category in [
@@ -1184,7 +1268,7 @@ impl Session {
                     "Output & recording",
                     "Advanced & compatibility",
                 ] {
-                    egui::CollapsingHeader::new(category).default_open(category == "Tracking & quality").show(ui, |ui| {
+                    egui::CollapsingHeader::new(category).show(ui, |ui| {
                         let mut changes = vec![];
                         if category == "Tracking & quality" {
                             let mut resilient = self.document().map(|doc| doc.get("rust_resilient").is_none() || doc.boolean("rust_resilient")).unwrap_or(true);
@@ -1192,17 +1276,13 @@ impl Session {
                                 changes.push(("rust_resilient", if resilient { "y" } else { "n" }.into()));
                             }
                         }
-                        if category == "Output & recording" {
-                            self.zmq_controls(ui);
-                            ui.separator();
-                        }
                         egui::Grid::new(("fields", self.id, category))
                             .num_columns(2)
                             .spacing([12.0, 6.0])
                             .show(ui, |ui| {
                                 for (key, original) in fields
                                     .iter()
-                                    .filter(|(key, _)| field_category(key) == category && key != "rust_resilient" && !key.starts_with("zmq_") && !key.starts_with("rust_normalized_") && !key.starts_with("rust_calibration_"))
+                                    .filter(|(key, _)| field_category(key) == category && key != "rust_resilient" && key != "rust_camera_id")
                                 {
                                     let mut value = original.clone();
                                     let (status, help) = parameter_description(key);
@@ -1217,6 +1297,7 @@ impl Session {
                                         ui.add(
                                             egui::TextEdit::singleline(&mut value)
                                                 .desired_width(170.0)
+                                                .hint_text("Unset / automatic")
                                                 .id_salt((self.id, key)),
                                         )
                                     };
@@ -1241,6 +1322,7 @@ impl Session {
                 ui.colored_label(ui.visuals().error_fg_color, error);
             }
         }
+        });
         egui::CollapsingHeader::new("Exact config text").show(ui, |ui| {
             self.config_text(ui);
         });
@@ -1284,9 +1366,9 @@ impl Session {
         let mut mode = original_mode.to_owned();
         let mut framing = original_framing.to_owned();
         let mut topic = original_topic.to_owned();
-        let mut host = original_host.to_owned();
+        let host = original_host.to_owned();
         let mut port = original_port.to_owned();
-        let mut capacity = original_capacity.to_owned();
+        let capacity = original_capacity.to_owned();
         if let Ok(value) = port.parse::<i32>()
             && (1..=65535).contains(&value)
         {
@@ -1335,15 +1417,8 @@ impl Session {
             ui.add(egui::TextEdit::singleline(&mut port).desired_width(100.0))
                 .on_hover_text("PUB bind port: -1 or 0 disables. Give each rig a unique port, normally 9871–9874. If a Python republisher already owns that port, use UDP to that bridge with this publisher disabled, or stop the bridge before enabling direct ZMQ.");
             ui.end_row();
-            ui.label("Bind address");
-            ui.add(egui::TextEdit::singleline(&mut host).desired_width(180.0))
-                .on_hover_text("Bind address on this tracking computer. 127.0.0.1 or ::1 accepts local clients only; 0.0.0.0 or * accepts IPv4 LAN clients, and :: accepts IPv6. A remote VR player connects to this computer's LAN IP, not to 0.0.0.0.");
-            ui.end_row();
-            ui.label("Queue capacity");
-            ui.add(egui::TextEdit::singleline(&mut capacity).desired_width(100.0))
-                .on_hover_text("Bounded live-message queue. A slow or absent receiver cannot block tracking or recording; drops are reported separately.");
-            ui.end_row();
         });
+        ui.small("Local receivers connect to localhost; LAN receivers use this computer's IP and the rig's port. Bind address and queue controls are in Advanced settings.");
         if port.parse::<i32>().is_ok_and(|value| value > 0)
             && (host.eq_ignore_ascii_case("localhost")
                 || host
@@ -1374,6 +1449,101 @@ impl Session {
             let result = self.fields(&changes);
             self.report(result);
         }
+    }
+    fn camera_binding_controls(&mut self, ui: &mut egui::Ui) {
+        let Ok(document) = self.document() else {
+            return;
+        };
+        let binding = document.get("rust_camera_id").filter(|v| !v.is_empty());
+        let selected_id = self
+            .snapshot
+            .actual_camera_id
+            .or_else(|| self.source_edit.parse::<u32>().ok());
+        let selected_hardware_id = selected_id
+            .and_then(|id| self.cameras.iter().find(|camera| camera.id == id))
+            .and_then(|camera| camera.hardware_id.clone());
+        ui.horizontal(|ui| {
+            let linked = binding.is_some();
+            let help = if linked {
+                "Unlink this rig from its camera; keep the current live camera"
+            } else {
+                "Link this rig to the current camera's unique serial ID"
+            };
+            let response = ui
+                .add_enabled_ui(linked || selected_hardware_id.is_some(), |ui| {
+                    icons::button(
+                        ui,
+                        if linked { Icon::Unlink } else { Icon::Link },
+                        linked,
+                        help,
+                    )
+                })
+                .inner;
+            if response.clicked() {
+                let result = self.bind_camera(if linked {
+                    None
+                } else {
+                    selected_hardware_id.as_deref()
+                });
+                self.report(result);
+            }
+            ui.label(if let Some(binding) = binding {
+                format!("Linked · {binding}")
+            } else {
+                "Camera unlinked".into()
+            });
+        });
+        ui.small(
+            "Save configuration to keep the link. A missing or duplicated identity stops this rig.",
+        );
+        egui::CollapsingHeader::new("Exact camera ID / USB socket")
+            .id_salt(("camera-binding-details", self.id))
+            .show(ui, |ui| {
+            let mut value = self
+                .camera_binding_draft
+                .clone()
+                .unwrap_or_else(|| binding.unwrap_or("").to_owned());
+            ui.label("Hardware ID");
+            if ui.add(egui::TextEdit::singleline(&mut value).desired_width(f32::INFINITY))
+                .on_hover_text("Copy the complete hardware ID from the camera list. It includes the USB serial and capture interface on Linux.").changed() {
+                self.camera_binding_draft = Some(value.clone());
+            }
+            ui.horizontal(|ui| {
+                if ui
+                    .add_enabled(!value.is_empty(), egui::Button::new("Link ID"))
+                    .clicked()
+                {
+                    let result = self.bind_camera(Some(&value));
+                    self.report(result);
+                }
+                if self.camera_binding_draft.is_some() && ui.button("Discard edit").clicked() {
+                    self.camera_binding_draft = None;
+                }
+            });
+            ui.small(if value.starts_with("usb-port:") { "USB socket binding: any camera in that connector is accepted. Reconnect to the same socket on this computer." } else { "Only this camera ID may open for this rig. Output ports remain assigned to the rig." });
+            let selected = selected_id
+                .and_then(|id| self.cameras.iter().find(|c| c.id == id))
+                .cloned();
+            if let Some(camera) = selected {
+                let duplicate = camera.hardware_id.as_ref().is_some_and(|id| {
+                    self.cameras
+                        .iter()
+                        .filter(|c| c.hardware_id.as_ref() == Some(id))
+                        .count()
+                        > 1
+                });
+                if duplicate {
+                    ui.colored_label(
+                        ui.visuals().warn_fg_color,
+                        "Serial ID is duplicated. It cannot identify this physical camera.",
+                    );
+                }
+                if let Some(port_id) = camera.port_id
+                    && ui.button("Use this USB socket ID instead").on_hover_text("Explicit connector binding: reconnect to the same USB socket on this computer. It follows the socket, so a replacement camera in that socket is accepted. This is not a unique physical-camera identity.").clicked() {
+                    self.camera_binding_draft = Some(port_id);
+                }
+            }
+        });
     }
     fn cycle_square(&mut self) -> Result<(), String> {
         let image = self
@@ -2296,8 +2466,8 @@ value}
             return;
         }
         if self.tool == Tool::Edit || self.edit_existing {
-            if response.drag_started()
-                && let Some(pos) = response.interact_pointer_pos()
+            if response.drag_started_by(egui::PointerButton::Primary)
+                && let Some(pos) = ui.input(|input| input.pointer.press_origin())
             {
                 let mut best = 12.0;
                 self.pending_drag = None;
@@ -2326,9 +2496,9 @@ value}
                     }
                 }
             }
-            if response.drag_started()
+            if response.drag_started_by(egui::PointerButton::Primary)
                 && matches!(self.tool, Tool::Square | Tool::Edit)
-                && let Some(pos) = response.interact_pointer_pos()
+                && let Some(pos) = ui.input(|input| input.pointer.press_origin())
             {
                 let current = self
                     .pending_drag
@@ -2351,7 +2521,7 @@ value}
                     self.pending_drag = Some((usize::MAX, index));
                 }
             }
-            if response.dragged()
+            if response.dragged_by(egui::PointerButton::Primary)
                 && let Some(pos) = response.interact_pointer_pos()
                 && let Some((poly, vertex)) = self.pending_drag
             {
@@ -2379,7 +2549,7 @@ value}
                     };
                 }
             }
-            if response.drag_stopped() {
+            if response.drag_stopped_by(egui::PointerButton::Primary) {
                 self.pending_drag = None;
             }
         } else if matches!(self.tool, Tool::Rim | Tool::Exclude | Tool::Square) {
@@ -2659,6 +2829,30 @@ fn settings_fields(document: &fictrac_io::ConfigDocument) -> Vec<(String, String
         .map(|(key, value)| (key.to_owned(), value.to_owned()))
         .collect::<std::collections::BTreeMap<_, _>>();
     for (key, value) in [
+        ("src_fps", "-1".into()),
+        ("do_display", "y".into()),
+        // These flags control legacy automatic recording at startup. The
+        // interactive Record selector separately defaults to raw video.
+        ("save_raw", "n".into()),
+        ("save_debug", "n".into()),
+        ("vid_codec", "h264".into()),
+        ("output_fn", "".into()),
+        ("sock_host", "127.0.0.1".into()),
+        ("sock_port", "-1".into()),
+        ("com_port", "".into()),
+        ("com_baud", "115200".into()),
+        ("zmq_host", fictrac_io::DEFAULT_ZMQ_HOST.into()),
+        ("zmq_port", fictrac_io::DEFAULT_ZMQ_PORT.into()),
+        ("zmq_queue_capacity", "256".into()),
+        ("zmq_output_mode", "native_ft".into()),
+        ("zmq_framing", "single".into()),
+        ("zmq_topic", "FT".into()),
+        ("sphere_map_fn", "".into()),
+        ("rust_camera_width", "0".into()),
+        ("rust_camera_height", "0".into()),
+        ("rust_engine", "spherical".into()),
+        ("fisheye", "n".into()),
+        ("cam_model", "rectilinear".into()),
         ("q_factor", map.quality.to_string()),
         ("thr_ratio", map.threshold_ratio.to_string()),
         ("thr_win_pc", map.threshold_window.to_string()),
@@ -2679,6 +2873,22 @@ fn settings_fields(document: &fictrac_io::ConfigDocument) -> Vec<(String, String
         ),
     ] {
         fields.entry(key.into()).or_insert(value);
+    }
+    for key in [
+        "src_fn",
+        "vfov",
+        "roi_c",
+        "roi_r",
+        "roi_circ",
+        "roi_ignr",
+        "c2a_r",
+        "c2a_t",
+        "c2a_src",
+        "c2a_cnrs_xy",
+        "c2a_cnrs_yz",
+        "c2a_cnrs_xz",
+    ] {
+        fields.entry(key.into()).or_default();
     }
     fields.into_iter().collect()
 }
@@ -2790,6 +3000,34 @@ mod tests {
             debug: None,
         }));
         Ok(session)
+    }
+    #[test]
+    fn stale_camera_preview_is_visible_even_when_fps_remains_high() -> Result<(), String> {
+        let mut session = session()?;
+        session.snapshot.actual_camera_id = Some(4);
+        session.snapshot.actual_fps = 100.0;
+        session.snapshot.preview_age_ms = Some(5200.0);
+        session.snapshot.camera_lag_ms = Some(10.0);
+        let ctx = egui::Context::default();
+        let render = |session: &mut Session| {
+            ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| session.status_bar(ui));
+            })
+        };
+        let output = render(&mut session);
+        assert!(output.shapes.iter().any(|shape| matches!(&shape.shape,
+            egui::Shape::Text(text) if text.galley.text() == "Stale preview")));
+        session.snapshot.paused = true;
+        let output = render(&mut session);
+        assert!(!output.shapes.iter().any(|shape| matches!(&shape.shape,
+            egui::Shape::Text(text) if text.galley.text() == "Stale preview")));
+        session.snapshot.paused = false;
+        session.snapshot.preview_age_ms = Some(15.0);
+        session.snapshot.camera_lag_ms = Some(800.0);
+        assert_eq!(live_preview_delay(&session.snapshot), Some(800.0));
+        session.snapshot.actual_camera_id = None;
+        assert_eq!(live_preview_delay(&session.snapshot), None);
+        Ok(())
     }
     #[test]
     fn daily_toolbar_stays_on_one_line_and_record_action_is_red_in_both_themes()
@@ -3010,7 +3248,14 @@ mod tests {
         let ctx = egui::Context::default();
         let output = zmq_controls_frame(&ctx, &mut session, vec![]);
         assert_eq!(session.history.text, before);
-        assert!(output.shapes.iter().any(|shape| matches!(&shape.shape, egui::Shape::Text(text) if text.galley.text() == "0.0.0.0")));
+        assert!(!output.shapes.iter().any(|shape| matches!(&shape.shape, egui::Shape::Text(text) if text.galley.text() == "0.0.0.0")));
+        assert_eq!(
+            settings_fields(&session.document()?)
+                .into_iter()
+                .find(|(key, _)| key == "zmq_host")
+                .map(|(_, value)| value),
+            Some("0.0.0.0".into())
+        );
         click_zmq_control(&ctx, &mut session, "Enabled")?;
         assert_eq!(session.document()?.get("zmq_port"), Some("-1"));
         click_zmq_control(&ctx, &mut session, "Enabled")?;
@@ -3767,6 +4012,66 @@ mod tests {
             );
         }
         assert_eq!(session.points, vec![[192.0, 144.0]]);
+        Ok(())
+    }
+    #[test]
+    fn saved_rim_drag_uses_press_origin_even_when_first_motion_passes_the_hit_radius()
+    -> Result<(), String> {
+        let mut session = session()?;
+        session.review_calibration_step(Tool::Rim)?;
+        session.choose_calibration_action("edit")?;
+        let initial: Vec<f64> = session
+            .document()?
+            .vector("roi_circ")
+            .map_err(|e| e.to_string())?;
+        let initial_fov = session.document()?.get("vfov").map(str::to_owned);
+        let point = [initial[0], initial[1]];
+        let start = egui::pos2(point[0] as f32 + 20.0, point[1] as f32 + 20.0);
+        let ctx = egui::Context::default();
+        pointer_frame(&ctx, &mut session, vec![]);
+        pointer_frame(
+            &ctx,
+            &mut session,
+            vec![
+                egui::Event::PointerMoved(start),
+                egui::Event::PointerButton {
+                    pos: start,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+        for delta in [egui::vec2(25.0, 10.0), egui::vec2(32.0, 15.0)] {
+            pointer_frame(
+                &ctx,
+                &mut session,
+                vec![egui::Event::PointerMoved(start + delta)],
+            );
+            let moved: Vec<f64> = session
+                .document()?
+                .vector("roi_circ")
+                .map_err(|e| e.to_string())?;
+            assert_eq!(
+                &moved[..2],
+                &[point[0] + f64::from(delta.x), point[1] + f64::from(delta.y)]
+            );
+            assert!(session.edit_existing);
+            assert_eq!(session.pending_drag, Some((0, 0)));
+        }
+        let end = start + egui::vec2(32.0, 15.0);
+        pointer_frame(
+            &ctx,
+            &mut session,
+            vec![egui::Event::PointerButton {
+                pos: end,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+        );
+        assert!(session.pending_drag.is_none());
+        assert_eq!(session.document()?.get("vfov"), initial_fov.as_deref());
         Ok(())
     }
     #[test]

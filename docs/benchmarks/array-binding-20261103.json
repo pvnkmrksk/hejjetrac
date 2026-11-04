@@ -1,0 +1,36 @@
+{
+  "source_base": "c1c2ed2b8479afa26a6037f3b320cb58fc6651c3",
+  "source_state": "working tree; numerical engine unchanged by this task",
+  "platform": "Ubuntu 22.04 x86_64, Linux 6.8.0-124, Mesa NV136 GL/X11",
+  "toolchain": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "build": "debug",
+  "binary_sha256": "f4993f799f69213bb9591472b4d3c2c3ad27e9a66ef0d7e38e7bbac5b046ed54",
+  "checks": {
+    "format": true,
+    "clippy_workspace_all_targets_locked_deny_warnings": true,
+    "tests_passed": 322,
+    "tests_failed": 0,
+    "tests_ignored": 0,
+    "completed_suites": 28
+  },
+  "camera_inventory": [
+    {
+      "hardware_id": "usb:0c45:6366:UC762:video:0",
+      "hardware_id_ambiguous": true,
+      "id": 0,
+      "name": "Arducam OV9281 USB Camera: Ardu",
+      "port_id": "usb-port:0000:00:14.0:4.1.3:video:0"
+    },
+    {
+      "hardware_id": "usb:0c45:6366:UC762:video:0",
+      "hardware_id_ambiguous": true,
+      "id": 2,
+      "name": "Arducam OV9281 USB Camera: Ardu",
+      "port_id": "usb-port:0000:00:14.0:4.1.4:video:0"
+    }
+  ],
+  "native_file_report": "runs/array-binding-file-validation/rerun-1793693754625934954/report.json",
+  "native_hardware_report": "runs/array-binding-hardware-validation/rerun-1793696506616629119/report.json",
+  "recorded_raw_frames": 5,
+  "scope": "startup, identity resolution, graceful failure isolation, malformed-input atomicity, selected video retention and native pixels; no firmware write, physical accuracy, performance or 16-camera execution claim"
+}

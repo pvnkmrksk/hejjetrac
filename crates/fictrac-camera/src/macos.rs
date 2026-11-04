@@ -60,6 +60,8 @@ pub fn list_cameras() -> Result<Vec<CameraInfo>> {
             .map(|(id, device)| CameraInfo {
                 id: id as u32,
                 name: device.localizedName().to_string(),
+                hardware_id: Some(format!("avfoundation:{}", device.uniqueID())),
+                port_id: None,
             })
             .collect())
     }
@@ -122,6 +124,7 @@ define_class!(
     }
 );
 pub struct Camera {
+    id: u32,
     session: Retained<AVCaptureSession>,
     output: Retained<AVCaptureVideoDataOutput>,
     _delegate: Retained<CaptureDelegate>,
@@ -131,6 +134,17 @@ pub struct Camera {
     dimensions: (usize, usize),
 }
 impl Camera {
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+    pub fn port_id(&self) -> Option<String> {
+        None
+    }
+    pub fn hardware_id(&self) -> Option<String> {
+        // SAFETY: The retained device belongs to this worker; the copied string
+        // contains no borrowed Objective-C storage and outlives this call.
+        unsafe { Some(format!("avfoundation:{}", self.device.uniqueID())) }
+    }
     pub fn source_label(&self) -> String {
         // SAFETY: The retained device is live for this borrow. These read-only
         // identity properties run on the same worker that owns the OS session;
@@ -261,6 +275,7 @@ impl Camera {
             // Construct the owner before capture starts, so a failed start clears the
             // delegate and drains queued callbacks before releasing any retained object.
             let camera = Self {
+                id,
                 session,
                 output,
                 _delegate: delegate,

@@ -55,6 +55,7 @@ pub struct ViewFrame {
 }
 #[derive(Clone, Default)]
 pub struct Snapshot {
+    pub actual_camera_id: Option<u32>,
     /// Actual opened video path or native camera identifier; never editor text.
     pub source_label: String,
     pub resources: WorkerResources,
@@ -78,6 +79,13 @@ pub struct Snapshot {
     pub actual_fps: f64,
     /// New source images published per second, independent of measured frames.
     pub preview_fps: f64,
+    /// Delay relative to the fastest observed camera delivery. This
+    /// detects growing driver/worker backlog, not absolute sensor latency.
+    pub camera_lag_ms: Option<f64>,
+    /// Age of the source image currently available to the GUI. Updated at read
+    /// time so a stalled worker cannot leave a reassuring stale FPS alone.
+    pub preview_age_ms: Option<f64>,
+    pub(crate) preview_captured_at: Option<Instant>,
     pub display_fps: u32,
     pub source_fps: f64,
     pub headroom_percent: f64,
@@ -359,10 +367,15 @@ impl Worker {
         Ok(())
     }
     pub fn latest(&self) -> Snapshot {
-        self.snapshot
+        let mut snapshot = self
+            .snapshot
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .clone()
+            .clone();
+        snapshot.preview_age_ms = snapshot
+            .preview_captured_at
+            .map(|captured| captured.elapsed().as_secs_f64() * 1000.0);
+        snapshot
     }
 }
 impl Drop for Worker {
@@ -390,6 +403,17 @@ impl Input {
                 )))
             }
             SourceSpec::Camera(id) => {
+                doc.validate_frontend().map_err(|e| e.to_string())?;
+                let binding = doc.camera_binding().map_err(|e| e.to_string())?;
+                let id = if let Some(binding) = binding {
+                    fictrac_camera::resolve_camera(
+                        &fictrac_camera::list_cameras().map_err(|e| e.to_string())?,
+                        binding,
+                    )
+                    .map_err(|e| e.to_string())?
+                } else {
+                    id
+                };
                 let width = doc.number("rust_camera_width", 0.0);
                 let height = doc.number("rust_camera_height", 0.0);
                 let fps = doc.number("src_fps", -1.0);
@@ -412,7 +436,14 @@ impl Input {
                 } else {
                     fictrac_camera::Camera::open(id, fps)
                 };
-                camera.map(Self::Camera).map_err(|e| e.to_string())
+                let camera = camera.map_err(|e| e.to_string())?;
+                if let Some(binding) = binding
+                    && camera.hardware_id().as_deref() != Some(binding)
+                    && camera.port_id().as_deref() != Some(binding)
+                {
+                    return Err("Camera identity changed while opening; reconnect the required camera and retry".into());
+                }
+                Ok(Self::Camera(camera))
             }
         }
     }
@@ -441,16 +472,39 @@ struct Engine {
     tracker: Tracker,
     diagnostics: Diagnostics,
 }
+fn camera_capture_instant(
+    origin: &mut Option<(Instant, f64)>,
+    source_time: f64,
+    received: Instant,
+) -> Result<Instant> {
+    let (wall, source) = *origin.get_or_insert((received, source_time));
+    let elapsed = Duration::try_from_secs_f64((source_time - source) / 1000.0)
+        .map_err(|_| "Camera source clock is invalid; reconnect the camera")?;
+    let captured = wall
+        .checked_add(elapsed)
+        .ok_or("Camera source clock exceeds the platform clock range")?;
+    if captured > received {
+        // Opening/enumerating controls can leave the first driver image old.
+        // Catching up must move the delivery offset backwards, never put later
+        // captures in the future and report an artificial zero age for seconds.
+        *origin = Some((received, source_time));
+        Ok(received)
+    } else {
+        Ok(captured)
+    }
+}
 fn promote_preview(
     snapshot: &mut Snapshot,
     rgb: &mut Option<Vec<u8>>,
     frame: Option<&GrayFrame>,
+    captured_at: Option<Instant>,
     engine: Option<&Engine>,
     fallback: &mut Option<DebugViews>,
 ) {
     if let Some(frame) = frame
         && let Some(rgb) = rgb.take()
     {
+        snapshot.preview_captured_at = captured_at;
         let debug = engine
             .and_then(|engine| engine.tracker.debug_views().cloned())
             .or_else(|| fallback.take());
@@ -534,6 +588,7 @@ fn run(
     };
     match &mut input {
         Input::Camera(camera) => {
+            snapshot.actual_camera_id = Some(camera.id());
             snapshot.source_label = camera.source_label();
             match camera.capabilities() {
                 Ok(capabilities) => {
@@ -593,6 +648,9 @@ fn run(
     let mut playback_origin_frame = 0;
     let mut last_camera_frame = Instant::now();
     let mut last_source_time: Option<f64> = None;
+    let mut camera_clock_origin: Option<(Instant, f64)> = None;
+    let mut previous_capture_instant = None;
+    let mut camera_discontinuity = false;
     let mut retimed = false;
     let (mut sinks, mut outputs_unavailable) = match OutputSinks::from_config(&doc) {
         Ok(sinks) => (sinks, false),
@@ -616,6 +674,16 @@ fn run(
             for cmd in pending_command.take().into_iter().chain(rx.try_iter()) {
                 match cmd {
                     Command::Configure(next, revision) => {
+                        // Linking/unlinking the already opened physical camera
+                        // changes source metadata only. Preserve its learned
+                        // map, predictor, recording epoch and measured path.
+                        let binding_only = matches!(input, Input::Camera(_))
+                            && doc
+                                .fields()
+                                .filter(|(key, _)| !matches!(*key, "rust_camera_id" | "src_fn"))
+                                .eq(next.fields().filter(|(key, _)| {
+                                    !matches!(*key, "rust_camera_id" | "src_fn")
+                                }));
                         // A failed startup has no previously configured handles.
                         // Reapply even unchanged settings, e.g. after the old Python
                         // publisher releases the requested port. A disabled sink is
@@ -656,7 +724,7 @@ fn run(
                             };
                         }
                         snapshot.revision = revision;
-                        needs_config = true;
+                        needs_config |= !binding_only;
                     }
                     Command::Pause(p) => {
                         skip_gap = true;
@@ -811,11 +879,14 @@ fn run(
                         recording_applied(&mut snapshot, "Recording started");
                     }
                     Command::Record(dir) => {
+                        let options =
+                            fictrac_control::RecordOptions::from_document(&doc).with_video();
+                        let effective = options.recording_document(&doc)?;
                         if let Err(error) = replace_recording(
                             &mut recorder,
                             finalizer.as_ref(),
                             dir.clone(),
-                            &doc,
+                            &effective,
                             source_recording_tuning(&input, MediaRecordingTuning::default()),
                             &mut snapshot,
                             recording_source_fps,
@@ -823,10 +894,9 @@ fn run(
                             recording_rejected(&mut snapshot, error);
                             continue;
                         }
-                        manual_record_options = None;
+                        manual_record_options = Some(options);
                         snapshot.recording = true;
-                        snapshot.record_options =
-                            Some(fictrac_control::RecordOptions::from_document(&doc));
+                        snapshot.record_options = Some(options);
                         snapshot.media_recording = None;
                         snapshot.media_warnings.clear();
                         recording_applied(&mut snapshot, "Recording started");
@@ -876,6 +946,7 @@ fn run(
                     &mut snapshot,
                     &mut previous_rgb,
                     previous_frame.as_ref(),
+                    previous_capture_instant,
                     engine_state.as_ref(),
                     &mut previous_debug,
                 );
@@ -965,6 +1036,20 @@ fn run(
                 *shared
                     .lock()
                     .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
+                if !ended && let Input::Camera(_) = &input {
+                    // Calibration freezes the displayed image and numerical
+                    // state, not acquisition. Keep draining the driver while
+                    // paused so resuming cannot measure images exposed before
+                    // the user finished calibrating. Files retain their exact
+                    // decoder position. No paused image is taught or recorded.
+                    if input.next()?.is_some() {
+                        last_camera_frame = Instant::now();
+                        camera_discontinuity |= snapshot.row.is_some();
+                    } else if last_camera_frame.elapsed() > Duration::from_secs(5) {
+                        return Err("No camera frames for five seconds. Check the device and camera permission, then Connect again.".into());
+                    }
+                    continue;
+                }
                 // Mutating commands and shutdown unpark immediately; the long idle
                 // timeout only refreshes asynchronous output health once a second.
                 thread::park_timeout(Duration::from_secs(1));
@@ -993,6 +1078,7 @@ fn run(
                     &mut snapshot,
                     &mut previous_rgb,
                     previous_frame.as_ref(),
+                    previous_capture_instant,
                     engine_state.as_ref(),
                     &mut previous_debug,
                 );
@@ -1023,6 +1109,16 @@ fn run(
             let raw_frame = frame.clone();
             let source_time = frame.timestamp_ms();
             let file_source = matches!(input, Input::File(_));
+            let captured_at = if file_source {
+                None
+            } else {
+                let received = Instant::now();
+                let captured =
+                    camera_capture_instant(&mut camera_clock_origin, source_time, received)?;
+                snapshot.camera_lag_ms =
+                    Some(received.saturating_duration_since(captured).as_secs_f64() * 1000.0);
+                Some(captured)
+            };
             let override_fps = doc.number("src_fps", -1.0);
             let frame = if file_source && (override_fps > 0.0 || retimed) {
                 let time = if let (Some(previous), Some(source_prev)) =
@@ -1126,6 +1222,12 @@ fn run(
                 needs_config = false;
             }
             let tracking_tick = Instant::now();
+            if camera_discontinuity {
+                if let Some(engine) = &mut engine_state {
+                    engine.tracker.mark_source_discontinuity();
+                }
+                camera_discontinuity = false;
+            }
             let row = if let Some(e) = &mut engine_state {
                 Some(
                     e.tracker
@@ -1203,6 +1305,7 @@ fn run(
                 }
             }
             if publish {
+                snapshot.preview_captured_at = captured_at;
                 snapshot.image = Some(Arc::new(ViewFrame {
                     width: frame.width(),
                     height: frame.height(),
@@ -1222,6 +1325,7 @@ fn run(
                     &mut snapshot,
                     &mut previous_rgb,
                     Some(&frame),
+                    captured_at,
                     engine_state.as_ref(),
                     &mut previous_debug,
                 );
@@ -1303,6 +1407,7 @@ fn run(
                 last_status_publish = Instant::now();
             }
             previous_frame = Some(frame);
+            previous_capture_instant = captured_at;
             previous_input = Some(input_frame);
             step_remaining = step_remaining.saturating_sub(1);
             snapshot.advance_remaining = step_remaining;
@@ -1878,6 +1983,47 @@ fn file(path: &PathBuf) -> Result<BufWriter<File>> {
 mod tests {
     use super::*;
     use std::net::UdpSocket;
+    #[test]
+    fn catching_up_initial_driver_frames_never_dates_the_preview_in_the_future() -> Result<()> {
+        let received = Instant::now();
+        let mut origin = None;
+        assert_eq!(
+            camera_capture_instant(&mut origin, 0.0, received)?,
+            received
+        );
+        let caught_up = received + Duration::from_millis(10);
+        assert_eq!(
+            camera_capture_instant(&mut origin, 1010.0, caught_up)?,
+            caught_up
+        );
+        let later = received + Duration::from_millis(30);
+        assert_eq!(
+            camera_capture_instant(&mut origin, 1020.0, later)?,
+            received + Duration::from_millis(20)
+        );
+        Ok(())
+    }
+    #[test]
+    fn stale_preview_age_keeps_advancing_when_reported_fps_is_frozen() -> Result<()> {
+        let (tx, _rx) = mpsc::sync_channel(1);
+        let captured = Instant::now()
+            .checked_sub(Duration::from_secs(5))
+            .ok_or("test clock cannot represent a five-second-old image")?;
+        let worker = Worker {
+            tx,
+            snapshot: Arc::new(Mutex::new(Snapshot {
+                actual_fps: 100.0,
+                preview_captured_at: Some(captured),
+                ..Snapshot::default()
+            })),
+            stop: Arc::new(AtomicBool::new(false)),
+            handle: None,
+        };
+        let snapshot = worker.latest();
+        assert_eq!(snapshot.actual_fps, 100.0);
+        assert!(snapshot.preview_age_ms.is_some_and(|age| age >= 5000.0));
+        Ok(())
+    }
     fn fixture() -> std::result::Result<(SourceSpec, ConfigDocument), Box<dyn std::error::Error>> {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
         let mut doc = ConfigDocument::parse(fs::read_to_string(

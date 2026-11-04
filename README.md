@@ -10,6 +10,17 @@
 
 *The native app processing the supplied FicTrac sample. [Watch the video](docs/images/tracking-demo.mp4).*
 
+[Updated real-camera calibration screenshots and native screen capture](docs/release-v0.3.6.md)
+show the saved 47° M01–M04 outlines. To adjust a saved outline, choose **Edit ball**
+and drag a numbered rim mark. The rig profiles bind M01–M04 by serial, independently
+of camera enumeration order.
+
+**Several live cameras:** run simultaneous sessions with one saved calibration
+and serial link per rig. [Multi-camera setup](book/src/rigs.md) explains linking,
+array launch and separate outputs. [Example hardware and optional Arducam serial
+programming](book/src/appendix-cameras.md) records our compact OV9281 global-shutter
+boards for replication; a suitable regular webcam also works.
+
 Created by **[Pavan Kumar Kaushik](https://github.com/pvnkmrksk)**. The name combines **ಹೆಜ್ಜೆ** (*hejjé*, roughly **HEY-jay**), Kannada for a footstep, footprint or path, with **Trac**, following FicTrac’s spelling: **HEY-jay-track**. [Word origin](https://alar.ink/dictionary/kannada/english/%E0%B2%B9%E0%B3%86%E0%B2%9C%E0%B3%8D%E0%B2%9C%E0%B3%86).
 
 ## Open and start
@@ -59,18 +70,27 @@ The desktop accepts a grid directly:
 hejjetrac --windows 4 --grid 2x2
 hejjetrac --windows 16 --grid 4x4
 hejjetrac --config VR1.txt --window-size 480x360
+hejjetrac --config VR1.txt --array
 ```
 
 Keep a saved config for each physical rig, with distinct output ports. Bundled `VR1.txt`–`VR4.txt` are examples from the original setup; review camera IDs and calibration before collecting data. Actual camera capacity depends on capture bandwidth, recording and your computer. [Multi-rig setup](https://pvnkmrksk.github.io/hejjetrak/manual/rigs.html).
 
-The current VR1–VR4 files use the supplied 2026-10-26 rig calibrations and
-explicit 320×240, 100 FPS capture, matching that setup's modified C++ capture
-adapter. Their camera IDs are 0/2/4/6, UDP ports are 1111–1114 and direct ZMQ
+The current VR1–VR4 files retain the saved rig calibrations and
+explicit 320×240, 100 FPS capture. They link to provisioned serials M01–M04;
+the saved numeric IDs 0/2/4/6 are historical, and serial resolution overrides
+them when USB enumeration changes. UDP ports are 1111–1114 and direct ZMQ
 ports are 9871–9874. When using the existing Python republishers, launch
 `./scripts/run_four_bridged.sh`: it disables direct ZMQ in temporary calibrated
 copies, leaving your saved files unchanged. [Connection setup](docs/matrex-vr.md).
 The camera chooser preserves an active preview when a camera is already in use
 and identifies its owning rig.
+Optional hardware binding in **Source & camera** keeps a rig attached to its
+camera across Linux USB/device renumbering. Missing or duplicated IDs leave that
+rig stopped. Bindings and output ports are saved per rig; configurations are
+unbound by default apart from the explicitly linked example rig files.
+[Binding and platform limits](book/src/configuration.md#optional-camera-binding).
+**More → Start saved rig array** starts the saved numbered rig files and reports
+each failure independently. Array startup never substitutes a stock video.
 
 Display FPS controls preview updates independently of processing. The recording
 speed/size control selects the configured codec, faster MJPEG, or fastest
@@ -96,6 +116,12 @@ HejjéTrac preserves FicTrac's legacy config text and data conventions, and chec
 explicit accuracy limits and a separate post-occlusion control.
 
 Native release CI runs on Windows, Linux, Apple Silicon and Intel Mac. Camera and GUI hardware checks are documented per platform. [Tracking performance](docs/tracking-performance.md) and [resource use](docs/resources.md) contain the fixture, hardware and timing boundaries for the published benchmarks.
+
+The four-camera six-minute run measured **27.11 ms median preview age**, 44.92 ms
+p95 and 48.86 ms maximum while each rig processed about 101 frames/s. The maximum
+occurred during steady state. Preview cadence is independent of tracking;
+[the timing explanation and distributions](docs/preview-age.md) describe the
+30 FPS display limit, observed publication rate and relative-clock measurement.
 
 ## Build and contribute
 

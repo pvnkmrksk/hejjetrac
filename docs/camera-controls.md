@@ -1,5 +1,94 @@
 # Native camera capabilities and controls
 
+On 2026-11-03, after the user's Windows provisioning, the four connected Linux
+capture interfaces expose unique USB serials M01, M02, M03 and M04. Current node
+assignments are video6, video2, video4 and video0 respectively. The saved VR1–VR4
+files bind to those exact serials, not that transient node order. Open streams
+retain their verified identity, and unlink keeps the opened camera. The UC762
+collision and tool investigations below describe the earlier unprovisioned
+devices; HejjéTrac did not write their firmware.
+
+Camera discovery includes an optional `hardware_id`. On Linux this is
+`usb:<vendor>:<product>:<serial>:video:<interface-index>`, read from sysfs USB
+descriptors and the V4L interface index, never from enumeration order. Metadata-only
+nodes remain excluded by the native backend. Exact matching requires one capture
+device; missing/duplicate identities return actionable errors. Capture rechecks
+the identity after opening and before publishing frames. Empty/absent
+`rust_camera_id` leaves ordinary selection unchanged. macOS exposes a namespaced
+AVFoundation uniqueID; this is an OS identity, not a claim of a manufacturer serial
+or cross-port persistence. Windows currently reports no binding identity. Devices
+without an established ID remain usable without binding. See the
+[configuration guide](../book/src/configuration.md#optional-camera-binding).
+
+The connected development Arducam OV9281 reports vendor `0c45`, product `6366`,
+serial `UC762`. Its image node has V4L index 0; index 1 is the companion node.
+The resulting image identity is `usb:0c45:6366:UC762:video:0`. This single-device
+observation establishes neither batch-wide serial uniqueness nor sixteen-camera
+capture capacity. Inspect the entire batch; conflicting capture identities block
+startup instead of selecting a camera arbitrarily.
+
+The follow-up inventory with two physical cameras found both report `UC762`.
+Their raw USB descriptor bytes, firmware revision and extension GUIDs also match;
+udev `ID_SERIAL_SHORT`, media serial and V4L identity supply no further distinction.
+Their USB paths `4.1.3` and `4.1.4` differ. Linux discovery therefore also exposes
+an explicit `port_id`, for example
+`usb-port:0000:00:14.0:4.1.3:video:0`. This binds a connector topology on this
+host, never the identity of a physical camera. The GUI labels this alternative
+and requires an explicit selection; serial collisions never silently become port
+bindings. Provisioning unique serials may be possible for the supported B0332
+board using Arducam's documented utility; SKU/firmware support and persistence
+after reconnect must be verified separately.
+
+### Serial provisioning follow-up, 2026-11-03
+
+A fresh read confirms two physical devices on USB paths `4.1.3` and `4.1.4`,
+both still reporting `UC762`. The official USB 2.0 serial utility was downloaded
+and inspected without executing it. Its package contains a Windows x86
+`ArducamUVCSerialNumber_Formal.exe` with `SonixCamera.dll` and
+`SunplusCamera.dll`; it supplies no Linux executable. The current Linux V4L
+control inventory exposes image/exposure controls, not a serial-writing control.
+Arducam's [B0332 support report](https://forum.arducam.com/t/serial-number-change-tool-no-longer-supports-b0332-cameras/12946)
+also records tool-version/production-batch compatibility differences. The printed
+board SKU and batch/date code are not present in the queried USB metadata.
+Programming has therefore not been performed from this Linux session; no serial,
+firmware or application configuration was changed by this provisioning attempt.
+The downloaded package, per-file hashes and original identity inventory are
+retained under `runs/camera-serial-provisioning/` for selecting a compatible
+vendor procedure. Reconnection and cross-port readback are required before a
+new serial can be treated as persistent identity.
+
+The user subsequently identified the board as **UC-844 Rev B**, matching the
+OV9281/B0332 family discussed in Arducam's support material. No supported
+Linux-only serial writer for these exact units was found. Arducam's
+[published explanation](https://www.arducam.com/blog/multiple-usb-camera-or-webcams-in-ubuntu-and-windows-solution/)
+describes its Windows software as programming identifiers that then persist
+across operating systems. USB-socket bindings remain the available Linux-only
+route in HejjéTrac; they do not change a camera's hardware serial.
+
+For a one-time Windows provisioning attempt, use the USB 2.0 **Serial Number
+Tool** in the [official configuration guide](https://docs.arducam.com/UVC-Camera/UVC-Camera-Configuration-Guide/):
+
+1. Copy and extract the official package. Keep `ArducamUVCSerialNumber_Formal.exe`,
+   `SonixCamera.dll` and `SunplusCamera.dll` together.
+2. Connect only the first external camera and close applications using it.
+3. Run the utility, select the Arducam camera in its Port list, and click Read.
+   Confirm the current serial is `UC762` before any write.
+4. Enter `HT001` in the Serial Number field, click Write and wait for success.
+5. Unplug, reconnect to a different USB socket, reopen the tool and Read again.
+   Treat the change as verified only if it still reports `HT001`; label the camera.
+6. Unplug it and repeat with the second camera as `HT002`, then through `HT016`
+   for the remaining batch. Keep one external camera connected while provisioning.
+7. Return to Linux and check `target/debug/fictrac-desktop --camera-list`.
+   Expect distinct `usb:0c45:6366:HT001:video:0` and
+   `usb:0c45:6366:HT002:video:0` identities. Reconnect/change sockets and verify
+   them again before replacing any socket binding with the new serial binding.
+
+If the utility cannot Read/recognize a camera, a compatible vendor build is
+needed before proceeding. Arducam's B0332 support report above records versions
+that stopped recognizing some batches. Supply UC-844 Rev B / OV9281, VID/PID
+`0c45:6366`, revision `0100` and current serial `UC762` when requesting the
+appropriate tool. No serial change is claimed until device readback verifies it.
+
 The camera crate exposes serializable Rust values, independent of the desktop and agent frontends. `Camera::capabilities()` queries the live device; `set_control(CameraControlRequest)` validates support/range/step, performs the operation on the owning capture worker and reads the actual state back. `open_with_format(id, CameraFormatRequest)` selects an explicitly supported resolution and rate. Invalid dimensions, nonfinite values, unsupported formats and unsupported hardware controls return errors. Format changes reopen capture and start a distinct calibration epoch. Legacy pixel marks require review/refit for the new geometry; an explicitly captured resolution reference can scale them for matching aspect ratio, configured FOV and projection. This does not detect physical lens changes or undocumented sensor crops, and metadata-free legacy files are never silently normalized.
 
 `Camera::open(id, fps)` retains the default preference for a bounded format near 640×480. Explicit format requests use exact advertised dimensions instead of silently choosing another resolution. Automatic FPS is `null` in the shared request. Windows/Linux choose from the complete advertised set, including mono and MJPEG-only devices; they do not require a YUYV mode or an exact 640×480 default size. JPEG decoding uses Rust code with checked image dimensions and allocation limits. Capture is bounded to 8 million pixels and 8192 per axis. The macOS adapter sets native CoreVideo output dimensions, filters transitional buffers and applies exact rational frame duration after the session configuration commits. No Rust image scaling conceals a negotiated size.

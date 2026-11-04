@@ -15,6 +15,8 @@ pub enum Icon {
     Play,
     Pause,
     Step,
+    Link,
+    Unlink,
 }
 fn artwork(icon: Icon, active: bool) -> (&'static str, &'static [u8]) {
     macro_rules! asset {
@@ -40,10 +42,11 @@ fn artwork(icon: Icon, active: bool) -> (&'static str, &'static [u8]) {
         Icon::Play => asset!("play"),
         Icon::Pause => asset!("pause"),
         Icon::Step => asset!("skip-forward"),
+        Icon::Link | Icon::Unlink => asset!("camera"),
     }
 }
 fn native_button(ui: &egui::Ui, icon: Icon, active: bool) -> egui::Button<'static> {
-    if matches!(icon, Icon::Calibration) {
+    if matches!(icon, Icon::Calibration | Icon::Link | Icon::Unlink) {
         return egui::Button::new("")
             .min_size(Vec2::splat(30.0))
             .selected(active)
@@ -109,6 +112,40 @@ pub fn button(ui: &mut egui::Ui, icon: Icon, active: bool, help: &str) -> egui::
                 [center + direction * 4.0, center + direction * 10.0],
                 stroke,
             );
+        }
+    }
+    if matches!(icon, Icon::Link | Icon::Unlink) {
+        // Native vector geometry, like the calibration reticle above. No
+        // image download or decode is needed when opening camera controls.
+        let center = response.rect.center();
+        let stroke = egui::Stroke::new(1.5_f32, ui.visuals().text_color());
+        let broken = matches!(icon, Icon::Unlink);
+        for side in [-1.0_f32, 1.0] {
+            let offset = if broken { 4.2 } else { 2.7 };
+            let points = (0..=24)
+                .map(|index| {
+                    let angle = index as f32 / 24.0 * std::f32::consts::TAU;
+                    let x = angle.cos() * 2.0;
+                    let y = angle.sin() * 2.0 + if angle.sin() >= 0.0 { 2.2 } else { -2.2 };
+                    center
+                        + egui::vec2(
+                            (x + y) * std::f32::consts::FRAC_1_SQRT_2 + side * offset,
+                            (x - y) * std::f32::consts::FRAC_1_SQRT_2 - side * offset,
+                        )
+                })
+                .collect();
+            ui.painter().add(egui::Shape::line(points, stroke));
+        }
+        if broken {
+            for side in [-1.0_f32, 1.0] {
+                ui.painter().line_segment(
+                    [
+                        center + egui::vec2(side * 2.0, side * 3.5),
+                        center + egui::vec2(side * 3.5, side * 5.0),
+                    ],
+                    stroke,
+                );
+            }
         }
     }
     response

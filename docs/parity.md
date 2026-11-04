@@ -1,5 +1,52 @@
 # Behavioral parity assessment
 
+## Live pause freshness and provisioned camera identity — 2026-11-03
+
+After the user's serial provisioning, all four connected Linux cameras expose
+distinct M01–M04 identities. The earlier two-device UC762 collision below is
+historical. Exact bindings follow the serial despite shuffled capture-node
+numbers. Open streams retain their verified identity; missing or duplicated
+bindings cannot select a numeric fallback. Unlink keeps the opened camera,
+and metadata-only link changes preserve its learned atlas and tracking epoch.
+
+The live pause path now drains acquisition while holding the calibration image
+and numerical state. This fixes the reproduced stale first frame after a
+multi-second calibration pause. Capture-clock backlog and preview age are
+reported independently of FPS; neither is an absolute sensor-latency oracle.
+File pause/advance behavior and the missing-motion policy remain unchanged.
+
+Continuous tracking, numerical tolerances and reference constants are unchanged.
+An explicit pause discontinuity requires fresh confirmed reanchoring with zero
+relative motion before map tracking resumes; the held atlas/path are preserved.
+The pairwise alternative anchors its next image without publishing gap motion.
+Complete real high-speed and capture-gap evidence passes the existing gates;
+both fast47 outputs are byte-identical to retained pre-binding outputs.
+[Numerical report](benchmarks/tracking-regression-20261103-final.json).
+The current native execution is Linux only; Windows/macOS serial binding and
+physical high-speed live motion are not established by these tests.
+
+## Optional binding and independent array startup — 2026-11-03
+
+Current source adds exact optional `rust_camera_id` matching and explicitly
+selected Linux USB-socket binding. The two inspected Arducam OV9281 cameras
+both expose serial `UC762`; serial matching cannot distinguish this pair.
+Duplicate identities are errors, never guessed assignments. USB socket IDs
+identify connector topology on this host and accept replacement cameras in the
+same socket; they are not physical camera identities. macOS exposes an
+AVFoundation ID without new native binding validation, and Windows binding IDs
+remain unavailable.
+
+Saved arrays start each numbered configuration independently, including when
+the first configuration is malformed. Missing/invalid rigs remain visible and
+never fall back to a stock video; healthy sessions continue. The interactive
+recording selector always chooses raw, debug or both, with raw as the default
+when legacy flags select no video. Legacy automatic-recording and offline
+numeric-only workflows retain their documented semantics. Unknown config-file
+keys warn and are ignored by the engine; malformed known values remain errors.
+These changes do not change numerical tracking, error metrics, oracle constants,
+scientific parity or sixteen-camera bandwidth claims.
+[Configuration and hardware limits](../book/src/configuration.md#optional-camera-binding).
+
 ## LAN defaults and Ubuntu graphics — 2026-10-28
 
 ZeroMQ now defaults to enabled on all IPv4 interfaces, including localhost,

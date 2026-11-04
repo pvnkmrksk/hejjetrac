@@ -16,11 +16,18 @@ pub fn list_cameras() -> Result<Vec<CameraInfo>> {
     let devices = nokhwa::query(ApiBackend::Auto).map_err(|error| Error(error.to_string()))?;
     #[cfg(target_os = "linux")]
     {
-        crate::identity::indexed_camera_infos(
+        let mut cameras = crate::identity::indexed_camera_infos(
             devices
                 .iter()
                 .map(|camera| (camera.index().as_string(), camera.human_name())),
-        )
+        )?;
+        for camera in &mut cameras {
+            if let Some(identity) = crate::identity::camera_identity(camera.id) {
+                camera.hardware_id = identity.hardware_id;
+                camera.port_id = identity.port_id;
+            }
+        }
+        Ok(cameras)
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -33,6 +40,9 @@ pub fn list_cameras() -> Result<Vec<CameraInfo>> {
                         Error("too many cameras to represent their native ordinal".into())
                     })?,
                     name: camera.human_name(),
+                    // No serial-backed identity is currently exposed by this adapter.
+                    hardware_id: None,
+                    port_id: None,
                 })
             })
             .collect()
@@ -40,12 +50,26 @@ pub fn list_cameras() -> Result<Vec<CameraInfo>> {
 }
 pub struct Camera {
     camera: NativeCamera,
+    id: u32,
+    hardware_id: Option<String>,
+    port_id: Option<String>,
     start: Instant,
     clock: crate::clock::CaptureClock,
     count: u64,
     read_failed: bool,
 }
 impl Camera {
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+    pub fn port_id(&self) -> Option<String> {
+        self.port_id.clone()
+    }
+    pub fn hardware_id(&self) -> Option<String> {
+        // Retain the identity verified at open: a recycled /dev/video index
+        // must never relabel the stream held by this camera.
+        self.hardware_id.clone()
+    }
     /// Identity reported by the opened backend, not an inferred enumeration path.
     pub fn source_label(&self) -> String {
         let info = self.camera.info();
@@ -91,6 +115,8 @@ impl Camera {
         Self::open_internal(id, request, true)
     }
     fn open_internal(id: u32, request: CameraFormatRequest, exact: bool) -> Result<Self> {
+        #[cfg(target_os = "linux")]
+        let identity_before = crate::identity::camera_identity(id);
         let requested_fps = request.fps.unwrap_or(30.0);
         if request.fps.is_some() && requested_fps.fract() != 0.0 {
             return Err(Error(
@@ -172,8 +198,23 @@ impl Camera {
         {
             return Err(Error("camera negotiated a format different from the explicit request; choose another advertised format".into()));
         }
+        #[cfg(target_os = "linux")]
+        let (hardware_id, port_id) = {
+            let identity_after = crate::identity::camera_identity(id);
+            if identity_before != identity_after {
+                return Err(Error("camera identity changed while opening; reconnect the required camera and retry".into()));
+            }
+            identity_after
+                .map(|identity| (identity.hardware_id, identity.port_id))
+                .unwrap_or_default()
+        };
+        #[cfg(not(target_os = "linux"))]
+        let (hardware_id, port_id) = (None, None);
         Ok(Self {
             camera,
+            id,
+            hardware_id,
+            port_id,
             start: Instant::now(),
             clock: crate::clock::CaptureClock::default(),
             count: 0,

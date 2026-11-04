@@ -12,6 +12,14 @@ pub struct RecordOptions {
     pub debug: bool,
 }
 impl RecordOptions {
+    /// Interactive recording always selects at least one video stream. Existing
+    /// numeric-only headless runs remain available independently of this selector.
+    pub fn with_video(self) -> Self {
+        Self {
+            raw: self.raw || !self.debug,
+            debug: self.debug,
+        }
+    }
     pub fn from_document(document: &ConfigDocument) -> Self {
         Self {
             raw: document.boolean("save_raw"),

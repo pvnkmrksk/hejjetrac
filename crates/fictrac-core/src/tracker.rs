@@ -132,6 +132,19 @@ impl Tracker {
             heading: 0.0,
         })
     }
+    /// Mark deliberately discarded source images without inferring their motion.
+    ///
+    /// Retains source/epoch counters, timestamps, pose, path, integrated motion
+    /// and the learned atlas. Map tracking requires fresh confirmed absolute
+    /// relocalization before relative motion resumes; pairwise tracking anchors
+    /// its next image with an initializing zero-relative-motion row.
+    pub fn mark_source_discontinuity(&mut self) {
+        self.previous = None;
+        self.prediction = DVec3::ZERO;
+        if let Some(map) = &mut self.spherical {
+            map.mark_source_discontinuity();
+        }
+    }
     /// Reset pose, path and heading while retaining source count/time and integrated displacement.
     /// With global search enabled the atlas is retained for relocalisation, as in FicTrac.
     pub fn reset_tracking(&mut self) {
@@ -413,7 +426,13 @@ impl Tracker {
             .spherical_map
             .as_ref()
             .is_some_and(|m| {
-                !m.resilient && m.max_bad_frames >= 0 && self.bad_frames > m.max_bad_frames as u32
+                !m.resilient
+                    && m.max_bad_frames >= 0
+                    && self.bad_frames > m.max_bad_frames as u32
+                    && !self
+                        .spherical
+                        .as_ref()
+                        .is_some_and(|map| map.is_reanchoring())
             });
         if reset_due {
             self.reset_tracking();

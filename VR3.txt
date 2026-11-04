@@ -1,4 +1,5 @@
-# VR3: calibration from the physical rig config, 2026-10-26.
+# VR3: 47-degree rim refit, 2026-11-04; reviewed against retained 2026-11-03 camera image.
+# Verify outline after moving the camera. Existing physical lab orientation is preserved.
 # Pixel marks were measured at 320x240; keep this capture size.
 # UDP 1113 and direct ZMQ 9873 are enabled; use only one publisher per port.
 # scripts/run_four_bridged.sh disables direct ZMQ in temporary copies for republishers.
@@ -16,10 +17,10 @@ opt_max_err      : -1.000000
 opt_max_evals    : 50
 opt_tol          : 0.001
 q_factor         : 6
-roi_c            : {-0.010769162760834994,-0.0036936168443336215,0.9999351890637902}
-roi_circ         : {226.87307133375907,152.32198142414862,120.61920266347622,194.6749226006192,70.09288210019157,106.25386996904025,191.9504674150182,45.3250773993808,96.84211063369521,52.01238390092879}
-roi_ignr         : { { 106.50155427079373,33.43653250773994,183.777103367582,19.318885448916408,187.4922739972353,63.90092879256966,173.37462560455282,86.93498452012383,110.95975902637768,85.44891640866874,99.07121301148717,58.69969040247678 } }
-roi_r            : 0.10325111956273916
+roi_c            : {0.07191865546494065, 0.10080707056491117, 0.992303200398062}
+roi_circ         : {177, 65, 119, 89, 95, 148, 116, 208, 248, 204, 272, 145, 243, 90}
+roi_ignr         : { { 111.70279315230833,37.15170278637771,191.20743328908756,41.60990712074303,183.03406924165134,93.62229102167183,173.37462560455282,133.74613003095976,111.70279315230833,110.71207430340557,106.50155427079373,86.19195046439629,97.58514475962586,62.414860681114554 } }
+roi_r            : 0.30217387978288196
 save_debug       : n
 save_raw         : n
 sock_host        : 127.0.0.1
@@ -28,7 +29,7 @@ src_fn           : 4
 src_fps          : 100
 thr_ratio        : 1.25
 thr_win_pc       : 0.25
-vfov             : 17
+vfov             : 47
 vid_codec        : h264
 
 rust_instance_name : VR3
@@ -36,3 +37,4 @@ rust_resilient     : y
 rust_camera_width  : 320
 rust_camera_height : 240
 zmq_port           : 9873
+rust_camera_id     : usb:0c45:6366:M03:video:0

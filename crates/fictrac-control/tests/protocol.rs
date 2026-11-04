@@ -583,11 +583,20 @@ fn native_only_controls_are_typed_and_not_advertised_for_headless_sessions() -> 
     let variants = schema["oneOf"].as_array().ok_or("missing variants")?;
     assert!(!variants.iter().any(|v| matches!(
         v["properties"]["command"]["const"].as_str(),
-        Some("view" | "camera_status" | "camera_set" | "camera_format")
+        Some(
+            "view"
+                | "start_array"
+                | "camera_list"
+                | "camera_status"
+                | "camera_set"
+                | "camera_format"
+        )
     )));
     let mut c = Controller::new();
     for (command, args) in [
         ("view", json!({"settings":false})),
+        ("camera_list", json!({})),
+        ("start_array", json!({})),
         ("camera_status", json!({})),
         (
             "camera_set",

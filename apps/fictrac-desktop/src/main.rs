@@ -1,4 +1,5 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
+mod array;
 mod calibration;
 mod control;
 #[cfg(any(target_os = "linux", test))]
@@ -35,6 +36,9 @@ struct Args {
     config: Option<PathBuf>,
     #[arg(long, default_value_t = 1)]
     windows: usize,
+    /// Start saved rig siblings and report failures independently, without sample fallback.
+    #[arg(long)]
+    array: bool,
     #[arg(long)]
     screenshot: Option<PathBuf>,
     #[arg(long, default_value_t = 2.0)]
@@ -154,6 +158,7 @@ struct Desktop {
     root_hidden: bool,
     startup_notice: String,
     startup_frames: u8,
+    tile_array_requested: bool,
 }
 impl Desktop {
     fn camera_owners(&self, except: Option<u64>) -> std::collections::BTreeMap<u32, String> {
@@ -166,12 +171,24 @@ impl Desktop {
                     && !session.snapshot.ended
             })
             .filter_map(|session| {
-                session.running_source.parse::<u32>().ok().map(|id| {
-                    (
-                        id,
-                        format!("{} (window {})", session.display_name(), session.id),
-                    )
-                })
+                session
+                    .snapshot
+                    .actual_camera_id
+                    .or_else(|| {
+                        session.running_source.parse::<u32>().ok().and_then(|id| {
+                            if let Some(binding) = session.running_camera_binding.as_deref() {
+                                fictrac_camera::resolve_camera(&session.cameras, binding).ok()
+                            } else {
+                                Some(id)
+                            }
+                        })
+                    })
+                    .map(|id| {
+                        (
+                            id,
+                            format!("{} (window {})", session.display_name(), session.id),
+                        )
+                    })
             })
             .collect()
     }
@@ -198,6 +215,7 @@ impl Desktop {
         }
         ui::configure_appearance(&cc.egui_ctx);
         let normal_startup = args.config.is_none() && !args.control_stdio;
+        let mut explicit_session = None;
         let startup = if normal_startup {
             startup::default_document(&default_config()?)?
         } else {
@@ -206,11 +224,14 @@ impl Desktop {
                 .clone()
                 .map(Ok)
                 .unwrap_or_else(|| resource("examples/upstream-config.txt"))?;
+            let candidate = Session::from_config_path(1, path.clone())?;
+            let document = match candidate.document() {
+                Ok(document) => document,
+                Err(_) => ConfigDocument::parse("src_fn:\n".into()).map_err(|e| e.to_string())?,
+            };
+            explicit_session = Some(candidate);
             startup::Startup {
-                document: ConfigDocument::parse(
-                    std::fs::read_to_string(&path).map_err(|e| e.to_string())?,
-                )
-                .map_err(|e| e.to_string())?,
+                document,
                 path,
                 fresh: false,
                 temporary: false,
@@ -219,7 +240,8 @@ impl Desktop {
         };
         let path = startup.path;
         let doc = startup.document;
-        let mut first = Session::new(1, doc.clone(), Some(path.clone()));
+        let mut first =
+            explicit_session.unwrap_or_else(|| Session::new(1, doc.clone(), Some(path.clone())));
         first.framebuffer_limit = cc
             .wgpu_render_state
             .as_ref()
@@ -233,7 +255,11 @@ impl Desktop {
             ));
         first.temporary_config = startup.temporary;
         first.fallback_notice = startup.notice.clone();
-        if normal_startup {
+        if normal_startup
+            && args.windows == 1
+            && !args.array
+            && doc.camera_binding().map_err(|e| e.to_string())?.is_none()
+        {
             first.startup_fallback = Some(fallback_document(&doc)?);
             if startup.fresh
                 && let Some(camera) = first.cameras.first()
@@ -242,7 +268,9 @@ impl Desktop {
                 first.changed = None;
             }
         }
-        let result = if first.worker.is_some() {
+        let result = if !first.error.is_empty() {
+            Err(first.error.clone())
+        } else if first.worker.is_some() {
             Ok(())
         } else {
             first.start()
@@ -321,9 +349,13 @@ impl Desktop {
             root_hidden: false,
             startup_notice,
             startup_frames: 0,
+            tile_array_requested: false,
         };
         for _ in 1..app.args.windows.clamp(1, 16) {
             app.spawn_from(app.sessions.len() - 1);
+        }
+        if app.args.array {
+            app.start_saved_array(0);
         }
         Ok(app)
     }
@@ -337,6 +369,24 @@ impl Desktop {
         {
             self.sessions[index].error = "At most 16 active instances".into();
             return;
+        }
+        // Saved arrays follow their file slots even when a prior file is invalid,
+        // a camera is missing, or two configurations request the same camera.
+        if let Some(anchor) = self.sessions[index].path.as_deref()
+            && let Some(slot) = array::slot(anchor)
+        {
+            let candidate = (1..16)
+                .filter_map(|offset| array::rig_path(anchor, (slot - 1 + offset) % 16 + 1))
+                .find(|path| {
+                    !self
+                        .sessions
+                        .iter()
+                        .any(|s| !s.closed && s.path.as_ref() == Some(path))
+                });
+            if let Some(path) = candidate {
+                self.spawn_saved(path);
+                return;
+            }
         }
         let document = if !self.sessions[index].fallback_notice.is_empty()
             && let Some(path) = &self.sessions[index].path
@@ -381,18 +431,10 @@ impl Desktop {
                     .path
                     .clone()
                     .or(self.sessions[index].source_base.clone());
-                let fallback = if self.args.config.is_none()
-                    && !self.args.control_stdio
-                    && doc.get("src_fn").is_some_and(|v| v.parse::<u32>().is_ok())
-                {
-                    fallback_document(&doc).ok()
-                } else {
-                    None
-                };
                 let mut next = Session::new(self.next_id, doc, path);
                 next.framebuffer_limit = self.sessions[index].framebuffer_limit;
                 next.max_window_inner_size = self.sessions[index].max_window_inner_size;
-                next.startup_fallback = fallback;
+                next.occupied_cameras = self.camera_owners(None);
                 if next.path.is_none() {
                     next.source_base = anchor;
                 }
@@ -409,6 +451,84 @@ impl Desktop {
             Err(e) => self.sessions[index].error = e,
         }
     }
+    fn spawn_saved(&mut self, path: PathBuf) {
+        match Session::from_config_path(self.next_id, path) {
+            Ok(mut next) => {
+                if let Some(first) = self.sessions.first() {
+                    next.framebuffer_limit = first.framebuffer_limit;
+                    next.max_window_inner_size = first.max_window_inner_size;
+                }
+                next.occupied_cameras = self.camera_owners(None);
+                if next.error.is_empty() {
+                    let result = next.start();
+                    next.report(result);
+                }
+                self.next_id += 1;
+                self.sessions.push(next);
+            }
+            Err(error) => {
+                if let Some(first) = self.sessions.first_mut() {
+                    first.error = error;
+                }
+            }
+        }
+    }
+    fn start_saved_array(&mut self, index: usize) {
+        self.tile_array_requested = true;
+        let Some(anchor) = self.sessions[index].path.clone() else {
+            self.sessions[index].error =
+                "Save this rig as VR1.txt (through VR16.txt), then start the saved array".into();
+            return;
+        };
+        for path in array::saved_paths(&anchor) {
+            if !self
+                .sessions
+                .iter()
+                .any(|s| !s.closed && s.path.as_ref() == Some(&path))
+                && self.sessions.iter().filter(|s| !s.closed).count() < 16
+            {
+                self.spawn_saved(path);
+            }
+        }
+        let owners: Vec<_> = self
+            .sessions
+            .iter()
+            .map(|s| self.camera_owners(Some(s.id)))
+            .collect();
+        for (session, owners) in self
+            .sessions
+            .iter_mut()
+            .zip(owners)
+            .filter(|(s, _)| !s.closed)
+        {
+            session.startup_fallback = None;
+            session.occupied_cameras = owners;
+            if session.sample_fallback_active {
+                session.worker = None;
+                session.snapshot = runtime::Snapshot::default();
+                session.textures.clear();
+                if let Some(path) = session.path.clone() {
+                    let result = session.load(path);
+                    session.report(result);
+                }
+            } else if session.worker.is_none() || session.snapshot.ended {
+                let result = if session.history.text == session.saved {
+                    if let Some(path) = session.path.clone() {
+                        session.load(path)
+                    } else {
+                        session.start()
+                    }
+                } else {
+                    session.start()
+                };
+                session.report(result);
+            } else if session.tool == session::Tool::Inspect {
+                session.paused = false;
+                session.send(runtime::Command::Pause(false));
+            }
+            session.show_rigs = true;
+        }
+    }
 
     fn rig_manager(&mut self, ctx: &egui::Context) {
         if !self
@@ -421,7 +541,7 @@ impl Desktop {
         let mut close = false;
         let mut start_all = false;
         let mut open_four = false;
-        let mut tile = false;
+        let mut tile = std::mem::take(&mut self.tile_array_requested);
         let framebuffer_limit = self
             .sessions
             .first()
@@ -442,16 +562,17 @@ impl Desktop {
                     ui.label("Each window has its own source, calibration and outputs.");
                     ui.horizontal_wrapped(|ui| {
                         start_all = ui.button("Start all").on_hover_text("Resume paused sessions, replay finished videos and retry stopped sources. Finish active calibration first.").clicked();
-                        open_four = ui.button("Open four rigs").on_hover_text("Open missing windows using the next saved VR/BR configuration, up to four active rigs.").clicked();
+                        open_four = ui.button("Start saved array").on_hover_text("Start saved VR1–VR16 or BR1–BR16 files beside this rig. Each failed rig stays visible; working rigs continue. No sample substitution.").clicked();
                         tile = ui.button("Arrange in a grid").clicked();
                     });
                     ui.separator();
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         for session in self.sessions.iter_mut().filter(|session| !session.closed) {
+                            ui.push_id(session.id, |ui| {
                             ui.group(|ui| {
                                 ui.horizontal(|ui| {
                                     ui.strong(session.display_name());
-                                    ui.label(if session.tool != session::Tool::Inspect { "Calibrating" } else if session.snapshot.ended { "Finished" } else if session.paused { "Paused" } else { "Running" });
+                                    ui.label(session.launch_state());
                                     if ui.button("Settings…").clicked() {
                                         session.show_settings = true;
                                         ui.ctx().send_viewport_cmd_to(
@@ -461,7 +582,9 @@ impl Desktop {
                                     }
                                 });
                                 ui.small(session.path.as_ref().map(|path| path.display().to_string()).unwrap_or_else(|| "Unsaved configuration · use Save As to keep this rig".into()));
-                                ui.small(format!("{} · {:.1} fps · {:.2} ms tracking", session.running_source, session.snapshot.actual_fps, session.snapshot.tracking_ms));
+                                let actual_source = if session.snapshot.source_label.is_empty() { &session.running_source } else { &session.snapshot.source_label };
+                                ui.small(format!("{} · {:.1} fps · {:.2} ms tracking", actual_source, session.snapshot.actual_fps, session.snapshot.tracking_ms))
+                                    .on_hover_text(session.running_camera_binding.as_deref().unwrap_or("No hardware binding"));
                                 if !session.fallback_notice.is_empty() {
                                     ui.small(&session.fallback_notice);
                                 }
@@ -473,6 +596,10 @@ impl Desktop {
                                 if !session.error.is_empty() {
                                     ui.colored_label(ui.visuals().error_fg_color, &session.error);
                                 }
+                                if session.snapshot.ended && !session.snapshot.notice.is_empty() {
+                                    ui.colored_label(ui.visuals().error_fg_color, &session.snapshot.notice);
+                                }
+                            });
                             });
                         }
                         ui.add_space(8.0);
@@ -502,17 +629,8 @@ impl Desktop {
             }
         }
         if open_four {
-            let missing = 4usize.saturating_sub(
-                self.sessions
-                    .iter()
-                    .filter(|session| !session.closed)
-                    .count(),
-            );
-            if let Some(mut index) = self.sessions.iter().rposition(|session| !session.closed) {
-                for _ in 0..missing {
-                    self.spawn_from(index);
-                    index = self.sessions.len() - 1;
-                }
+            if let Some(index) = self.sessions.iter().position(|session| !session.closed) {
+                self.start_saved_array(index);
             }
             tile = true;
         }
@@ -631,6 +749,19 @@ impl eframe::App for Desktop {
                 (n > 0).then_some((i, n))
             })
             .collect();
+        let array_requests: Vec<_> = self
+            .sessions
+            .iter_mut()
+            .enumerate()
+            .filter_map(|(i, s)| {
+                let requested = s.start_array_request;
+                s.start_array_request = false;
+                requested.then_some(i)
+            })
+            .collect();
+        for index in array_requests {
+            self.start_saved_array(index);
+        }
         for (mut i, requested) in requests {
             let n = if requested == 3 {
                 4usize.saturating_sub(self.sessions.iter().filter(|s| !s.closed).count())
@@ -851,7 +982,13 @@ fn run() -> Result<(), String> {
     }
     if args.camera_list || args.probe_camera.is_some() {
         for camera in fictrac_camera::list_cameras().map_err(|e| e.to_string())? {
-            println!("{}: {}", camera.id, camera.name);
+            println!(
+                "{}: {} · hardware ID: {} · USB socket ID: {}",
+                camera.id,
+                camera.name,
+                camera.hardware_id.as_deref().unwrap_or("unavailable"),
+                camera.port_id.as_deref().unwrap_or("unavailable")
+            );
         }
         if let Some(id) = args.probe_camera {
             fictrac_camera::request_permission().map_err(|e| e.to_string())?;

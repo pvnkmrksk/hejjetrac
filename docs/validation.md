@@ -1,5 +1,163 @@
 # HejjéTrac validation evidence
 
+## Calibration drag and 47° rig refit — 2026-11-04
+
+Version 0.3.6 passes formatting, strict locked workspace/all-target Clippy and
+**331 workspace tests**, with no failures or ignored tests. The new saved-rim
+pointer regression fails with the previous moved-pointer hit test and passes
+with press-origin selection. Rig tests also recompute every stored 47° sphere
+from its pixel marks through shared core and compare all angular values within
+1e-12. No scientific fixture tolerance or oracle constant changes.
+
+The owner's 47° vertical FOV is saved in VR1–VR4 and the normal startup profiles,
+with exact M01–M04 bindings. Angular sphere fits are regenerated; M03's displaced
+historical rim marks are replaced from the retained real image. Original files
+are backed up under `runs/calibration-47-20261104/backup`. Lab rotation and
+exclusions are preserved; physical axes remain unverified in this session.
+
+Four simultaneous native windows replay the actual retained 100 FPS camera
+recordings using Mesa NV136 GL. Each saved-mark editor opens and finishes without
+changing configuration text. All four outlines and controls receive visual
+inspection. A separate serial release replay processes all **1281 images**:
+four initialization rows and **1277 tracked rows**, with no rejections.
+The release synthetic 120-image demo passes the unchanged 0.003-radian gate
+(component RMSE 0.00030405 rad), and the real sample processes 300 images.
+
+No `/dev/video*` or sysfs capture nodes are present during this session. This
+recording replay cannot establish current physical camera alignment, fresh live
+latency, or known-motion accuracy under airflow jitter. The November 3 live
+stress evidence below predates the 47° refit. [Updated screenshots, screen
+capture and release details](release-v0.3.6.md) and [machine-readable evidence](benchmarks/calibration-47-20261104.json)
+retain the inputs, counts, timing boundaries, platform, toolchain, hashes and
+remaining limits.
+
+## Four provisioned cameras, pause freshness and sustained UI — 2026-11-03
+
+Final source passes formatting, locked strict workspace/all-target Clippy and
+**330 workspace tests**, with zero failures or ignored tests. Release binaries
+use Rust 1.99.1, thin LTO and one codegen unit on Ubuntu 22.04 x86_64, Linux
+6.8.0-138 and an i7-6700K. Native X11 pixels use Mesa NV136 GL. Exact hashes,
+check logs, branch audit, timing boundaries and report paths are retained in
+[live-regression-20261103.json](benchmarks/live-regression-20261103.json).
+
+The user's provisioned cameras now expose distinct M01–M04 serials. Their
+observed capture nodes are respectively video6, video2, video4 and video0.
+The earlier UC762 evidence below predates that provisioning. A real native
+four-camera test deliberately saves `src_fn:99999` for every rig and resolves
+each exact serial instead. Link/unlink cycles preserve the opened camera,
+frame/sequence progress and learned epoch. Missing/duplicate IDs remain errors;
+they cannot highlight or open a stale numeric fallback. The open adapter keeps
+the identity verified at startup instead of rereading it by a recycled ordinal.
+
+Before the fix, a 3.041-second live pause resumed an image only 12 ms newer
+than the pre-pause image. Paused acquisition now drains the driver while holding
+the calibration image and numerical state. After actual discarded camera images,
+the shared core requires fresh confirmed zero-relative-motion reanchoring,
+preserving atlas/path/heading/integrated movement and source timestamps.
+Known-motion tests cover near-rest hidden movement, legacy immediate-reset
+settings and pairwise anchoring without changing existing tolerances.
+
+The final native run contains two serial 180-second observation phases, with
+four full-frame empty calibration drafts/Keep-saved cycles between them, then
+pause/resume, four stream reopenings and simultaneous short raw recordings.
+All four 320×240/100 FPS requests sustain **100.90–100.93 processed frames/s**
+over each main phase. Every rig processes over 36,000 images across those phases,
+crossing the 20,000-point display-path cap. Across 927 native commands, median
+round trip is 16.86 ms, p95 23.05 ms and maximum 54.06 ms. Maximum sampled preview
+age is 48.86 ms; relative capture backlog is at most 7.03 ms. These diagnose
+relative delay, not absolute sensor-to-display latency. RSS settles near
+134 MiB after warm-up; threads/FDs remain 14/19 during observations and return to
+those counts after recording. No continuing 5–10-second UI backlog is reproduced.
+
+All **1281** images in the four short takes have tracked numeric/quality rows
+and are independently decoded by the Rust AVI adapter. A separate 54-image take
+retains the real 3084 ms pause gap: one recovering row and one relocalized row
+have zero camera/lab deltas and unchanged position/heading/integrated movement,
+then 52 tracked rows include nonzero observed jitter. Every recording is
+finalized before inspection; the original rig configs remain unchanged. Actual
+native full-frame calibration pixels for all four rigs and link/unlink controls
+are inspected. The separate final failure-isolation run keeps healthy real-video
+peers advancing beside a missing bound rig and a malformed config, with no sample
+fallback; its default five-image recording also decodes completely.
+
+Final release numerical validation processes synthetic120, sample300, complete
+VR3 5157 plus a fresh337-image control, raw47 6075, fast47 4579 and capture-gap4408.
+Every existing gate passes; all 3413 clear raw47 fast images and all 4407 gap
+increments are measured, including 57 extended intervals. Both fast47 numerical,
+quality and temporal outputs are byte-identical to the retained pre-binding
+October 28 evidence. [Full numerical report](benchmarks/tracking-regression-20261103-final.json).
+
+All available local/cached remote branch refs are ancestors of main. The last
+prior numerical change is `bd7d699`; serial binding was uncommitted. The paused
+source-reading behavior dates to `81c9240`; `3598c73` introduced the guided
+calibration workflow. There is no demonstrated numerical regression to justify
+reverting the validated high-speed engine. This fix changes deliberate pause
+continuity, not normal optimizer/scoring behavior. Live physical motion here is
+airflow jitter, not controlled high-speed ground truth; those checks use real
+recordings. Native execution remains Linux only, and delivered counters cannot
+establish absence of sensor/kernel frame loss.
+
+## Hardware binding, array failures and recording selection — 2026-11-03
+
+`cargo fmt --all -- --check`, locked strict workspace/all-target Clippy and all
+**322 workspace tests** pass, with no failed or ignored tests. The tests include
+the complete real-video decoder/reference oracles and existing known-motion
+regressions; no numerical tolerance or oracle was changed. Exact build identity,
+camera inventory, check totals and native report paths are recorded in
+[array-binding-20261103.json](benchmarks/array-binding-20261103.json).
+
+On Ubuntu 22.04 x86_64, Linux 6.8.0-124, Rust 1.99.1, current debug source was
+tested through the actual X11 native app and its typed stdio bridge. GPU pixels
+use Mesa NV136 GL. This is functional/startup validation, not a release
+performance measurement or physical tracking-accuracy experiment.
+
+Two connected Arducam OV9281s report vendor/product `0c45:6366`, revision `0100`
+and the same serial `UC762`. Their sysfs USB descriptor byte strings and UVC
+extension GUIDs match. udev and V4L/media identity provide no distinct camera
+serial. The actual capture nodes are video0 and video2, with companion metadata
+nodes video1 and video3. The observed socket identities are
+`usb-port:0000:00:14.0:4.1.3:video:0` and
+`usb-port:0000:00:14.0:4.1.4:video:0`. The read-only inventory is retained under
+`runs/array-binding-hardware-validation/identifier-probe.json`; unsupported
+vendor-specific identity queries were not invented or sent. No camera firmware,
+serial number or installed application was rewritten.
+
+The native four-slot plan deliberately contains a missing bound camera in VR1,
+a malformed manual config in VR3 and two healthy peers. In the first case VR2/4
+explicitly use the real bundled sample; in the second they open the two physical
+cameras at 320×240/100 FPS requests using distinct, explicitly selected socket
+bindings. Both hardware configs deliberately contain incorrect numeric source
+IDs (99992/99994); the app resolves the saved binding to video0/video2 instead.
+The failed entries remain labelled **Did not start** with errors while the
+healthy peers advance. No failed entry plays a stock video. These source-format
+requests and short frame-progress checks do not establish sustained 100 FPS,
+sixteen-camera capacity or physical motion accuracy.
+
+Both cases reject an explicit empty recording selection before creating output,
+reject a malformed `src_fps` edit without changing config, and record five raw
+frames when options are omitted and legacy flags are both `n`. The Rust CLI
+independently decodes all five AVI images: 384×288/30 FPS for the real-file case
+and 320×240/100 FPS container metadata for the physical case. Live stop queues
+background finalization; the test polls the completed take's finalization entry,
+not a stale progress snapshot. All-frame numeric/quality files remain retained.
+
+Actual rig-manager and settings pixels were inspected. Visual review caught and
+fixed duplicate per-rig collapsing-header widget IDs. Raw is visibly selected by
+default; ZMQ bind host is absent from the routine controls and retained in
+Advanced settings. Evidence is in the successful reports/screenshots under
+`runs/array-binding-file-validation/rerun-1793693754625934954/` and
+`runs/array-binding-hardware-validation/rerun-1793696506616629119/`.
+`scripts/test_native_array_binding.py` reproduces the checks with copied configs
+and isolated outputs; `--hardware --config VR1.txt` selects the two-camera case.
+
+Unit regressions cover sixteen identical model names with distinct serial IDs,
+enumeration reordering, missing/duplicate IDs, explicit socket selection, USB
+port/device-number changes in sysfs fixtures, absent serials, preserved config
+round trips, unbound clones, malformed known values, duplicate JSON keys and
+unknown-key warnings. A native-worker regression starts real-video peers beside
+both malformed and missing-camera entries. macOS/Windows native binding and
+sixteen physical cameras have not been executed in this change.
+
 ## Enabled LAN publishing and Ubuntu graphics safeguards — 2026-10-28
 
 Source `f9b20f1` enables the shared ZeroMQ default at `0.0.0.0:9871`, serving
