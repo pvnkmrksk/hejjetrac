@@ -1,9 +1,47 @@
 # HejjéTrac validation evidence
 
+## Fresh four-camera 47° hardware run — 2026-11-04
+
+The cameras are accessible again: exact M01/M02/M03/M04 bindings open video0/2/4/6
+respectively. The final desktop SHA256 is
+`a8f3839e0adb0bb1fc35858055cdef457ee5eec41f04e81b5ab6bfd3bd5c23f4`.
+It is built with `cargo build --release --locked --workspace --bins --examples`;
+`--examples` alone does not rebuild the desktop binary. Formatting, strict
+Clippy and **332 workspace tests** pass. Native replay verifies all four windows
+automatically enlarge from 480×360 to 640×480 and restore afterward. Resize
+requests persist until actual native viewport acknowledgement.
+
+Two isolated serial 180-second live phases surround four complete calibration
+cycles. All four cameras sustain **100.88–100.92 processed frames/s**, with over
+36,000 images per camera across the phases. All sampled numerical states remain
+tracked; source clocks and fresh previews continue advancing. Across 925 native
+commands, round-trip median is **16.65 ms**, p95 **24.56 ms**, maximum **54.32 ms**.
+Sampled preview-image age is **27.30 ms median**, **44.84 ms p95**, **48.53 ms maximum**;
+the maximum occurs 148.42 seconds into the first phase, not startup. Relative
+capture backlog remains below 6.11 ms. These clocks do not measure absolute
+exposure-to-screen latency. Observation threads/FDs stay 14/19; RSS settles near
+134 MiB before recording. After recording, threads/FDs return to 14/19.
+
+Pause/resume, four real stream reopenings, exact serial link/unlink and simultaneous
+recording checks pass. All **1253** short-take images have tracked numeric/quality
+rows and decode independently through the Rust AVI adapter. Native X11 windows
+use ordinary NV136 Mesa GL. Full-frame calibration screenshots are inspected.
+[Full report](benchmarks/live-four-47-20261104-final.json) and
+[age distributions](benchmarks/preview-age-20261104-final.json) retain the measured scope.
+
+**Unresolved hand-recovery limitation:** a separate live diagnostic contains
+visible hands and physical turns. M02 has a **6.608-second** interval without
+continuous relative tracking, including clear frames after the hand leaves;
+it later recovers. M01/M03 have shorter recovery episodes and M04 remains tracked.
+The failure is preserved in [hand-recovery evidence](benchmarks/live-hand-recovery-20261104.json).
+Fresh previews during that interval do not imply measured motion. The passing
+undisturbed run does not resolve this recovery limitation or provide physical
+motion ground truth. No quality tolerance or scientific oracle was weakened.
+
 ## Calibration drag and 47° rig refit — 2026-11-04
 
 Version 0.3.6 passes formatting, strict locked workspace/all-target Clippy and
-**331 workspace tests**, with no failures or ignored tests. The new saved-rim
+**332 workspace tests**, with no failures or ignored tests. The new saved-rim
 pointer regression fails with the previous moved-pointer hit test and passes
 with press-origin selection. Rig tests also recompute every stored 47° sphere
 from its pixel marks through shared core and compare all angular values within
@@ -23,7 +61,7 @@ four initialization rows and **1277 tracked rows**, with no rejections.
 The release synthetic 120-image demo passes the unchanged 0.003-radian gate
 (component RMSE 0.00030405 rad), and the real sample processes 300 images.
 
-No `/dev/video*` or sysfs capture nodes are present during this session. This
+No `/dev/video*` or sysfs capture nodes were present during the initial replay session. This
 recording replay cannot establish current physical camera alignment, fresh live
 latency, or known-motion accuracy under airflow jitter. The November 3 live
 stress evidence below predates the 47° refit. [Updated screenshots, screen

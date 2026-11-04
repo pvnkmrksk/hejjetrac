@@ -1,5 +1,11 @@
 # v0.3.6 — camera freshness, exact bindings and calibration editing
 
+Fresh final-build live captures:
+[M01](images/edit-M01-20261104.png) · [M02](images/edit-M02-20261104.png) ·
+[M03](images/edit-M03-20261104.png) · [M04](images/edit-M04-20261104.png) ·
+[Three-second live native screen recording](images/live-native-20261104.mp4).
+These use the connected cameras; the replay captures below remain separately labeled.
+
 Live camera acquisition continues draining during a calibration hold. Resuming
 uses fresh images and explicitly reanchors tracking after discarded frames,
 retaining the atlas and accumulated motion without inventing motion across the
@@ -21,9 +27,14 @@ remain physically unverified after this refit.
 [Calibration controls](images/calibration-controls-20261104.png) ·
 [Native screen capture of recorded camera replay](images/native-camera-replay-20261104.mp4).
 These November 4 captures use the retained real 100 FPS camera recordings,
-ordinary NV136 Mesa graphics and the native app. No live camera devices were
-enumerated in this session. The earlier six-minute four-camera hardware stress
-run is separately documented in [validation](validation.md).
+ordinary NV136 Mesa graphics and the native app. A subsequent **fresh live
+six-minute 47° run** also passes all four calibration, pause/resume, reopening
+and recording checks at 100.88–100.92 processed FPS per camera. See
+[fresh hardware validation](validation.md#fresh-four-camera-47-hardware-run--2026-11-04).
+
+The separate hand-driven test exposes an **unresolved 6.608-second M02 recovery
+gap**, including clear frames after the hand leaves. It later recovers. This
+release preparation does not claim that hand recovery is fixed.
 
 All four complete retained camera takes also process with the new 47° fits:
 **1281 images**, four initialization rows and **1277 tracked rows**, with no
@@ -32,7 +43,7 @@ truth. [Calibration evidence](benchmarks/calibration-47-20261104.json) retains
 the pixel points, angular fits and exact native binary hash.
 
 Required checks pass: formatting, strict locked workspace/all-target Clippy and
-**331 workspace tests** (zero failures or ignored tests). The release synthetic
+**332 workspace tests** (zero failures or ignored tests). The release synthetic
 demo and real sample pass; existing scientific tolerances and oracles are unchanged.
 
 Preview-image age was **27.11 ms median**, **44.92 ms p95**, **48.86 ms maximum**

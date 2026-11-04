@@ -1,5 +1,17 @@
 # Preview age, tracking rate and display cadence
 
+The final fresh **47° four-camera run on November 4** measures **27.30 ms median**,
+**44.84 ms p95**, **48.53 ms maximum** across 2796 samples. The maximum is M03 at
+148.42 seconds into the first phase, with relative capture backlog at 4.34 ms;
+the run-wide relative backlog maximum is 6.11 ms. Both three-minute phases remain
+bounded across the four calibration cycles. [Final distribution](benchmarks/preview-age-20261104-final.json)
+and [native hardware report](benchmarks/live-four-47-20261104-final.json) retain the
+exact binary and timing scope. The cadence explanation below still applies.
+Hand-driven recovery loss is a separate unresolved tracking limitation documented
+in [validation](validation.md#fresh-four-camera-47-hardware-run--2026-11-04).
+
+The earlier November 3 measurements are retained below for comparison.
+
 The four-camera six-minute native run measured **27.11 ms median**, **44.92 ms
 p95**, and **48.86 ms maximum** preview-image age across 2796 samples from the
 two steady-state phases. The maximum was camera M03, **82.78 seconds into the

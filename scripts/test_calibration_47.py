@@ -31,7 +31,7 @@ def run(args):
         (output / f"VR{n}.txt").write_text(text)
     bridge = NativeBridge([str(args.binary.resolve()), "--config", str(output / "VR1.txt"),
                            "--array", "--control-stdio", "--grid", "2x2",
-                           "--window-size", "640x480"], output)
+                           "--window-size", "480x360"], output)
     report = {"passed": False, "scope": "Native replay of retained real camera video; not a live camera test",
               "binary_sha256": hashlib.sha256(args.binary.read_bytes()).hexdigest(), "captures": [], "rigs": []}
     try:
@@ -43,11 +43,26 @@ def run(args):
             state = bridge.request("view", n, calibration=True, calibration_step="ball", calibration_action="edit",
                                    full_image=True, overlays=True)
             assert state["view"]["edit_marks"]
-            time.sleep(.5)
-            state = bridge.request("status", n)
+            deadline = time.monotonic() + 5
+            while True:
+                state = bridge.request("status", n)
+                size = state["window_inner_size"]
+                if size and size[0] >= 639 and size[1] >= 479:
+                    break
+                if time.monotonic() >= deadline:
+                    raise RuntimeError(f"Calibration window did not expand: {size}")
+                time.sleep(.1)
             report["captures"].append(capture_window(output, f"ball-VR{n}", state["window_title"]))
             report["captures"].append(capture_window(output, f"controls-VR{n}", f"HejjéTrac · VR{n} calibration"))
             bridge.request("view", n, calibration_action="finish")
+            deadline = time.monotonic() + 5
+            while True:
+                size = bridge.request("status", n)["window_inner_size"]
+                if size and abs(size[0] - 480) <= 1 and abs(size[1] - 360) <= 1:
+                    break
+                if time.monotonic() >= deadline:
+                    raise RuntimeError(f"Calibration window did not restore: {size}")
+                time.sleep(.1)
             assert bridge.request("config", n)["text"] == original, "Review changed saved configuration"
             report["rigs"].append(bridge.request("snapshot", n, directory=str(output / f"snapshot-VR{n}")))
             bridge.request("view", n, calibration=False, settings=False)

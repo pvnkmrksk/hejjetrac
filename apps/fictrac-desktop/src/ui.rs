@@ -76,6 +76,22 @@ fn camera_choice_label(camera: &fictrac_camera::CameraInfo) -> String {
     }
 }
 impl Session {
+    fn calibration_window_request(&mut self, size: Vec2, limit: Vec2) -> Option<Vec2> {
+        if self.tool != Tool::Inspect {
+            let target = size.max(egui::vec2(640.0, 480.0)).min(limit);
+            if (target - size).length() > 1.0 {
+                self.calibration_preview_size.get_or_insert(size);
+                return Some(target);
+            }
+        } else if let Some(original) = self.calibration_preview_size {
+            let target = original.min(limit);
+            if (target - size).length() > 1.0 {
+                return Some(target);
+            }
+            self.calibration_preview_size = None;
+        }
+        None
+    }
     pub fn show(&mut self, ctx: &egui::Context) {
         self.update();
         let limit = constrain_framebuffer(ctx, self.framebuffer_limit);
@@ -85,15 +101,9 @@ impl Session {
         }
         let size = ctx.content_rect().size();
         self.window_inner_size = Some([size.x, size.y]);
-        if self.tool != Tool::Inspect
-            && self.calibration_preview_size.is_none()
-            && (size.x < 640.0 || size.y < 480.0)
-        {
-            self.calibration_preview_size = Some(size);
-            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(640.0, 480.0)));
-        } else if self.tool == Tool::Inspect
-            && let Some(size) = self.calibration_preview_size.take()
-        {
+        // Native resize acknowledgement is asynchronous. Keep requesting until
+        // the actual viewport reaches the target, including after restoration.
+        if let Some(size) = self.calibration_window_request(size, limit) {
             ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(size));
         }
         self.window_rect = ctx
@@ -4012,6 +4022,38 @@ mod tests {
             );
         }
         assert_eq!(session.points, vec![[192.0, 144.0]]);
+        Ok(())
+    }
+    #[test]
+    fn calibration_resize_waits_for_native_acknowledgement_in_both_directions() -> Result<(), String>
+    {
+        let mut session = session()?;
+        let compact = egui::vec2(480.0, 360.0);
+        let expanded = egui::vec2(640.0, 480.0);
+        let limit = egui::vec2(4096.0, 4096.0);
+        session.tool = Tool::Rim;
+        for _ in 0..3 {
+            assert_eq!(
+                session.calibration_window_request(compact, limit),
+                Some(expanded)
+            );
+            assert_eq!(session.calibration_preview_size, Some(compact));
+        }
+        assert_eq!(session.calibration_window_request(expanded, limit), None);
+        session.tool = Tool::Inspect;
+        for _ in 0..3 {
+            assert_eq!(
+                session.calibration_window_request(expanded, limit),
+                Some(compact)
+            );
+        }
+        assert_eq!(session.calibration_window_request(compact, limit), None);
+        assert_eq!(session.calibration_preview_size, None);
+        session.tool = Tool::Rim;
+        assert_eq!(
+            session.calibration_window_request(egui::vec2(900.0, 360.0), limit),
+            Some(egui::vec2(900.0, 480.0))
+        );
         Ok(())
     }
     #[test]

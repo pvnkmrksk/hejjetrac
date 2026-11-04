@@ -117,11 +117,13 @@ explicit accuracy limits and a separate post-occlusion control.
 
 Native release CI runs on Windows, Linux, Apple Silicon and Intel Mac. Camera and GUI hardware checks are documented per platform. [Tracking performance](docs/tracking-performance.md) and [resource use](docs/resources.md) contain the fixture, hardware and timing boundaries for the published benchmarks.
 
-The four-camera six-minute run measured **27.11 ms median preview age**, 44.92 ms
-p95 and 48.86 ms maximum while each rig processed about 101 frames/s. The maximum
+The final 47° four-camera six-minute run measured **27.30 ms median preview age**, 44.84 ms
+p95 and 48.53 ms maximum while each rig processed about 101 frames/s. The maximum
 occurred during steady state. Preview cadence is independent of tracking;
 [the timing explanation and distributions](docs/preview-age.md) describe the
 30 FPS display limit, observed publication rate and relative-clock measurement.
+The separate hand-driven test exposes an unresolved 6.61-second M02 tracking
+recovery gap; [fresh validation](docs/validation.md) preserves that failure separately.
 
 ## Build and contribute
 

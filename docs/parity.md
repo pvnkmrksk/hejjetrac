@@ -1,5 +1,17 @@
 # Behavioral parity assessment
 
+## Fresh 47° hardware validation and remaining recovery gap — 2026-11-04
+
+The final explicit binary build passes six minutes of four-camera live tracking,
+four full-frame calibration cycles, pause/resume, stream reopening and short
+simultaneous recordings with exact M01–M04 bindings. Native saved-mark windows
+expand and restore with acknowledgement; drag selection uses the original press.
+This establishes the measured undisturbed live workflow, not universal recovery.
+A separate physical hand-turn test leaves M02 without continuous relative tracking
+for 6.608 seconds before recovery. That limitation remains unresolved; rejected
+and relocalized frames retain complete numeric/quality evidence.
+[Fresh hardware results and limits](validation.md#fresh-four-camera-47-hardware-run--2026-11-04).
+
 ## Live pause freshness and provisioned camera identity — 2026-11-03
 
 After the user's serial provisioning, all four connected Linux cameras expose

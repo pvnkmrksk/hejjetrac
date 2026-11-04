@@ -1,5 +1,5 @@
 {
-  "basis": "Retained 2026-11-03 live source images; no cameras enumerated on 2026-11-04. User supplied 47-degree vertical FOV. Lab rotation and exclusions retained; physical lab axes need motion verification.",
+  "basis": "Retained 2026-11-03 live source images; no cameras enumerated on 2026-11-04. User supplied 47-degree vertical FOV. Lab rotation and exclusions retained; physical lab axes need motion verification. Later on November 4, all four live cameras are accessible; the same saved fits receive native visual verification on the final explicit --bins build.",
   "rigs": {
     "1": {
       "fov": 47,
@@ -138,8 +138,8 @@
       "changed_marks": false
     }
   },
-  "native_review": "runs/calibration-47-native-20261104/rerun-1793794935208403704/report.json",
-  "native_binary_sha256": "0ae13b7c490ff1354f89e601cc83ad823756b007468976fc9f20a293929f79f1",
+  "native_review": "runs/calibration-47-native-20261104/rerun-1793798761937583157/report.json",
+  "native_binary_sha256": "a8f3839e0adb0bb1fc35858055cdef457ee5eec41f04e81b5ab6bfd3bd5c23f4",
   "full_take_replay": {
     "scope": "Serial release replay of complete retained camera takes; observed airflow jitter, no motion ground truth",
     "rigs": [
@@ -220,13 +220,13 @@
   "toolchain": "Rust 1.99.1, release thin LTO, one codegen unit",
   "cli_sha256": "ecf72795181114b4042f6d190bb4e8a6c172a4992a7457ea60e67ca407f336d1",
   "required_checks": {
-    "workspace_tests_passed": 331,
+    "workspace_tests_passed": 332,
     "ignored": 0,
     "fmt": "passed",
     "clippy": "workspace all-targets locked -D warnings passed",
     "logs": {
-      "workspace-tests.log": "33197a23be6ec8a94c280c16fe894b031197ba6257dceab59dcfb953658e8a02",
-      "workspace-clippy.log": "2abd811d1b58a892d01778ae4371806576f8c2bb67dbf17569a9048ae3ea3f0b"
+      "workspace-tests.log": "045996892c3974917db35ee5f8c61cc7421de4e9e36ae3dd3bb8f2a493706ee9",
+      "workspace-clippy.log": "f720a450cd6a8e1e892bf83283ff560aa1ef93135b2ea9a6ead169a68cae962f"
     }
   },
   "saved_profiles": {
@@ -234,5 +234,86 @@
     "VR2.txt": "4c10a4bec0ed6a0f31f6f075f43b0219bbe867e85a52ce4b9b56883ef5c52e11",
     "VR3.txt": "d704676640c3fc919b2d7bc683af6e077c00cae6316286f077646ddc8f8e4f7f",
     "VR4.txt": "923601f1d11cf667be4f5e0a2d88a97e39aac98253ed536eaf636674163f63b5"
+  },
+  "automatic_window_resize": "All four native windows: 480x360 -> at least640x480 -> 480x360, acknowledged by actual viewport size",
+  "fresh_live_validation": "docs/benchmarks/live-four-47-20261104-final.json",
+  "fresh_live_capture": {
+    "scope": "Actual live M01-M04 cameras, native NV136 GL; screenshots and screen recording after isolated performance test",
+    "binary_sha256": "a8f3839e0adb0bb1fc35858055cdef457ee5eec41f04e81b5ab6bfd3bd5c23f4",
+    "captures": [
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-final-captures-20261104/live-M01.png",
+        "title": "VR1 \u00b7 Outputs off \u00b7 /dev/video0",
+        "window_id": "0x1400004",
+        "width": 480,
+        "height": 360,
+        "sha256": "3a50abec99e4d92a33b4a48d1dbb4606725f45083cec1e4ca4504069361f82b1",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-final-captures-20261104/live-M02.png",
+        "title": "VR2 \u00b7 Outputs off \u00b7 /dev/video2",
+        "window_id": "0x1400005",
+        "width": 480,
+        "height": 360,
+        "sha256": "e5a1ab8d022b53bd1245a7c132cd2f23f7f94cfebf28321f02de417ba839e9b1",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-final-captures-20261104/live-M03.png",
+        "title": "VR3 \u00b7 Outputs off \u00b7 /dev/video4",
+        "window_id": "0x1400006",
+        "width": 480,
+        "height": 360,
+        "sha256": "f43699ef74ae2bf2a8963e4b60b0d97ee7997b9ce320b9db34d15663e98f8933",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-final-captures-20261104/live-M04.png",
+        "title": "VR4 \u00b7 Outputs off \u00b7 /dev/video6",
+        "window_id": "0x1400007",
+        "width": 480,
+        "height": 360,
+        "sha256": "6dca243f0288d77c38541343fc35d31847fb0519c7c76b09bd721fdde03482d7",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-final-captures-20261104/edit-M01.png",
+        "title": "VR1 \u00b7 Outputs off \u00b7 /dev/video0",
+        "window_id": "0x1400004",
+        "width": 640,
+        "height": 480,
+        "sha256": "9533958d27d482cb8db9d502d997189b56f63b5b4b6b72c7cc072036bee03008",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-final-captures-20261104/edit-M02.png",
+        "title": "VR2 \u00b7 Outputs off \u00b7 /dev/video2",
+        "window_id": "0x1400005",
+        "width": 640,
+        "height": 480,
+        "sha256": "076bba27779eb858c71daa2f522878850cb80dd8b92376990386693c9cd35751",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-final-captures-20261104/edit-M03.png",
+        "title": "VR3 \u00b7 Outputs off \u00b7 /dev/video4",
+        "window_id": "0x1400006",
+        "width": 640,
+        "height": 480,
+        "sha256": "5277d0c5811706f4a86c30ebc10dd9a635daa48afcb9947bf26df4e8d66204df",
+        "capture": "actual X11 native window pixels"
+      },
+      {
+        "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live-final-captures-20261104/edit-M04.png",
+        "title": "VR4 \u00b7 Outputs off \u00b7 /dev/video6",
+        "window_id": "0x1400007",
+        "width": 640,
+        "height": 480,
+        "sha256": "c91db30f662a7bfad5ac8bee60e1a7a2ce90c80807b9ea5d6d77d891a7205821",
+        "capture": "actual X11 native window pixels"
+      }
+    ],
+    "passed": true
   }
 }

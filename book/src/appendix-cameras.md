@@ -55,8 +55,8 @@ from that guide so the tool matches the camera/batch.
 5. Repeat one camera at a time with `M02`, `M03`, `M04`, or your own unique scheme.
 6. Reconnect all cameras on the tracking computer and run `hejjetrac --camera-list`.
    Check that every serial identifies exactly one capture interface. In the
-   tested Linux setup, M01 appears as `usb:0c45:6366:M01:video:0` even though its
-   current device number is 6.
+   tested Linux setup, M01 appears as `usb:0c45:6366:M01:video:0`: its device
+   number was 6 on November 3 and 0 on November 4, while the binding stayed the same.
 
 The setup owner completed this provisioning in Windows; Linux readback and the
 four-camera release tests verify M01–M04. HejjéTrac itself does not write camera

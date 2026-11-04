@@ -1,0 +1,118 @@
+{
+  "scope": "Live diagnostic with visible hand entering image and physically turning balls; not an undisturbed jitter test",
+  "rigs": [
+    {
+      "rig": 1,
+      "frames": 2132,
+      "statuses": {
+        "tracked": 2127,
+        "rejected": 1,
+        "recovering": 3,
+        "relocalized": 1
+      },
+      "missing_runs": [
+        {
+          "first_index": 457,
+          "last_index": 461,
+          "rows": 5,
+          "duration_ms": 39.973008000000846
+        }
+      ],
+      "last_status": "tracked",
+      "last_timestamp_ms": 22680.627023
+    },
+    {
+      "rig": 2,
+      "frames": 2132,
+      "statuses": {
+        "tracked": 1439,
+        "rejected": 16,
+        "relocalized": 16,
+        "recovering": 661
+      },
+      "missing_runs": [
+        {
+          "first_index": 504,
+          "last_index": 1171,
+          "rows": 668,
+          "duration_ms": 6608.0389989999985
+        },
+        {
+          "first_index": 1177,
+          "last_index": 1178,
+          "rows": 2,
+          "duration_ms": 11.973011999998562
+        },
+        {
+          "first_index": 1181,
+          "last_index": 1186,
+          "rows": 6,
+          "duration_ms": 48.000991000000795
+        },
+        {
+          "first_index": 1188,
+          "last_index": 1191,
+          "rows": 4,
+          "duration_ms": 31.993984000000637
+        },
+        {
+          "first_index": 1194,
+          "last_index": 1196,
+          "rows": 3,
+          "duration_ms": 19.971998000000895
+        },
+        {
+          "first_index": 1198,
+          "last_index": 1199,
+          "rows": 2,
+          "duration_ms": 11.996001999999862
+        },
+        {
+          "first_index": 1201,
+          "last_index": 1206,
+          "rows": 6,
+          "duration_ms": 48.00300000000061
+        },
+        {
+          "first_index": 1208,
+          "last_index": 1209,
+          "rows": 2,
+          "duration_ms": 7.988999999999578
+        }
+      ],
+      "last_status": "tracked",
+      "last_timestamp_ms": 22689.473052
+    },
+    {
+      "rig": 3,
+      "frames": 2132,
+      "statuses": {
+        "tracked": 2124,
+        "rejected": 1,
+        "recovering": 6,
+        "relocalized": 1
+      },
+      "missing_runs": [
+        {
+          "first_index": 646,
+          "last_index": 653,
+          "rows": 8,
+          "duration_ms": 71.97401900000023
+        }
+      ],
+      "last_status": "tracked",
+      "last_timestamp_ms": 22710.924033000003
+    },
+    {
+      "rig": 4,
+      "frames": 2132,
+      "statuses": {
+        "tracked": 2132
+      },
+      "missing_runs": [],
+      "last_status": "tracked",
+      "last_timestamp_ms": 22720.698748
+    }
+  ],
+  "note": "Includes visible hands and physical turns; M02 has a 6.608-second missing-motion run. Do not present as passing continuous tracking."
+}

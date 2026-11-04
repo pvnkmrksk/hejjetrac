@@ -299,7 +299,7 @@ def main():
         # linked ABI as the Debian package and must obey the same baseline.
         linux_abi = linux_abi_requirements(stage)
         linux_depends = linux_dependencies(stage)
-    for directory in ['examples', 'docs']:
+    for directory in ['examples', 'docs', 'book']:
         shutil.copytree(root / directory, resource / directory)
     for pattern in ['VR*.txt']:
         for config in root.glob(pattern):
