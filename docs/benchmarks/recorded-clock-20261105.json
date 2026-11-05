@@ -1,0 +1,356 @@
+{
+  "date": "2026-11-05",
+  "scope": "Compare a complete recorded-clock replay without dropping rejected images.\n\nDevelopment evidence only. The original FicTrac reference measures agreement,\nnot physical ground truth. The take and its calibration remain read-only.\n",
+  "recording": "runs/new-user-takes-20261105/take-1",
+  "source_sha256": "1556e12764bf9490fb17a86d297fe68e73ab2cd34b594e6331705c014c0e6425",
+  "recorded_config_sha256": "32ecf963bd47154c9232a4bd7edd7d6dbd6f5bb7dbf55de259e7cf201d069377",
+  "replay_config_sha256": "46dc7d4ea49185e4e864df821071cdbb73ac1ce405b4a1588ef8d2a3bf9dfa56",
+  "reference_sha256": "701ee229095eda40d5be27496e233276f10046ece90dc08373b81ca7f5ef5194",
+  "candidate_sha256": "6468c535d7a09b1310138a201af93008a3d4c4f0a15638fba50a570bacf7e4a1",
+  "baseline_sha256": "d3436a3411e96320fbcfd20c63fa0f16d1cb87ccd4045d9085bb597db24f1e1d",
+  "evidence_binary_sha256": "341188c6451cafb6f5075b5dbb2204197b03520d4e884b51594422be55dd1de1",
+  "initial_state_limit": "Recording begins with an already learned live atlas; both replays start empty. The post-run cache is not its initial state.",
+  "calibration": "Recorded 47-degree field of view and saved rim/exclusions/axes retained; output sinks disabled for replay.",
+  "timestamp_interval_ms": {
+    "median": 8.041995999999926,
+    "p95": 12.021994999995513,
+    "maximum": 20.034006000008958
+  },
+  "live_quality_statuses": {
+    "tracked": 8568,
+    "rejected": 41,
+    "recovering": 689,
+    "relocalized": 41
+  },
+  "baseline": {
+    "frames": 9339,
+    "statuses": {
+      "initializing": 1,
+      "tracked": 8905,
+      "rejected": 26,
+      "recovering": 381,
+      "relocalized": 26
+    },
+    "all_decision_component_rms_rad": [
+      0.020818907138880915,
+      0.016823592734295907,
+      0.015992935575442794
+    ],
+    "maximum_unmeasured_interval_ms": 1279.995989,
+    "unmeasured_intervals": [
+      {
+        "first_image": 171,
+        "next_tracked_image": 300,
+        "duration_ms": 1279.995989
+      },
+      {
+        "first_image": 305,
+        "next_tracked_image": 307,
+        "duration_ms": 19.992992999999842
+      },
+      {
+        "first_image": 1626,
+        "next_tracked_image": 1670,
+        "duration_ms": 464.02799100000266
+      },
+      {
+        "first_image": 3456,
+        "next_tracked_image": 3464,
+        "duration_ms": 76.0130050000007
+      },
+      {
+        "first_image": 3523,
+        "next_tracked_image": 3531,
+        "duration_ms": 76.00599800000055
+      },
+      {
+        "first_image": 3634,
+        "next_tracked_image": 3708,
+        "duration_ms": 732.0150039999935
+      },
+      {
+        "first_image": 3718,
+        "next_tracked_image": 3726,
+        "duration_ms": 76.0319989999989
+      },
+      {
+        "first_image": 3762,
+        "next_tracked_image": 3782,
+        "duration_ms": 196.00499699999637
+      },
+      {
+        "first_image": 3810,
+        "next_tracked_image": 3824,
+        "duration_ms": 139.98900899999717
+      },
+      {
+        "first_image": 3863,
+        "next_tracked_image": 3889,
+        "duration_ms": 275.995001999996
+      },
+      {
+        "first_image": 3916,
+        "next_tracked_image": 3936,
+        "duration_ms": 208.00300000000425
+      },
+      {
+        "first_image": 3978,
+        "next_tracked_image": 3998,
+        "duration_ms": 207.99400099999912
+      },
+      {
+        "first_image": 6462,
+        "next_tracked_image": 6475,
+        "duration_ms": 140.00799600000028
+      },
+      {
+        "first_image": 7628,
+        "next_tracked_image": 7647,
+        "duration_ms": 187.9959899999958
+      },
+      {
+        "first_image": 7649,
+        "next_tracked_image": 7651,
+        "duration_ms": 19.99099500000011
+      },
+      {
+        "first_image": 7837,
+        "next_tracked_image": 7843,
+        "duration_ms": 60.00299599999562
+      },
+      {
+        "first_image": 7919,
+        "next_tracked_image": 7939,
+        "duration_ms": 208.02701300001354
+      }
+    ],
+    "diagnostic_windows": [
+      {
+        "start_inclusive": 171,
+        "end_exclusive": 300,
+        "statuses": {
+          "rejected": 1,
+          "recovering": 127,
+          "relocalized": 1
+        },
+        "all_decision_component_rms_rad": [
+          0.027281786899214445,
+          0.026615558257579944,
+          0.02272215201010576
+        ]
+      },
+      {
+        "start_inclusive": 1600,
+        "end_exclusive": 1700,
+        "statuses": {
+          "tracked": 56,
+          "rejected": 1,
+          "recovering": 42,
+          "relocalized": 1
+        },
+        "all_decision_component_rms_rad": [
+          0.03169923225383303,
+          0.021556082989904638,
+          0.0469121574398625
+        ]
+      },
+      {
+        "start_inclusive": 3700,
+        "end_exclusive": 4050,
+        "statuses": {
+          "recovering": 103,
+          "relocalized": 7,
+          "tracked": 234,
+          "rejected": 6
+        },
+        "all_decision_component_rms_rad": [
+          0.033103410740319195,
+          0.06374856183957565,
+          0.016805083683571285
+        ]
+      },
+      {
+        "start_inclusive": 7800,
+        "end_exclusive": 8200,
+        "statuses": {
+          "tracked": 374,
+          "rejected": 3,
+          "relocalized": 3,
+          "recovering": 20
+        },
+        "all_decision_component_rms_rad": [
+          0.059008879520626965,
+          0.011672593103558128,
+          0.02381499189858608
+        ]
+      }
+    ]
+  },
+  "candidate": {
+    "frames": 9339,
+    "statuses": {
+      "initializing": 1,
+      "tracked": 9330,
+      "rejected": 1,
+      "recovering": 6,
+      "relocalized": 1
+    },
+    "all_decision_component_rms_rad": [
+      0.009674048772610098,
+      0.008593563150900204,
+      0.014418156203500223
+    ],
+    "maximum_unmeasured_interval_ms": 80.01100199999928,
+    "unmeasured_intervals": [
+      {
+        "first_image": 3559,
+        "next_tracked_image": 3567,
+        "duration_ms": 80.01100199999928
+      }
+    ],
+    "diagnostic_windows": [
+      {
+        "start_inclusive": 171,
+        "end_exclusive": 300,
+        "statuses": {
+          "tracked": 129
+        },
+        "all_decision_component_rms_rad": [
+          0.0119134679698035,
+          0.010781213743435715,
+          0.02054491333881575
+        ]
+      },
+      {
+        "start_inclusive": 1600,
+        "end_exclusive": 1700,
+        "statuses": {
+          "tracked": 100
+        },
+        "all_decision_component_rms_rad": [
+          0.010390741372798872,
+          0.009984388921594973,
+          0.016943770784864903
+        ]
+      },
+      {
+        "start_inclusive": 3700,
+        "end_exclusive": 4050,
+        "statuses": {
+          "tracked": 350
+        },
+        "all_decision_component_rms_rad": [
+          0.010911994095563468,
+          0.012424928308262362,
+          0.01781571274354648
+        ]
+      },
+      {
+        "start_inclusive": 7800,
+        "end_exclusive": 8200,
+        "statuses": {
+          "tracked": 400
+        },
+        "all_decision_component_rms_rad": [
+          0.011496148533786303,
+          0.01047642077552588,
+          0.018064072395266282
+        ]
+      }
+    ]
+  },
+  "integrity": {
+    "every_source_image": true,
+    "exact_recorded_clock": true,
+    "missing_relative_motion_zero": true,
+    "no_accuracy_tolerance_changed": true
+  },
+  "run": {
+    "command": [
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/examples/replay_evidence",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/new-user-takes-20261105/take-1/epoch-0000-media/raw.avi",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/new-user-takes-20261105/initial-inspection/config.txt",
+      "9339",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/new-user-takes-20261105/final-latest.jsonl",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/new-user-takes-20261105/take-1/exact-clock.dat",
+      "0",
+      "0"
+    ],
+    "binary_sha256": "341188c6451cafb6f5075b5dbb2204197b03520d4e884b51594422be55dd1de1",
+    "config_sha256": "46dc7d4ea49185e4e864df821071cdbb73ac1ce405b4a1588ef8d2a3bf9dfa56",
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "wall_seconds": 71.21970127199893,
+    "statuses": {
+      "initializing": 1,
+      "tracked": 9330,
+      "rejected": 1,
+      "recovering": 6,
+      "relocalized": 1
+    }
+  },
+  "timing_boundary": "One serial release run: Rust source open/decode, tracking and numerical diagnostics, all JSONL evidence writes and close. Excludes original-FicTrac comparison and graphical presentation. Not a repeated steady-state performance distribution.",
+  "build": {
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "cpu_model": "Intel(R) Core(TM) i7-6700K CPU @ 4.00GHz",
+    "logical_cpus": 8,
+    "build_profile": "Workspace release, thin LTO, codegen-units=1; binaries built before this suite",
+    "rustflags": null,
+    "rustc_verbose": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.1\nLLVM version: 23.1.1",
+    "core_source_sha256": {
+      "crates/fictrac-core/src/calibration.rs": "6c81097ec61c9b620b3918eb4492f541a6f0b531837260e473b97550f9350e82",
+      "crates/fictrac-core/src/config.rs": "751a6ab8da1e8f9800a2fec6f0da88691f701bb18f1394243c842e4f2ae3adbc",
+      "crates/fictrac-core/src/diagnostics.rs": "d51a0104d6c301ae7f071cdf16da7944289d7391caa8ffdde1ea673c064e7edb",
+      "crates/fictrac-core/src/frame.rs": "a4ca945eb614424f564bbc24e410f27b0116fb24ce487f919c88437b722abc02",
+      "crates/fictrac-core/src/geometry.rs": "d0a67a1d3e3e0253d0d8b8298bfd06caad47a4000ec1511a63d40126d803c36d",
+      "crates/fictrac-core/src/lib.rs": "81b6b8884c6dce9b55469145149f3945a1fae6ed487103760cd894f4d4146580",
+      "crates/fictrac-core/src/resilience.rs": "4ef1dc3d2bb7ee5b20ae5a1187a9a47a7dae8e3672cf4fcc8b93acc52996185b",
+      "crates/fictrac-core/src/spherical.rs": "adf9d466bf4b0c18d69a04ce0408940fa2b09d3803b75963da5d759bc2fba9dd",
+      "crates/fictrac-core/src/synthetic.rs": "3cc9b84434d5360bb0dc06c74d5f24b0c488f326f3cd1b25867aa19dc8b0da05",
+      "crates/fictrac-core/src/tracker.rs": "77f95ae7315fa140053dc9db87392c14954ce1fc9dae44809bd8b9658147d4b1"
+    },
+    "source_commit": "3ce8850a12c7424ebda3f057c8b425b9c6014ffe",
+    "source_dirty": [
+      " M .gitignore",
+      " M Cargo.lock",
+      " M README.md",
+      " M VR1.txt",
+      " M VR2.txt",
+      " M VR3.txt",
+      " M VR4.txt",
+      " M apps/fictrac-desktop/Cargo.toml",
+      " M apps/fictrac-desktop/src/control.rs",
+      " M apps/fictrac-desktop/src/main.rs",
+      " M apps/fictrac-desktop/src/runtime.rs",
+      " M apps/fictrac-desktop/src/session.rs",
+      " M apps/fictrac-desktop/src/startup.rs",
+      " M apps/fictrac-desktop/src/ui.rs",
+      " M book/src/SUMMARY.md",
+      " M book/src/install.md",
+      " M book/src/rigs.md",
+      " M crates/fictrac-control/src/lib.rs",
+      " M crates/fictrac-control/src/schema.rs",
+      " M crates/fictrac-core/src/resilience.rs",
+      " M crates/fictrac-core/src/spherical.rs",
+      " M crates/fictrac-core/src/tracker.rs",
+      " M crates/fictrac-core/tests/recovery.rs",
+      " M docs/architecture.md",
+      " M docs/atlas-learning.md",
+      " M docs/output.md",
+      " M docs/recovery.md",
+      " M docs/ui-design.md",
+      " M scripts/build_site.py",
+      " M scripts/test_daily_ui_visual.py",
+      " M scripts/test_native_ui_interaction.py",
+      "?? apps/fictrac-desktop/src/atlas_cache.rs",
+      "?? apps/fictrac-desktop/src/state.rs",
+      "?? apps/fictrac-desktop/src/tiling.rs",
+      "?? book/src/workspaces.md",
+      "?? docs/recorded-clock.md",
+      "?? scripts/analyze_capture_replay.py",
+      "?? scripts/test_live_atlas_cache.py",
+      "?? scripts/test_sixteen_workspace.py"
+    ]
+  },
+  "accuracy_limit": "Full-clip component RMS is reported with every decision. The 171..300 diagnostic window has a Z RMS above the existing 0.020 rad target; full-clip agreement does not erase that local error. No physical motion ground truth is available.",
+  "baseline_scope": "Retained exact-clock output before the fixes, using the same recorded geometry, quality six and 50-evaluation limit. The baseline executable was not retained for a matched performance comparison."
+}

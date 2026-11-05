@@ -2,11 +2,31 @@
 
 The preview and inspector are native OS windows rendered by Rust egui/wgpu;
 neither is a webview. Widgets are Rust-drawn, rather than AppKit/WinUI widgets.
-The minimum preview remains 96×96 logical pixels. If the content is narrower than
-160 pixels or shorter than 120, toolbar/status chrome disappears so the image
-gets the available space; font sizes are not shrunk. The context menu retains
-Reset, recording, Settings and Calibrate again. The status strip appears from
-320×220; larger toolbars expose additional commands.
+The minimum preview remains 96×96 logical pixels. From 112×120, a compact toolbar
+retains refresh, record and More; a status strip appears from 112×160. Larger
+toolbars expose additional commands. Fonts are not shrunk. The inspector uses
+explicit Source, Calibration, View, Atlas & startup, Recording, Outputs and
+Advanced pages. Recording and atlas controls open explicit pages on click, without
+hover expansion across the pointer route. Tooltips require a still pointer for 650 ms, with no instant
+tooltip handoff while crossing neighboring controls.
+
+Raw configuration text is read-only and selectable until editing is explicitly
+enabled. Typed edits disable automatic application and require Apply. Numerical
+validation precedes changing the running session or saving the file. Presentation
+choices use sidecars, preserving exact legacy configuration text.
+
+Arrays of five to sixteen rigs share one native hardware GPU surface. Tiles,
+settings and the manager are embedded in the root window; sources, numerical
+workers and outputs stay independent. Open expands a tile for detailed work and
+Grid returns to all rigs. Up to four rigs keep native tracking windows.
+[Observed display-server crash and corrected stress test](ui-rendering.md).
+
+Grid arrangement fits each image aspect and native decoration size. Linux X11
+also reads the window manager's reserved work area through safe Rust X11
+protocol calls, avoiding docks and panels. If XWayland omits the desktop index,
+the intersection of exported work areas remains reserved. View state is saved
+per rig; an opt-in startup manifest restores a configured workspace on ordinary
+graphical launch. [Graphical setup and atlas startup](../book/src/workspaces.md).
 
 The hierarchy follows [Apple toolbar guidance](https://developer.apple.com/design/human-interface-guidelines/toolbars) and [Microsoft command-bar guidance](https://learn.microsoft.com/en-ca/windows/apps/design/controls/command-bar): prioritize frequent commands, group related actions, move less frequent controls into secondary surfaces, and explain compact controls with tooltips. Toolbar artwork is bundled from Lucide, with pinned source SVGs, embedded rendered assets and ISC/Feather MIT notices. No icon network request, custom icon font or render-tool runtime is required. See [third-party notices](https://github.com/pvnkmrksk/hejjetrak/blob/main/THIRD_PARTY.md). The application icon retains its editable SVG source.
 
@@ -31,8 +51,8 @@ flowchart LR
 
 | Surface | Default | Equivalent command |
 |---|---|---|
-| Reset tracking | Toolbar | `reset` |
-| Start/stop recording | Toolbar + mode chevron | `record_start` with optional `record_options`; `record_stop` |
+| Refresh atlas | Toolbar | `map_refresh`; `reset` retains its existing separate reset semantics |
+| Start/stop recording | Toolbar; options on Recording page | `record_start` with optional `record_options`; `record_stop` |
 | Camera/video selection | Source menu with cached device list | `source`, `camera_status`, `camera_format`, `camera_set` |
 | Preview/diagnostics/guides | Preview first | Native `view` flags |
 | Rim/exclusion/square | Inspector; source paused | `calibrate` kinds rim/exclude/square/square_cycle |

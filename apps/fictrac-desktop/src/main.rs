@@ -1,7 +1,9 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 mod array;
+mod atlas_cache;
 mod calibration;
 mod control;
+mod dashboard;
 #[cfg(any(target_os = "linux", test))]
 mod graphics;
 mod icons;
@@ -10,6 +12,8 @@ mod launch;
 mod runtime;
 mod session;
 mod startup;
+mod state;
+mod tiling;
 mod ui;
 mod ui_metrics;
 use clap::Parser;
@@ -146,6 +150,9 @@ fn parse_grid(value: &str) -> Result<Pair, String> {
     Ok(pair)
 }
 struct Desktop {
+    dashboard: bool,
+    dashboard_focus: Option<u64>,
+    dashboard_columns: Option<usize>,
     sessions: Vec<Session>,
     next_id: u64,
     args: Args,
@@ -160,6 +167,8 @@ struct Desktop {
     startup_notice: String,
     startup_frames: u8,
     tile_array_requested: bool,
+    workspace: state::Workspace,
+    tile_positions: std::collections::BTreeMap<u64, tiling::Tile>,
 }
 impl Desktop {
     fn camera_owners(&self, except: Option<u64>) -> std::collections::BTreeMap<u32, String> {
@@ -216,8 +225,31 @@ impl Desktop {
         }
         ui::configure_appearance(&cc.egui_ctx);
         let normal_startup = args.config.is_none() && !args.control_stdio;
+        let workspace =
+            state::workspace_path().and_then(|path| state::read::<state::Workspace>(&path, 65536));
+        let workspace = match workspace {
+            Ok(Some(value))
+                if value.rigs.len() <= 16 && value.rigs.iter().all(|p| p.is_absolute()) =>
+            {
+                value
+            }
+            Ok(None) => state::Workspace::default(),
+            Ok(Some(_)) => {
+                eprintln!("Saved workspace is invalid; using the default rig");
+                state::Workspace::default()
+            }
+            Err(error) => {
+                eprintln!("{error}");
+                state::Workspace::default()
+            }
+        };
+        let restoring_workspace = normal_startup
+            && args.windows == 1
+            && !args.array
+            && workspace.restore_on_launch
+            && !workspace.rigs.is_empty();
         let mut explicit_session = None;
-        let startup = if normal_startup {
+        let mut startup = if normal_startup {
             startup::default_document(&default_config()?)?
         } else {
             let path = args
@@ -239,6 +271,16 @@ impl Desktop {
                 notice: String::new(),
             }
         };
+        if restoring_workspace {
+            let path = workspace.rigs[0].clone();
+            let session = Session::from_config_path(1, path.clone())?;
+            startup.path = path;
+            startup.document = session
+                .document()
+                .unwrap_or(ConfigDocument::parse("src_fn:\n".into()).map_err(|e| e.to_string())?);
+            startup.fresh = false;
+            explicit_session = Some(session);
+        }
         let path = startup.path;
         let doc = startup.document;
         let mut first =
@@ -257,6 +299,7 @@ impl Desktop {
         first.temporary_config = startup.temporary;
         first.fallback_notice = startup.notice.clone();
         if normal_startup
+            && !restoring_workspace
             && args.windows == 1
             && !args.array
             && doc.camera_binding().map_err(|e| e.to_string())?.is_none()
@@ -336,7 +379,11 @@ impl Desktop {
             }
             startup_notice.push_str(&format!("Compatible {mode} graphics startup is active. Use --diagnostics to locate the startup log."));
         }
+        let arrange_on_start = restoring_workspace || args.grid.is_some();
         let mut app = Self {
+            dashboard: false,
+            dashboard_focus: None,
+            dashboard_columns: None,
             sessions: vec![first],
             next_id: 2,
             args,
@@ -350,13 +397,20 @@ impl Desktop {
             root_hidden: false,
             startup_notice,
             startup_frames: 0,
-            tile_array_requested: false,
+            tile_array_requested: arrange_on_start,
+            workspace,
+            tile_positions: std::collections::BTreeMap::new(),
         };
         for _ in 1..app.args.windows.clamp(1, 16) {
             app.spawn_from(app.sessions.len() - 1);
         }
         if app.args.array {
             app.start_saved_array(0);
+        }
+        if restoring_workspace {
+            for path in app.workspace.rigs.clone().into_iter().skip(1) {
+                app.spawn_saved(path);
+            }
         }
         Ok(app)
     }
@@ -379,10 +433,11 @@ impl Desktop {
             let candidate = (1..16)
                 .filter_map(|offset| array::rig_path(anchor, (slot - 1 + offset) % 16 + 1))
                 .find(|path| {
-                    !self
-                        .sessions
-                        .iter()
-                        .any(|s| !s.closed && s.path.as_ref() == Some(path))
+                    path.is_file()
+                        && !self
+                            .sessions
+                            .iter()
+                            .any(|s| !s.closed && s.path.as_ref() == Some(path))
                 });
             if let Some(path) = candidate {
                 self.spawn_saved(path);
@@ -542,32 +597,42 @@ impl Desktop {
         let mut close = false;
         let mut start_all = false;
         let mut open_four = false;
-        let mut tile = std::mem::take(&mut self.tile_array_requested);
+        let mut add_rigs = false;
+        let mut new_rig = false;
+        let mut save_workspace = false;
+        let mut tile = false;
         let framebuffer_limit = self
             .sessions
             .first()
             .map(|s| s.framebuffer_limit)
             .unwrap_or(4096);
-        ctx.show_viewport_immediate(
-            egui::ViewportId::from_hash_of("rig-manager"),
-            egui::ViewportBuilder::default()
-                .with_title("HejjéTrac · Rig manager")
-                .with_inner_size([580.0, 540.0])
-                .with_max_inner_size(ui::framebuffer_window_limit(framebuffer_limit, ctx.pixels_per_point()))
-                .with_min_inner_size([400.0, 300.0]),
-            |ctx, _| {
-                ui::constrain_framebuffer(ctx, framebuffer_limit);
-                close = ctx.input(|i| i.viewport().close_requested());
-                egui::CentralPanel::default().show(ctx, |ui| {
-                    ui.heading("Your rigs");
-                    ui.label("Each window has its own source, calibration and outputs.");
-                    ui.horizontal_wrapped(|ui| {
+        let mut contents = |ui: &mut egui::Ui| {
+            ui.heading("Your rigs");
+            ui.label("Each rig has its own source, calibration and outputs.");
+            ui.horizontal_wrapped(|ui| {
                         start_all = ui.button("Start all").on_hover_text("Resume paused sessions, replay finished videos and retry stopped sources. Finish active calibration first.").clicked();
                         open_four = ui.button("Start saved array").on_hover_text("Start saved VR1–VR16 or BR1–BR16 files beside this rig. Each failed rig stays visible; working rigs continue. No sample substitution.").clicked();
                         tile = ui.button("Arrange in a grid").clicked();
+                        add_rigs = ui.button("Add saved rigs…").clicked();
+                        new_rig = ui.add_enabled(self.sessions.iter().filter(|s| !s.closed).count() < 16, egui::Button::new("New rig")).clicked();
                     });
-                    ui.separator();
-                    egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.add_space(6.0);
+            ui.checkbox(
+                &mut self.workspace.restore_on_launch,
+                "Restore saved workspace on graphical launch",
+            );
+            save_workspace = ui
+                .button("Save current rigs as startup workspace")
+                .clicked();
+            ui.small(format!(
+                "{} of 16 rigs open. Save each rig's configuration before saving the workspace.",
+                self.sessions.iter().filter(|s| !s.closed).count()
+            ));
+            if !self.startup_notice.is_empty() {
+                ui.colored_label(ui.visuals().warn_fg_color, &self.startup_notice);
+            }
+            ui.separator();
+            egui::ScrollArea::vertical().show(ui, |ui| {
                         for session in self.sessions.iter_mut().filter(|session| !session.closed) {
                             ui.push_id(session.id, |ui| {
                             ui.group(|ui| {
@@ -604,12 +669,35 @@ impl Desktop {
                             });
                         }
                         ui.add_space(8.0);
-                        ui.small("Launch a saved grid from Terminal:");
-                        ui.code("hejjetrac --config VR1.txt --windows 4 --grid 2x2");
+                        ui.small("Add up to 16 saved configurations here, arrange them, then save this workspace. The app launcher can restore it without a terminal.");
                     });
-                });
-            },
-        );
+        };
+        if self.dashboard {
+            let mut open = true;
+            egui::Window::new("Rig manager")
+                .id(egui::Id::new("grid-rig-manager"))
+                .open(&mut open)
+                .default_size([580.0, 540.0])
+                .show(ctx, &mut contents);
+            close = !open;
+        } else {
+            ctx.show_viewport_immediate(
+                egui::ViewportId::from_hash_of("rig-manager"),
+                egui::ViewportBuilder::default()
+                    .with_title("HejjéTrac · Rig manager")
+                    .with_inner_size([580.0, 540.0])
+                    .with_max_inner_size(ui::framebuffer_window_limit(
+                        framebuffer_limit,
+                        ctx.pixels_per_point(),
+                    ))
+                    .with_min_inner_size([400.0, 300.0]),
+                |ctx, _| {
+                    ui::constrain_framebuffer(ctx, framebuffer_limit);
+                    close = ctx.input(|i| i.viewport().close_requested());
+                    egui::CentralPanel::default().show(ctx, &mut contents);
+                },
+            );
+        }
         if close {
             for session in &mut self.sessions {
                 session.show_rigs = false;
@@ -635,55 +723,139 @@ impl Desktop {
             }
             tile = true;
         }
+        if add_rigs
+            && let Some(paths) = rfd::FileDialog::new()
+                .add_filter("Rig configurations", &["txt"])
+                .pick_files()
+        {
+            for path in paths {
+                if self.sessions.iter().filter(|s| !s.closed).count() >= 16 {
+                    break;
+                }
+                if !self
+                    .sessions
+                    .iter()
+                    .any(|s| !s.closed && s.path.as_ref() == Some(&path))
+                {
+                    self.spawn_saved(path);
+                }
+            }
+            self.tile_array_requested = true;
+        }
+        if new_rig && let Some(index) = self.sessions.iter().position(|s| !s.closed) {
+            self.spawn_from(index);
+            self.tile_array_requested = true;
+        }
+        if save_workspace {
+            match self.save_workspace() {
+                Ok(()) => self.startup_notice = "Startup workspace saved. View preferences are stored separately from calibration text.".into(),
+                Err(error) => self.startup_notice = error,
+            }
+        }
         if tile {
-            let count = self
-                .sessions
-                .iter()
-                .filter(|session| !session.closed)
-                .count();
-            let columns = (count as f32).sqrt().ceil().max(1.0) as usize;
-            let rows = count.div_ceil(columns);
-            let monitor = ctx
-                .input(|i| i.viewport().monitor_size)
-                .unwrap_or(egui::vec2(1440.0, 900.0));
-            self.tile_columns = columns;
-            self.window_size = Pair(
-                (monitor.x / columns as f32 - 8.0).max(96.0),
-                ((monitor.y - 50.0) / rows as f32 - 32.0).max(96.0),
-            );
-            self.window_origin = Pair(4.0, 32.0);
-            for (cell, (index, session)) in self
-                .sessions
-                .iter()
-                .enumerate()
-                .filter(|(_, session)| !session.closed)
-                .enumerate()
-            {
-                let id = if index == 0 {
-                    egui::ViewportId::ROOT
-                } else {
-                    egui::ViewportId::from_hash_of(("fictrac", session.id))
-                };
-                ctx.send_viewport_cmd_to(
-                    id,
-                    egui::ViewportCommand::InnerSize(egui::vec2(
-                        self.window_size.0,
-                        self.window_size.1,
-                    )),
-                );
-                ctx.send_viewport_cmd_to(
-                    id,
-                    egui::ViewportCommand::OuterPosition(egui::pos2(
-                        self.window_origin.0 + (cell % columns) as f32 * (self.window_size.0 + 8.0),
-                        self.window_origin.1
-                            + (cell / columns) as f32 * (self.window_size.1 + 32.0),
-                    )),
+            self.arrange(ctx, None);
+        }
+    }
+    fn save_workspace(&mut self) -> Result<(), String> {
+        let mut paths = vec![];
+        for session in self.sessions.iter_mut().filter(|s| !s.closed) {
+            let path = session
+                .path
+                .as_ref()
+                .filter(|p| p.is_file())
+                .ok_or("Save every rig's configuration before saving the startup workspace")?;
+            if session.history.text != session.saved {
+                return Err(
+                    "Save the unsaved rig configurations first, then save the workspace".into(),
                 );
             }
+            paths.push(std::path::absolute(path).map_err(|e| e.to_string())?);
+            session.save_view()?;
+        }
+        self.workspace.rigs = paths;
+        state::write(&state::workspace_path()?, &self.workspace)
+    }
+    fn release_closed_grid_root(&mut self) {
+        if self.sessions[0].closed && self.dashboard {
+            // The dashboard still needs the native root surface, but its first
+            // rig must release capture and outputs just like every other rig.
+            let root = &mut self.sessions[0];
+            root.worker = None;
+            root.show_settings = false;
+            root.snapshot = runtime::Snapshot::default();
+            root.textures.clear();
+            root.texture_image = None;
+        }
+    }
+    fn arrange(&mut self, ctx: &egui::Context, columns: Option<usize>) {
+        if self
+            .sessions
+            .iter()
+            .any(|s| !s.closed && s.show_calibration)
+        {
+            self.startup_notice =
+                "Finish or close calibration before arranging the tracking windows".into();
+            return;
+        }
+        self.ensure_dashboard(ctx);
+        if self.dashboard {
+            self.dashboard_columns = columns;
+            self.dashboard_focus = None;
+            ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
+            return;
+        }
+        let monitor = ctx
+            .input(|i| i.viewport().monitor_size)
+            .unwrap_or(egui::vec2(1440.0, 900.0));
+        let fallback_work = egui::Rect::from_min_max(
+            egui::pos2(4.0, 32.0),
+            egui::pos2(monitor.x - 4.0, monitor.y - 8.0),
+        );
+        let work = tiling::native_work_area(ctx).unwrap_or(fallback_work);
+        let active: Vec<_> = self
+            .sessions
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| !s.closed)
+            .collect();
+        let aspects: Vec<_> = active.iter().map(|(_, s)| s.content_aspect()).collect();
+        let decorations = active
+            .iter()
+            .filter_map(|(_, s)| s.window_rect.zip(s.window_inner_size))
+            .map(|(outer, inner)| egui::vec2(outer[2] - inner[0], outer[3] - inner[1]))
+            .fold(egui::vec2(0.0, 32.0), |a, b| a.max(b));
+        let tiles = tiling::plan(work, &aspects, decorations, columns);
+        if tiles.len() != active.len() {
+            self.startup_notice = "This display cannot fit every window at its minimum size. Use fewer rigs on this display or a larger desktop.".into();
+            return;
+        }
+        let placements: Vec<_> = active
+            .into_iter()
+            .zip(tiles)
+            .map(|((index, session), tile)| (index, session.id, tile))
+            .collect();
+        for (index, session_id, tile) in placements {
+            self.tile_positions.insert(session_id, tile);
+            self.sessions[index].requested_window_size = Some(tile.inner);
+            let id = if index == 0 {
+                egui::ViewportId::ROOT
+            } else {
+                egui::ViewportId::from_hash_of(("fictrac", session_id))
+            };
+            ctx.send_viewport_cmd_to(id, egui::ViewportCommand::Maximized(false));
+            ctx.send_viewport_cmd_to(id, egui::ViewportCommand::InnerSize(tile.inner));
+            ctx.send_viewport_cmd_to(id, egui::ViewportCommand::OuterPosition(tile.position));
         }
     }
 }
 impl eframe::App for Desktop {
+    fn on_exit(&mut self) {
+        for session in &mut self.sessions {
+            if let Err(error) = session.save_view() {
+                eprintln!("{error}");
+            }
+        }
+    }
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         let update_started = Instant::now();
         if self.startup_frames < 2 {
@@ -701,45 +873,58 @@ impl eframe::App for Desktop {
             bridge.poll(self);
             self.control = Some(bridge);
         }
-        if !self.sessions[0].closed {
-            self.sessions[0].show(ctx);
-            // A delayed camera failure replaces its own notice. Keep the separate
-            // bootstrap failure actionable until the preview has been saved.
-            let first = &mut self.sessions[0];
-            if !self.startup_notice.is_empty()
-                && !first.fallback_notice.contains(&self.startup_notice)
-            {
-                if !first.fallback_notice.is_empty() {
-                    first.fallback_notice.push_str(". ");
+        self.ensure_dashboard(ctx);
+        if self.dashboard {
+            self.show_dashboard(ctx);
+        } else {
+            if !self.sessions[0].closed {
+                self.sessions[0].show(ctx);
+                // A delayed camera failure replaces its own notice. Keep the separate
+                // bootstrap failure actionable until the preview has been saved.
+                let first = &mut self.sessions[0];
+                if !self.startup_notice.is_empty()
+                    && !first.fallback_notice.contains(&self.startup_notice)
+                {
+                    if !first.fallback_notice.is_empty() {
+                        first.fallback_notice.push_str(". ");
+                    }
+                    first.fallback_notice.push_str(&self.startup_notice);
                 }
-                first.fallback_notice.push_str(&self.startup_notice);
             }
-        }
-        let mut cell = usize::from(!self.sessions[0].closed);
-        for session in self.sessions.iter_mut().skip(1) {
-            if session.closed {
-                continue;
+            let mut cell = usize::from(!self.sessions[0].closed);
+            for session in self.sessions.iter_mut().skip(1) {
+                if session.closed {
+                    continue;
+                }
+                let id = egui::ViewportId::from_hash_of(("fictrac", session.id));
+                let tile = self
+                    .tile_positions
+                    .get(&session.id)
+                    .copied()
+                    .unwrap_or(tiling::Tile {
+                        position: egui::pos2(
+                            self.window_origin.0
+                                + (cell % self.tile_columns) as f32 * (self.window_size.0 + 8.0),
+                            self.window_origin.1
+                                + (cell / self.tile_columns) as f32 * (self.window_size.1 + 32.0),
+                        ),
+                        inner: egui::vec2(self.window_size.0, self.window_size.1),
+                    });
+                ctx.show_viewport_immediate(
+                    id,
+                    egui::ViewportBuilder::default()
+                        .with_title(session.window_title())
+                        .with_inner_size(tile.inner)
+                        .with_position(tile.position)
+                        .with_max_inner_size(session.max_window_inner_size)
+                        .with_min_inner_size([96.0, 96.0]),
+                    |ctx, class| {
+                        session.native_window = class != egui::ViewportClass::Embedded;
+                        session.show(ctx);
+                    },
+                );
+                cell += 1;
             }
-            let id = egui::ViewportId::from_hash_of(("fictrac", session.id));
-            ctx.show_viewport_immediate(
-                id,
-                egui::ViewportBuilder::default()
-                    .with_title(session.window_title())
-                    .with_inner_size([self.window_size.0, self.window_size.1])
-                    .with_position([
-                        self.window_origin.0
-                            + (cell % self.tile_columns) as f32 * (self.window_size.0 + 8.0),
-                        self.window_origin.1
-                            + (cell / self.tile_columns) as f32 * (self.window_size.1 + 32.0),
-                    ])
-                    .with_max_inner_size(session.max_window_inner_size)
-                    .with_min_inner_size([96.0, 96.0]),
-                |ctx, class| {
-                    session.native_window = class != egui::ViewportClass::Embedded;
-                    session.show(ctx);
-                },
-            );
-            cell += 1;
         }
         let requests: Vec<_> = self
             .sessions
@@ -776,11 +961,22 @@ impl eframe::App for Desktop {
             }
         }
         self.rig_manager(ctx);
+        if self.tile_array_requested
+            && self
+                .sessions
+                .iter()
+                .filter(|s| !s.closed)
+                .all(|s| s.snapshot.image.is_some() || s.snapshot.ended || !s.error.is_empty())
+        {
+            self.tile_array_requested = false;
+            self.arrange(ctx, self.args.grid.map(|p| p.0 as usize));
+        }
         if self.sessions.iter().all(|s| s.closed) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;
         }
-        if self.sessions[0].closed {
+        self.release_closed_grid_root();
+        if self.sessions[0].closed && !self.dashboard {
             // eframe owns a root event-loop window. Closing a tracking session
             // must not close other sessions: retain only a hidden event host,
             // and release this session's capture, outputs and image memory.
@@ -797,6 +993,11 @@ impl eframe::App for Desktop {
             }
         }
         let root = self.sessions[0].id;
+        for session in self.sessions.iter_mut().filter(|s| s.closed) {
+            if let Err(error) = session.save_view() {
+                eprintln!("{error}");
+            }
+        }
         self.sessions.retain(|s| s.id == root || !s.closed);
         let elapsed = self.start.elapsed().as_secs_f64();
         if self.args.screenshot.is_some()
@@ -840,8 +1041,8 @@ impl eframe::App for Desktop {
         if self.last_state.elapsed().as_millis() > 400
             && let Some(path) = &self.args.state_output
         {
-            let instances:Vec<_>=self.sessions.iter().filter(|s| !s.closed).map(|s|serde_json::json!({"id":s.id,"frames":s.snapshot.frames,"source":s.source_edit,"config_path":s.path,"paused":s.snapshot.paused,"native_window":s.native_window,"window_rect":s.window_rect,"window_title":s.window_title(),"revision":s.snapshot.revision,"notice":s.snapshot.notice,"error":s.error,"config_text":s.history.text,"ui":s.ui_metrics.value(),"preview_age_ms":s.snapshot.preview_age_ms})).collect();
-            let value = serde_json::json!({"instances":instances,"elapsed_seconds":elapsed,"root_update_ms":update_started.elapsed().as_secs_f64()*1000.,"previous_native_frame_ms":frame.info().cpu_usage.map(|seconds|seconds*1000.)});
+            let instances:Vec<_>=self.sessions.iter().filter(|s| !s.closed).map(|s|serde_json::json!({"id":s.id,"frames":s.snapshot.frames,"source":s.source_edit,"config_path":s.path,"paused":s.snapshot.paused,"native_window":s.native_window,"tile_rect":s.tile_rect,"window_rect":s.window_rect,"window_inner_size":s.window_inner_size,"view":{"full_image":s.full_image,"diagnostics":s.show_diagnostics,"overlays":s.show_overlays,"display_fps":s.display_fps,"reuse_atlas":s.reuse_atlas},"window_title":s.window_title(),"revision":s.snapshot.revision,"notice":s.snapshot.notice,"error":s.error,"config_text":s.history.text,"ui":s.ui_metrics.value(),"preview_age_ms":s.snapshot.preview_age_ms})).collect();
+            let value = serde_json::json!({"instances":instances,"elapsed_seconds":elapsed,"native_viewport_count":ctx.input(|i|i.raw.viewports.len()),"root_update_ms":update_started.elapsed().as_secs_f64()*1000.,"previous_native_frame_ms":frame.info().cpu_usage.map(|seconds|seconds*1000.)});
             match serde_json::to_vec_pretty(&value)
                 .map_err(|e| e.to_string())
                 .and_then(|data| std::fs::write(path, data).map_err(|e| e.to_string()))

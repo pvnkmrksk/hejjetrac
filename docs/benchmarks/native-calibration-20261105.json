@@ -1,0 +1,136 @@
+{
+  "passed": true,
+  "binary_sha256": "7d4a50d021b5d9c1fa9452ff310d83a25bb1a2f8576cfc4ed38c0fe1140ad3df",
+  "scope": "Native X11 window/input timing on live copied rigs; no physical motion ground truth",
+  "native_input_seconds": [
+    0.04494341800455004,
+    0.057798755005933344,
+    0.054558513016672805,
+    0.056634068983839825,
+    0.058891246997518465,
+    0.0442419669998344
+  ],
+  "native_drags": [
+    {
+      "session": 1,
+      "expected_first_mark": [
+        126.25950695816589,
+        88.99521531100478
+      ],
+      "actual_first_mark": [
+        125.98931182937311,
+        89.19786096256685
+      ]
+    },
+    {
+      "session": 2,
+      "expected_first_mark": [
+        132.20377996561112,
+        97.91162397973544
+      ],
+      "actual_first_mark": [
+        132.40642465246066,
+        98.18181818181819
+      ]
+    },
+    {
+      "session": 3,
+      "expected_first_mark": [
+        250.55022532833743,
+        84.58137121877245
+      ],
+      "actual_first_mark": [
+        250.4812908055344,
+        84.70588235294117
+      ]
+    },
+    {
+      "session": 4,
+      "expected_first_mark": [
+        171.5845886399359,
+        62.24598930481283
+      ],
+      "actual_first_mark": [
+        171.55080308155758,
+        62.24598930481283
+      ]
+    }
+  ],
+  "maximum_ui_interval_ms": 122.27315499999999,
+  "maximum_native_input_seconds": 0.058891246997518465,
+  "original_configs_unchanged": true,
+  "phases": {
+    "after-calibrations-covered-manager": {
+      "samples": 28,
+      "maximum_root_update_ms": 15.007645
+    },
+    "calibration-1-before-hover": {
+      "samples": 5,
+      "maximum_root_update_ms": 12.877505
+    },
+    "calibration-1-hover": {
+      "samples": 23,
+      "maximum_root_update_ms": 15.318472
+    },
+    "calibration-2-before-hover": {
+      "samples": 5,
+      "maximum_root_update_ms": 14.088211
+    },
+    "calibration-2-hover": {
+      "samples": 23,
+      "maximum_root_update_ms": 15.969217
+    },
+    "calibration-3-before-hover": {
+      "samples": 5,
+      "maximum_root_update_ms": 23.333788000000002
+    },
+    "calibration-3-hover": {
+      "samples": 24,
+      "maximum_root_update_ms": 18.041861
+    },
+    "calibration-4-before-hover": {
+      "samples": 4,
+      "maximum_root_update_ms": 13.61827
+    },
+    "calibration-4-hover": {
+      "samples": 24,
+      "maximum_root_update_ms": 16.537464
+    },
+    "diagnostics-untouched": {
+      "samples": 30,
+      "maximum_root_update_ms": 10.302078
+    },
+    "hidden-root-with-three-live-windows": {
+      "samples": 19,
+      "maximum_root_update_ms": 19.122447
+    },
+    "large-resized-window": {
+      "samples": 24,
+      "maximum_root_update_ms": 21.259113
+    },
+    "minimized-rig-manager": {
+      "samples": 19,
+      "maximum_root_update_ms": 36.558111
+    },
+    "native-input-probe": {
+      "samples": 8,
+      "maximum_root_update_ms": 15.983687
+    },
+    "restored-rig-manager": {
+      "samples": 8,
+      "maximum_root_update_ms": 12.269071
+    },
+    "rig-manager-and-diagnostics": {
+      "samples": 19,
+      "maximum_root_update_ms": 11.03642
+    },
+    "settings": {
+      "samples": 19,
+      "maximum_root_update_ms": 13.519303
+    },
+    "startup": {
+      "samples": 4,
+      "maximum_root_update_ms": 79.43399
+    }
+  }
+}

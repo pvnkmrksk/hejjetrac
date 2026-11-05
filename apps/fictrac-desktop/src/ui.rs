@@ -2,7 +2,7 @@ use crate::{
     calibration,
     icons::{self, Icon},
     runtime::Command,
-    session::{Session, Tool},
+    session::{Session, SettingsSection, Tool},
 };
 use eframe::egui::{self, Align2, Color32, FontId, Pos2, Rect, Stroke, TextureOptions, Vec2};
 use fictrac_core::Config;
@@ -14,6 +14,9 @@ pub(crate) fn configure_appearance(ctx: &egui::Context) {
     ctx.set_theme(egui::ThemePreference::System);
     ctx.all_styles_mut(|style| {
         style.spacing.button_padding = egui::vec2(10.0, 6.0);
+        style.interaction.tooltip_delay = 0.65;
+        style.interaction.tooltip_grace_time = 0.0;
+        style.interaction.show_tooltips_only_when_still = true;
     });
 }
 #[derive(Clone, Copy)]
@@ -23,8 +26,8 @@ struct PreviewChrome {
 }
 fn preview_chrome(size: Vec2) -> PreviewChrome {
     PreviewChrome {
-        toolbar: size.x >= 160.0 && size.y >= 120.0,
-        status: size.x >= 320.0 && size.y >= 220.0,
+        toolbar: size.x >= 112.0 && size.y >= 120.0,
+        status: size.x >= 112.0 && size.y >= 160.0,
     }
 }
 pub(crate) fn framebuffer_window_limit(texture_limit: u32, pixels_per_point: f32) -> Vec2 {
@@ -100,10 +103,15 @@ impl Session {
         self.ui_metrics.update_ms = show_started.elapsed().as_secs_f64() * 1000.;
         let limit = constrain_framebuffer(ctx, self.framebuffer_limit);
         self.max_window_inner_size = limit;
-        if let Some(size) = self.requested_window_size.take() {
-            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(size.min(limit)));
-        }
         let size = ctx.content_rect().size();
+        if let Some(target) = self.requested_window_size {
+            let target = target.min(limit);
+            if (target - size).length() <= 1.0 {
+                self.requested_window_size = None;
+            } else {
+                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(target));
+            }
+        }
         self.window_inner_size = Some([size.x, size.y]);
         // Native resize acknowledgement is asynchronous. Keep requesting until
         // the actual viewport reaches the target, including after restoration.
@@ -126,29 +134,40 @@ impl Session {
                 self.closed = true;
             }
         }
-        if self.close_pending {
-            egui::Modal::new(egui::Id::new(("unsaved-config", self.id))).show(ctx, |ui| {
-                ui.heading("Unsaved configuration");
-                ui.label("Save configuration changes before closing?");
-                ui.horizontal(|ui| {
-                    if ui.button("Save and close").clicked() {
-                        let result = self.save(false);
-                        if result.is_ok() {
-                            self.closed = true;
-                            self.close_pending = false;
-                        }
-                        self.report(result);
-                    }
-                    if ui.button("Discard and close").clicked() {
-                        self.closed = true;
-                        self.close_pending = false;
-                    }
-                    if ui.button("Cancel").clicked() {
-                        self.close_pending = false;
-                    }
+        self.keyboard_and_drop(ctx);
+        let chrome = preview_chrome(ctx.content_rect().size());
+        if chrome.toolbar {
+            egui::TopBottomPanel::top(egui::Id::new(("toolbar", self.id)))
+                .frame(
+                    egui::Frame::new()
+                        .fill(ctx.style().visuals.panel_fill)
+                        .inner_margin(5.0),
+                )
+                .show(ctx, |ui| {
+                    self.toolbar(ui);
                 });
+        }
+        if chrome.status {
+            egui::TopBottomPanel::bottom(egui::Id::new(("status", self.id))).show(ctx, |ui| {
+                self.status_bar(ui);
             });
         }
+        if self.tool != Tool::Inspect {
+            egui::TopBottomPanel::top(egui::Id::new(("calibration-guide", self.id)))
+                .show(ctx, |ui| self.calibration_banner(ui));
+        }
+        let texture_started = std::time::Instant::now();
+        self.refresh_textures(ctx);
+        self.ui_metrics.textures_ms = texture_started.elapsed().as_secs_f64() * 1000.;
+        egui::CentralPanel::default()
+            .frame(egui::Frame::NONE.fill(Color32::from_rgb(12, 15, 19)))
+            .show(ctx, |ui| {
+                self.paint_preview(ui, ui.available_rect_before_wrap(), chrome.toolbar);
+            });
+        self.show_dialogs(ctx, false);
+        self.ui_metrics.show_ms = show_started.elapsed().as_secs_f64() * 1000.;
+    }
+    fn keyboard_and_drop(&mut self, ctx: &egui::Context) {
         if ctx.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::S)) {
             {
                 let result = self.save(false);
@@ -174,7 +193,7 @@ impl Session {
         }
         if !ctx.wants_keyboard_input() {
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::SHIFT, egui::Key::R)) {
-                self.send(Command::Reset);
+                self.send(Command::RefreshAtlas);
             }
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::F))
                 && self.tool == Tool::Square
@@ -214,48 +233,51 @@ impl Session {
                 };
             }
         }
-        let chrome = preview_chrome(ctx.content_rect().size());
-        if chrome.toolbar {
-            egui::TopBottomPanel::top(egui::Id::new(("toolbar", self.id)))
-                .frame(
-                    egui::Frame::new()
-                        .fill(ctx.style().visuals.panel_fill)
-                        .inner_margin(5.0),
-                )
-                .show(ctx, |ui| {
-                    self.toolbar(ui);
+    }
+    fn paint_preview(&mut self, ui: &mut egui::Ui, rect: Rect, diagnostics_available: bool) {
+        self.preview_canvas_rect = Some([rect.min.x, rect.min.y, rect.width(), rect.height()]);
+        self.preview_image_rect = None;
+        // A resize/minimize can temporarily leave no canvas after the
+        // toolbar and diagnostic/calibration panels consume its height.
+        // Never project pixels or pointer coordinates through that area.
+        if !drawable_rect(rect) {
+            return;
+        }
+        if self.show_diagnostics && diagnostics_available {
+            let width = rect.width().min(rect.height() * 4.0 / 3.0);
+            let size = Vec2::new(width, width * 0.75);
+            let image = Rect::from_center_size(rect.center(), size);
+            self.preview_image_rect =
+                Some([image.min.x, image.min.y, image.width(), image.height()]);
+            self.canvas(ui, image);
+        } else {
+            self.preview(ui, rect);
+        }
+    }
+    fn show_dialogs(&mut self, ctx: &egui::Context, embedded: bool) {
+        if self.close_pending {
+            egui::Modal::new(egui::Id::new(("unsaved-config", self.id))).show(ctx, |ui| {
+                ui.heading("Unsaved configuration");
+                ui.label("Save configuration changes before closing?");
+                ui.horizontal(|ui| {
+                    if ui.button("Save and close").clicked() {
+                        let result = self.save(false);
+                        if result.is_ok() {
+                            self.closed = true;
+                            self.close_pending = false;
+                        }
+                        self.report(result);
+                    }
+                    if ui.button("Discard and close").clicked() {
+                        self.closed = true;
+                        self.close_pending = false;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        self.close_pending = false;
+                    }
                 });
-        }
-        if chrome.status {
-            egui::TopBottomPanel::bottom(egui::Id::new(("status", self.id))).show(ctx, |ui| {
-                self.status_bar(ui);
             });
         }
-        if self.tool != Tool::Inspect {
-            egui::TopBottomPanel::top(egui::Id::new(("calibration-guide", self.id)))
-                .show(ctx, |ui| self.calibration_banner(ui));
-        }
-        let texture_started = std::time::Instant::now();
-        self.refresh_textures(ctx);
-        self.ui_metrics.textures_ms = texture_started.elapsed().as_secs_f64() * 1000.;
-        egui::CentralPanel::default()
-            .frame(egui::Frame::NONE.fill(Color32::from_rgb(12, 15, 19)))
-            .show(ctx, |ui| {
-                let rect = ui.available_rect_before_wrap();
-                // A resize/minimize can temporarily leave no canvas after the
-                // toolbar and diagnostic/calibration panels consume its height.
-                // Never project pixels or pointer coordinates through that area.
-                if !drawable_rect(rect) {
-                    return;
-                }
-                if self.show_diagnostics && chrome.toolbar {
-                    let width = rect.width().min(rect.height() * 4.0 / 3.0);
-                    let size = Vec2::new(width, width * 0.75);
-                    self.canvas(ui, Rect::from_center_size(rect.center(), size));
-                } else {
-                    self.preview(ui, rect);
-                }
-            });
         if self.show_settings {
             let mut close = false;
             let layout = ctx.input(|i| {
@@ -283,40 +305,66 @@ impl Session {
             if let Some((reserved, _)) = layout {
                 builder = builder.with_position(reserved.min);
             }
-            ctx.show_viewport_immediate(
-                egui::ViewportId::from_hash_of(("settings", self.id)),
-                builder,
-                |ctx, _class| {
-                    constrain_framebuffer(ctx, self.framebuffer_limit);
-                    if ctx.input(|i| i.viewport().close_requested()) {
-                        close = true;
+            if embedded {
+                let mut open = true;
+                egui::Window::new(format!(
+                    "{} · {}",
+                    self.display_name(),
+                    if self.show_calibration {
+                        "calibration"
+                    } else {
+                        "configuration"
                     }
-                    egui::CentralPanel::default().show(ctx, |ui| {
-                        egui::ScrollArea::vertical().show(ui, |ui| {
-                            if self.show_calibration {
-                                self.calibration_panel(ui);
-                            } else {
-                                self.settings(ui);
-                            }
-                        });
-                    });
-                    if !ctx.wants_keyboard_input() {
-                        if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::F))
-                            && self.tool == Tool::Square
-                            && !self.calibration_review
-                            && !self.calibration_redraw
-                        {
-                            let result = self.cycle_square();
-                            self.report(result);
+                ))
+                .id(egui::Id::new(("grid-settings", self.id)))
+                .open(&mut open)
+                .default_size(inner)
+                .show(ctx, |ui| {
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        if self.show_calibration {
+                            self.calibration_panel(ui);
+                        } else {
+                            self.settings(ui);
                         }
-                        if ctx
-                            .input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
-                        {
+                    });
+                });
+                close = !open;
+            } else {
+                ctx.show_viewport_immediate(
+                    egui::ViewportId::from_hash_of(("settings", self.id)),
+                    builder,
+                    |ctx, _class| {
+                        constrain_framebuffer(ctx, self.framebuffer_limit);
+                        if ctx.input(|i| i.viewport().close_requested()) {
                             close = true;
                         }
-                    }
-                },
-            );
+                        egui::CentralPanel::default().show(ctx, |ui| {
+                            egui::ScrollArea::vertical().show(ui, |ui| {
+                                if self.show_calibration {
+                                    self.calibration_panel(ui);
+                                } else {
+                                    self.settings(ui);
+                                }
+                            });
+                        });
+                        if !ctx.wants_keyboard_input() {
+                            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::F))
+                                && self.tool == Tool::Square
+                                && !self.calibration_review
+                                && !self.calibration_redraw
+                            {
+                                let result = self.cycle_square();
+                                self.report(result);
+                            }
+                            if ctx.input_mut(|i| {
+                                i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)
+                            }) {
+                                close = true;
+                            }
+                        }
+                    },
+                );
+            }
             if close {
                 self.set_calibration_panel(false);
                 self.show_settings = false;
@@ -342,7 +390,83 @@ impl Session {
                 }
             });
         }
-        self.ui_metrics.show_ms = show_started.elapsed().as_secs_f64() * 1000.;
+    }
+    /// One GPU surface can display many independent sessions. All pointer and
+    /// calibration coordinates still pass through the shared preview adapter.
+    pub fn show_tile(&mut self, ui: &mut egui::Ui, rect: Rect, expanded: bool) -> bool {
+        let started = std::time::Instant::now();
+        self.ui_metrics
+            .begin(ui.ctx().cumulative_frame_nr(), started);
+        self.update();
+        self.ui_metrics.update_ms = started.elapsed().as_secs_f64() * 1000.;
+        self.native_window = false;
+        self.tile_rect = Some([rect.min.x, rect.min.y, rect.width(), rect.height()]);
+        self.window_rect = ui
+            .ctx()
+            .input(|i| i.viewport().outer_rect)
+            .map(|r| [r.min.x, r.min.y, r.width(), r.height()]);
+        self.window_inner_size = Some([rect.width(), rect.height()]);
+        self.requested_window_size = None;
+        let ctx = ui.ctx().clone();
+        self.max_window_inner_size =
+            framebuffer_window_limit(self.framebuffer_limit, ctx.pixels_per_point());
+        if expanded || ctx.pointer_hover_pos().is_some_and(|p| rect.contains(p)) {
+            self.keyboard_and_drop(&ctx);
+        }
+        let texture_started = std::time::Instant::now();
+        self.refresh_textures(&ctx);
+        self.ui_metrics.textures_ms = texture_started.elapsed().as_secs_f64() * 1000.;
+        let mut focus = false;
+        ui.scope_builder(
+            egui::UiBuilder::new()
+                .id_salt(("rig-tile", self.id))
+                .max_rect(rect),
+            |ui| {
+                ui.set_clip_rect(rect);
+                let header = Rect::from_min_size(rect.min, egui::vec2(rect.width(), 40.0));
+                ui.scope_builder(egui::UiBuilder::new().max_rect(header), |ui| {
+                    ui.horizontal_centered(|ui| {
+                        ui.strong(self.display_name());
+                        let response =
+                            ui.selectable_label(expanded, if expanded { "Grid" } else { "Open" });
+                        self.tile_open_rect = Some([
+                            response.rect.min.x,
+                            response.rect.min.y,
+                            response.rect.width(),
+                            response.rect.height(),
+                        ]);
+                        focus = response.clicked();
+                        self.toolbar(ui);
+                    });
+                });
+                let mut canvas = Rect::from_min_max(
+                    rect.min + egui::vec2(0.0, 40.0),
+                    rect.max - egui::vec2(0.0, 22.0),
+                );
+                if self.tool != Tool::Inspect {
+                    let guide = Rect::from_min_size(
+                        canvas.min,
+                        egui::vec2(canvas.width(), 72.0_f32.min(canvas.height())),
+                    );
+                    ui.scope_builder(egui::UiBuilder::new().max_rect(guide), |ui| {
+                        self.calibration_banner(ui)
+                    });
+                    canvas.min.y = guide.max.y;
+                }
+                ui.scope_builder(egui::UiBuilder::new().max_rect(canvas), |ui| {
+                    ui.set_clip_rect(canvas);
+                    self.paint_preview(ui, canvas, true);
+                });
+                let status =
+                    Rect::from_min_max(egui::pos2(rect.min.x, rect.max.y - 22.0), rect.max);
+                ui.scope_builder(egui::UiBuilder::new().max_rect(status), |ui| {
+                    self.status_bar(ui)
+                });
+            },
+        );
+        self.show_dialogs(&ctx, true);
+        self.ui_metrics.show_ms = started.elapsed().as_secs_f64() * 1000.;
+        focus
     }
     fn toolbar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| self.toolbar_row(ui));
@@ -355,11 +479,11 @@ impl Session {
             ui,
             Icon::Reset,
             false,
-            "Reset tracking (Shift+R). Retains source time and measured integrated displacement.",
+            "Refresh atlas (Shift+R): learn fresh views and replace the saved atlas. Retains source time and measured integrated displacement.",
         )
         .clicked()
         {
-            self.send(Command::Reset);
+            self.send(Command::RefreshAtlas);
         }
         if icons::button(
             ui,
@@ -427,10 +551,17 @@ impl Session {
                 self.set_settings_panel(!self.show_settings || self.show_calibration);
             }
         }
-        icons::menu(ui, Icon::More, "Recording, view and window options", |ui| {
-            ui.menu_button("Recording", |ui| self.recording_menu(ui));
+        icons::menu(ui, Icon::More, "View, rigs and settings", |ui| {
+            if ui.button("Rig manager…").clicked() {
+                self.show_rigs = true;
+                ui.close();
+            }
             if !full_row {
-                ui.menu_button("Camera or video", |ui| self.source_controls(ui));
+                if ui.button("Camera or video…").clicked() {
+                    self.settings_section = SettingsSection::Source;
+                    self.set_settings_panel(true);
+                    ui.close();
+                }
                 ui.checkbox(&mut self.full_image, "Full source image");
                 ui.checkbox(&mut self.show_diagnostics, "Full debug view");
             }
@@ -445,6 +576,16 @@ impl Session {
                 }
             }
             ui.separator();
+            if ui.button("Recording settings…").clicked() {
+                self.settings_section = SettingsSection::Recording;
+                self.set_settings_panel(true);
+                ui.close();
+            }
+            if ui.button("Atlas & startup…").clicked() {
+                self.settings_section = SettingsSection::Atlas;
+                self.set_settings_panel(true);
+                ui.close();
+            }
             self.window_menu(ui);
         });
     }
@@ -465,18 +606,33 @@ impl Session {
         } else {
             Color32::from_rgb(96, 210, 158)
         };
-        let text = format!(
-            "{:.1} fps · {:.2} ms track{}{}",
-            self.snapshot.actual_fps,
-            self.snapshot.tracking_ms,
-            lag.map(|ms| format!(" · {ms:.0} ms view"))
-                .unwrap_or_default(),
-            if self.snapshot.dropped_running > 0 {
-                format!(" · drop {}", self.snapshot.dropped_running)
-            } else {
-                String::new()
-            }
-        );
+        let text = if ui.available_width() < 200.0 {
+            format!(
+                "{:.0} fps · {:.1} ms",
+                self.snapshot.actual_fps, self.snapshot.tracking_ms
+            )
+        } else if ui.available_width() < 320.0 {
+            format!(
+                "{:.0} fps · {:.1} ms{}",
+                self.snapshot.actual_fps,
+                self.snapshot.tracking_ms,
+                lag.map(|ms| format!(" · {ms:.0} ms view"))
+                    .unwrap_or_default()
+            )
+        } else {
+            format!(
+                "{:.1} fps · {:.2} ms track{}{}",
+                self.snapshot.actual_fps,
+                self.snapshot.tracking_ms,
+                lag.map(|ms| format!(" · {ms:.0} ms view"))
+                    .unwrap_or_default(),
+                if self.snapshot.dropped_running > 0 {
+                    format!(" · drop {}", self.snapshot.dropped_running)
+                } else {
+                    String::new()
+                }
+            )
+        };
         let detail = format!(
             "{} frames\nTracking mean: {:.3} ms ({} measured frames; ROI + fitting + integration + numerical maps)\nWorker: {:.2} ms (conversion + tracking + diagnostics + recording + dispatch; excludes camera wait and playback pacing)\nSource: {:.2} fps · worker headroom {:.0}%\nPreview updates: {:.1} fps · display limit {} fps\nCapture frames skipped: {} (includes intentional pauses)\n{}\nUDP {} · ZMQ {}\n{}\n{}",
             self.snapshot.frames,
@@ -684,20 +840,6 @@ impl Session {
             self.show_rigs = true;
             ui.close();
         }
-        if ui
-            .button("Rig manager…")
-            .on_hover_text(
-                "See every rig's startup result, retry stopped rigs, or start the saved array.",
-            )
-            .clicked()
-        {
-            self.show_rigs = true;
-            ui.ctx().send_viewport_cmd_to(
-                egui::ViewportId::from_hash_of("rig-manager"),
-                egui::ViewportCommand::Focus,
-            );
-            ui.close();
-        }
         ui.checkbox(&mut self.full_image, "Full source image")
             .on_hover_text(
                 "Otherwise crop around the ball. Pixels always retain their aspect ratio.",
@@ -738,6 +880,14 @@ impl Session {
         });
         if ui.button("About HejjéTrac").clicked() {
             self.show_about = true;
+            ui.close();
+        }
+        if !self.native_window && ui.button("Close this rig").clicked() {
+            if self.history.text != self.saved {
+                self.close_pending = true;
+            } else {
+                self.closed = true;
+            }
             ui.close();
         }
     }
@@ -1052,19 +1202,33 @@ impl Session {
         });
     }
     fn config_text(&mut self, ui: &mut egui::Ui) {
+        ui.small("Exact file text · edits can change tracking and calibration. Reading does not modify the file.");
+        ui.checkbox(&mut self.config_text_editing, "Enable text editing");
         let mut text = self.history.text.clone();
-        if ui
-            .add(
-                egui::TextEdit::multiline(&mut text)
-                    .code_editor()
-                    .desired_rows(18)
-                    .desired_width(f32::INFINITY),
-            )
-            .changed()
-        {
+        let mut read_only = self.history.text.as_str();
+        let editing = self.config_text_editing;
+        let response = egui::ScrollArea::both()
+            .id_salt(("exact-config", self.id))
+            .max_height(440.0)
+            .show(ui, |ui| {
+                let editor = if editing {
+                    egui::TextEdit::multiline(&mut text)
+                } else {
+                    egui::TextEdit::multiline(&mut read_only)
+                };
+                ui.add(
+                    editor
+                        .code_editor()
+                        .desired_rows(18)
+                        .desired_width(ui.available_width()),
+                )
+            })
+            .inner;
+        if editing && response.changed() {
+            self.auto_apply = false;
             self.edit(text);
         }
-        ui.checkbox(&mut self.auto_apply,"Apply edits automatically").on_hover_text("Validated edits start a numerical epoch after 400 ms; source position and time are retained.");
+        ui.small("Text edits require Apply, then Save configuration to keep them. Invalid edits leave the running tracker intact.");
     }
     fn calibration_tools(&mut self, ui: &mut egui::Ui) {
         for (tool, label, help) in [
@@ -1246,29 +1410,66 @@ impl Session {
             self.config_text(ui);
             return;
         }
-        egui::CollapsingHeader::new("Source & camera")
-            .default_open(true)
-            .show(ui, |ui| {
+        ui.add_space(8.0);
+        ui.horizontal_wrapped(|ui| {
+            for (section, label) in [
+                (SettingsSection::Source, "Source"),
+                (SettingsSection::Calibration, "Calibration"),
+                (SettingsSection::Display, "View"),
+                (SettingsSection::Atlas, "Atlas & startup"),
+                (SettingsSection::Recording, "Recording"),
+                (SettingsSection::Outputs, "Outputs"),
+                (SettingsSection::Advanced, "Advanced"),
+            ] {
+                ui.selectable_value(&mut self.settings_section, section, label);
+            }
+        });
+        ui.separator();
+        match self.settings_section {
+            SettingsSection::Source => {
+                ui.heading("Camera or video");
                 self.source_controls(ui);
                 self.camera_binding_controls(ui);
                 self.camera_controls(ui);
-            });
-        egui::CollapsingHeader::new("Display")
-            .default_open(true)
-            .show(ui, |ui| self.display_rate_control(ui));
-        egui::CollapsingHeader::new("Recording")
-            .default_open(true)
-            .show(ui, |ui| self.recording_menu(ui));
-        egui::CollapsingHeader::new("Graphical calibration").show(ui, |ui| {
-            if ui.button("Check saved calibration…").clicked() {
-                self.set_calibration_panel(true);
             }
-        });
-        let fields = self.document().map(|d| settings_fields(&d));
-        egui::CollapsingHeader::new("Output ports")
-            .default_open(true)
-            .show(ui, |ui| self.zmq_controls(ui));
-        egui::CollapsingHeader::new("Advanced settings · change with care").show(ui, |ui| {
+            SettingsSection::Calibration => {
+                ui.heading("Ball outline and lab axes");
+                ui.label(
+                    "Review a saved layer, edit its marks, or redraw only the layer you need.",
+                );
+                if ui.button("Open graphical calibration…").clicked() {
+                    self.set_calibration_panel(true);
+                }
+                ui.small("Calibration uses the full source image and restores your normal view afterward.");
+            }
+            SettingsSection::Display => {
+                ui.heading("Preview");
+                ui.checkbox(&mut self.full_image, "Show full source image");
+                ui.checkbox(
+                    &mut self.show_diagnostics,
+                    "Show tracking maps and diagnostics",
+                );
+                ui.checkbox(
+                    &mut self.show_overlays,
+                    "Show calibration outlines and axes",
+                );
+                self.display_rate_control(ui);
+                ui.small("These view choices return on the next launch of this saved rig. Calibration text is separate.");
+            }
+            SettingsSection::Atlas => self.atlas_controls(ui),
+            SettingsSection::Recording => {
+                ui.heading("Recording");
+                ui.label("Recording folder");
+                ui.text_edit_singleline(&mut self.recording_path);
+                self.recording_menu(ui);
+            }
+            SettingsSection::Outputs => {
+                ui.heading("Live outputs");
+                self.zmq_controls(ui);
+            }
+            SettingsSection::Advanced => {
+                let fields = self.document().map(|d| settings_fields(&d));
+                egui::CollapsingHeader::new("Advanced settings · change with care").show(ui, |ui| {
         ui.small("Defaults suit most rigs. These controls affect calibration, fitting, recording startup and transport. Apply validates edits before using them.");
         match fields {
             Ok(fields) => {
@@ -1333,31 +1534,63 @@ impl Session {
             }
         }
         });
-        egui::CollapsingHeader::new("Exact config text").show(ui, |ui| {
-            self.config_text(ui);
-        });
-        egui::CollapsingHeader::new("Recording & sphere templates").show(ui, |ui| {
-            ui.label("Recording folder");
-            ui.text_edit_singleline(&mut self.recording_path)
-                .on_hover_text("Each instant recording creates a unique take directory here.");
-            if ui.button("Save accumulated sphere…").clicked()
-                && let Some(path) = rfd::FileDialog::new()
-                    .add_filter("PNG", &["png"])
-                    .save_file()
-            {
-                self.send(Command::SaveMap(path));
+
+                ui.separator();
+                ui.label("Configuration file text");
+                ui.small("Read the exact file or explicitly enable manual editing. Apply validates before using changes.");
+                if ui.button("View exact configuration text…").clicked() {
+                    self.show_config_text = true;
+                    self.config_text_editing = false;
+                }
             }
-            if ui.button("Load sphere template…").clicked()
-                && let Some(path) = rfd::FileDialog::new()
-                    .add_filter("PNG", &["png"])
-                    .pick_file()
-            {
-                self.send(Command::LoadMap(path));
-            }
-        });
+        }
+        if !self.view_state_error.is_empty() {
+            ui.colored_label(ui.visuals().warn_fg_color, &self.view_state_error);
+        }
         if !self.error.is_empty() {
             ui.colored_label(ui.visuals().error_fg_color, &self.error);
         }
+    }
+    fn atlas_controls(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Atlas & startup");
+        let mut reuse = self.reuse_atlas;
+        if ui
+            .checkbox(&mut reuse, "Reuse this rig's last atlas at startup")
+            .changed()
+        {
+            let result = self.set_reuse_atlas(reuse);
+            self.report(result);
+        }
+        ui.label("When enabled, accepted views update a checkpoint every 30 seconds and on clean shutdown. Later passes keep refining it.");
+        ui.small("A matching camera and calibration are required. Fresh images must confirm the current pose; motion while the app was closed is not measured.");
+        if let Some(path) = self.atlas_cache_path() {
+            ui.small(path.display().to_string());
+        }
+        if !self.snapshot.atlas_cache_status.is_empty() {
+            ui.label(&self.snapshot.atlas_cache_status);
+        }
+        ui.horizontal_wrapped(|ui| {
+            if ui
+                .add_enabled(self.reuse_atlas, egui::Button::new("Save latest atlas now"))
+                .clicked()
+            {
+                self.send(Command::AtlasCache(self.atlas_cache_path()));
+            }
+            if ui.button("Refresh atlas").clicked() {
+                self.send(Command::RefreshAtlas);
+            }
+        });
+        ui.small("The top-left refresh button discards the old atlas and learns a replacement from fresh images.");
+        ui.separator();
+        egui::CollapsingHeader::new("Import / export an atlas image").show(ui, |ui| {
+            if ui.button("Export current atlas PNG…").clicked()
+                && let Some(path) = rfd::FileDialog::new().add_filter("PNG", &["png"]).save_file()
+            { self.send(Command::SaveMap(path)); }
+            if ui.button("Import atlas PNG…").clicked()
+                && let Some(path) = rfd::FileDialog::new().add_filter("PNG", &["png"]).pick_file()
+            { self.send(Command::LoadMap(path)); }
+            ui.small("Manual images have no saved camera identity or pose. Use them only with their matching calibration and localization settings.");
+        });
     }
     fn zmq_controls(&mut self, ui: &mut egui::Ui) {
         let Ok(document) = self.document() else {
@@ -1784,6 +2017,16 @@ value}
         }
         crop
     }
+    pub(crate) fn content_aspect(&self) -> f32 {
+        if self.show_diagnostics {
+            return 4.0 / 3.0;
+        }
+        let Some(image) = &self.snapshot.image else {
+            return 4.0 / 3.0;
+        };
+        let uv = self.image_uv();
+        (uv.width() * image.width as f32 / (uv.height() * image.height as f32)).clamp(0.25, 4.0)
+    }
     fn preview(&mut self, ui: &mut egui::Ui, rect: Rect) {
         if !drawable_rect(rect) {
             return;
@@ -1827,6 +2070,8 @@ value}
         };
         let uv = self.image_uv();
         let target = fit_image(rect, image.width, image.height, uv);
+        self.preview_image_rect =
+            Some([target.min.x, target.min.y, target.width(), target.height()]);
         if let Some(texture) = self.textures.first() {
             ui.painter().image(texture.id(), target, uv, Color32::WHITE);
         }
@@ -2618,7 +2863,7 @@ value}
         let (Some(image), Some(texture)) = (&self.snapshot.image, self.textures.first()) else {
             return;
         };
-        let (external, inspector_inset) = ui.ctx().input(|i| {
+        let (mut external, mut inspector_inset) = ui.ctx().input(|i| {
             let viewport = i.viewport();
             viewport
                 .outer_rect
@@ -2642,6 +2887,10 @@ value}
                 })
                 .unwrap_or((None, None))
         });
+        if !self.native_window {
+            external = None;
+            inspector_inset = None;
+        }
         let size = if external.is_some() {
             240.0
         } else {

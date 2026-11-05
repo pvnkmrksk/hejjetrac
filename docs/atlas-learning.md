@@ -53,6 +53,14 @@ or reconstruct relative motion across a missing interval.
 
 ## Controlled regressions
 
+The November 5 recorded-clock follow-up preserves the 8/12 ms intervals reported
+by the live cameras. Increasing visible angular steps can now reach the existing
+four-image acceleration fit even when those intervals reverse two raw rates.
+Fitted speeds must still increase with the same residual and direction checks.
+An isolated jump cannot establish an epoch. The uncertain-fit retry uses the
+sum of bilinear known-support proposals from both the persistent and previous-image
+maps. Its final binary score and all acceptance checks retain their original meaning.
+
 `crates/fictrac-core/tests/recovery.rs` adds two numerical cases, using the
 existing deterministic 180×90 material pattern, 160×160 camera geometry and
 unchanged 0.008 rad/component RMS gate:

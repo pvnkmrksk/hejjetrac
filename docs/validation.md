@@ -1,5 +1,72 @@
 # HejjéTrac validation evidence
 
+## Recorded-clock tracking and shared-surface rig grid — 2026-11-05
+
+The unchanged six-case serial release suite passes the 120-image known-motion
+synthetic demo, complete 300-image sample, complete 5,157-image VR3, complete
+6,075-image raw 47° take, and complete/controlled-gap 4,579-image fast 47° take.
+All original accuracy gates, annotations and decoder oracle constants remain.
+[Exact configurations, timing boundaries, build and platform](benchmarks/tracking-workspace-ui-20261105.json).
+
+The newest user recording is a separate 9,339-image M02 take, replayed with its
+actual 8/12 ms capture clock, without altering its 47° rim or optimizer budget.
+The final engine tracks 9,330 increments; eight possible steps remain unmeasured.
+Its longest unmeasured interval falls from 1.28 s to 80.011 ms. Full-take component
+RMS disagreement with original FicTrac is 0.00967 / 0.00859 / 0.01442 rad. A short
+129-image onset window still exceeds the existing 0.020 rad Z target at
+0.02054 rad. The clear 350-image fast section and later 400-image fast section
+are continuously tracked. A fresh run of the second take's 660-image suffix
+measures all 659 possible increments. These recorded images provide reference
+agreement, not physical motion ground truth or universal occlusion recovery.
+[Recorded-clock method and limits](recorded-clock.md) ·
+[All decisions, input hashes and exact binary metadata](benchmarks/recorded-clock-20261105.json).
+
+The numerical reports above were recorded before the mechanical 0.4.0 version
+bump and subsequent frontend-only grid correction. Their original build hashes
+and versions remain in the reports. The final workspace checks pass formatting, strict locked Clippy and **351
+Rust tests** on the release source; sixteen concurrent desktop replay streams also match the
+retained serial VR3 accepted output byte for byte.
+
+The original sixteen-native-window attempt failed: XWayland aborted in the
+Nouveau driver, disconnecting both HejjéTrac and ChatGPT. It is not counted as
+a successful stress test. Large arrays now use one native hardware Vulkan
+surface with embedded tiles, settings and manager. A bounded five-file smoke
+passes first. The complete sixteen-file test processes 82,512 source images
+and produces sixteen identical 5,042-row accepted streams. All tiles fit in
+forced 4×4 and automatic arrangements. Native input is 32.51–58.46 ms;
+peak observed app RSS is 319.31 MiB. A normal graphical restart restores all
+sixteen saved view modes and advances every source by at least 306 images.
+[Actual crash, hardware, streams and geometry](benchmarks/ui-grid-20261105.json) ·
+[Native screenshots and reproduction](ui-rendering.md).
+
+This establishes Linux sixteen-file concurrency and actual input responsiveness,
+not sixteen physical cameras, 100 FPS per rig under that load, simultaneous media
+encoding or other-platform hardware execution. Four-camera live validation is
+reported separately; earlier physical hand-recovery failures remain historical
+evidence rather than being deleted.
+
+
+The final four-camera native check uses physical serial-bound M01–M04 rigs and
+all four saved 47° outlines. Real rim drags agree with expected source pixels
+within 0.28 px; calibration magnifiers, manager minimize/restore, resizing and
+closed-root behavior pass. Native pointer responses are 44.24–58.89 ms, with
+122.27 ms maximum observed UI interval. Original config hashes stay unchanged.
+[Physical native-input evidence](benchmarks/native-calibration-20261105.json).
+
+The separate 35-second cold / 15-second cached live phases sustain
+100.72–101.17 processed FPS per rig. All 972 sampled decisions are tracked;
+these samples are not a full every-frame physical accuracy oracle. A new
+process confirms all cached rigs within 1.98 seconds. Refresh removes the
+previous checkpoint and saves a newly learned atlas later in the current
+source epoch, without changing any copied or original config text.
+[Cache restart/refresh evidence](benchmarks/live-cache-20261105.json).
+
+Relative preview-image age in those phases is 27.06 ms median, 46.34 ms p95
+and 112.90 ms maximum. The maximum is steady-state M02 at cold-phase 29.46 s,
+then returns to 33.18 ms at the next sample. Twelve of 972 samples exceed
+50 ms. This is not a hard 50 ms ceiling, and the cause of the isolated tail is
+unproven. [Definitions and distributions](preview-age.md).
+
 ## Progressive atlas learning and early confirmation — 2026-11-04
 
 Formatting, strict locked workspace/all-target Clippy and **343 workspace tests**

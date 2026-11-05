@@ -1180,6 +1180,134 @@ fn moving_cold_atlas_tracks_after_a_blurred_first_view() -> Result {
 }
 
 #[test]
+fn saved_atlas_pose_is_only_a_seed_and_refresh_discards_it() -> Result {
+    for legacy in [false, true] {
+        let mut c = config(false);
+        c.legacy_roi_coordinates = legacy;
+        c.sphere.centre = DVec3::new(0.12, -0.06, 1.0).normalize().to_array();
+        c.spherical_map = Some(MapSettings {
+            global_search: false,
+            ..MapSettings::default()
+        });
+        let material = known_template()?;
+        let basis = DQuat::from_rotation_arc(DVec3::from_array(c.sphere.centre), DVec3::Z);
+        let pose = DQuat::from_scaled_axis(DVec3::new(0.6, -0.2, 0.1));
+        let exported_pose = if legacy {
+            basis * pose * basis.inverse()
+        } else {
+            pose
+        };
+        let mut tracker = Tracker::new(c.clone())?;
+        tracker.load_sphere_template_at_pose(
+            material.clone(),
+            exported_pose.to_scaled_axis().to_array(),
+        )?;
+        let before = tracker.sphere_template();
+        assert!(
+            tracker
+                .load_sphere_template_at_pose(material.clone(), [f64::NAN, 0.0, 0.0])
+                .is_err()
+        );
+        assert_eq!(tracker.sphere_template(), before);
+        let mut tracked = 0;
+        let mut squared = DVec3::ZERO;
+        let delta = DVec3::new(0.045, 0.003, -0.002);
+        for i in 0..60 {
+            let actual = DQuat::from_scaled_axis(delta * i as f64) * pose;
+            let row = tracker.process(render_template(&c, &material, actual, i as f64 * 10.0)?)?;
+            if i == 0 {
+                assert!(
+                    !row.accepted,
+                    "a stored pose cannot confirm a fresh image by itself"
+                );
+            }
+            if row.status == "tracked" {
+                let expected = if legacy { basis * delta } else { delta };
+                let error = DVec3::from_array(row.delta_camera) - expected;
+                squared += error * error;
+                tracked += 1;
+            } else {
+                assert_eq!(row.delta_camera, [0.0; 3]);
+                if !row.accepted {
+                    assert_eq!(tracker.sphere_template(), before);
+                }
+            }
+        }
+        assert!(
+            tracked >= 50,
+            "cached atlas did not promptly confirm visible high-speed motion: {tracked}"
+        );
+        let rms = (squared / tracked as f64).to_array().map(f64::sqrt);
+        assert!(rms.iter().all(|r| *r < 0.008), "cached-pose RMS {rms:?}");
+        tracker.clear_sphere_template()?;
+        assert!(
+            tracker
+                .sphere_template()
+                .ok_or("missing cleared map")?
+                .pixels
+                .iter()
+                .all(|p| *p == 128)
+        );
+        let row = tracker.process(render_template(&c, &material, pose, 600.0)?)?;
+        assert_eq!(row.status, "initializing");
+        assert_eq!(row.delta_camera, [0.0; 3]);
+    }
+    Ok(())
+}
+
+#[test]
+fn visible_acceleration_survives_reported_capture_cadence_quantization() -> Result {
+    for quantized in [false, true] {
+        let mut c = config(false);
+        c.spherical_map = Some(MapSettings {
+            global_search: false,
+            max_evaluations: 50,
+            ..MapSettings::default()
+        });
+        let material = known_template()?;
+        let mut tracker = Tracker::new(c.clone())?;
+        let mut pose = DQuat::IDENTITY;
+        let mut squared = DVec3::ZERO;
+        for i in 0..140 {
+            let angle = match i {
+                0 => 0.0,
+                1..60 => 0.001,
+                60 => 0.014,
+                61 => 0.022,
+                62 => 0.030,
+                63 => 0.045,
+                64 => 0.060,
+                65 => 0.075,
+                _ => 0.080,
+            };
+            let delta = DVec3::X * angle;
+            pose = DQuat::from_scaled_axis(delta) * pose;
+            // Prescribed image motion is unchanged; the reported source clock
+            // alternates 8/12 ms as observed on these cameras. Keep those times.
+            let timestamp = i as f64 * 10.0 - if quantized && i % 2 == 1 { 2.0 } else { 0.0 };
+            let row = tracker.process(render_template(&c, &material, pose, timestamp)?)?;
+            assert!(
+                row.accepted,
+                "cadence quantized={quantized}, image {i}: {} {}",
+                row.status, row.error
+            );
+            assert_eq!(row.timestamp_ms, timestamp);
+            assert_eq!(row.status, if i == 0 { "initializing" } else { "tracked" });
+            if i > 0 {
+                let error = DVec3::from_array(row.delta_camera) - delta;
+                squared += error * error;
+            }
+        }
+        let rms = (squared / 139.0).to_array().map(f64::sqrt);
+        assert!(
+            rms.iter().all(|value| *value < 0.008),
+            "cadence quantized={quantized}, RMS={rms:?}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn later_rotations_refine_a_mistaken_initial_patch_without_losing_motion() -> Result {
     let mut c = config(false);
     c.max_rotation = 0.35;

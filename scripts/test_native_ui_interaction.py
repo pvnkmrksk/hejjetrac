@@ -49,7 +49,10 @@ class Pointer:
             raise RuntimeError("An accessible native X11 display is required")
 
     def window(self, identity):
-        return self.named_window(lambda: self.bridge.request("status", identity)["window_title"])
+        def title():
+            state = self.bridge.request("status", identity)
+            return state.get("host_window_title", state["window_title"])
+        return self.named_window(title)
 
     def named_window(self, title):
         deadline = time.monotonic() + 5
@@ -107,6 +110,32 @@ class Pointer:
         finally:
             self.x.XDestroyImage(image)
 
+    def request_close(self, window):
+        """Send WM_DELETE_WINDOW only to a window already verified as ours."""
+        class Data(ctypes.Union):
+            _fields_ = [('b',ctypes.c_char*20),('s',ctypes.c_short*10),('l',ctypes.c_long*5)]
+        class Message(ctypes.Structure):
+            _fields_ = [('type',ctypes.c_int),('serial',ctypes.c_ulong),('send_event',ctypes.c_int),
+                        ('display',ctypes.c_void_p),('window',ctypes.c_ulong),('message_type',ctypes.c_ulong),
+                        ('format',ctypes.c_int),('data',Data)]
+        class Event(ctypes.Union):
+            _fields_ = [('message',Message),('pad',ctypes.c_long*24)]
+        self.x.XInternAtom.argtypes = [ctypes.c_void_p,ctypes.c_char_p,ctypes.c_int]
+        self.x.XInternAtom.restype = ctypes.c_ulong
+        self.x.XSendEvent.argtypes = [ctypes.c_void_p,ctypes.c_ulong,ctypes.c_int,ctypes.c_long,ctypes.POINTER(Event)]
+        self.x.XSendEvent.restype = ctypes.c_int
+        event = Event()
+        event.message.type = 33
+        event.message.send_event = 1
+        event.message.display = self.display
+        event.message.window = window
+        event.message.message_type = self.x.XInternAtom(self.display,b'WM_PROTOCOLS',0)
+        event.message.format = 32
+        event.message.data.l[0] = self.x.XInternAtom(self.display,b'WM_DELETE_WINDOW',0)
+        if not self.x.XSendEvent(self.display,window,0,0,ctypes.byref(event)):
+            raise RuntimeError('Cannot send the owned native window close request')
+        self.x.XFlush(self.display)
+
     def close(self):
         self.x.XCloseDisplay(self.display)
 
@@ -119,7 +148,8 @@ def run(args):
         source = args.configs / f"VR{n}.txt"
         originals[str(source.resolve())] = hashlib.sha256(source.read_bytes()).hexdigest()
         text = source.read_text()
-        for key, value in [("save_raw", "n"), ("save_debug", "n")]:
+        for key, value in [("save_raw", "n"), ("save_debug", "n"),
+                           ("sock_port", "0"), ("zmq_port", "0"), ("com_port", "")]:
             text = field(text, key, value)
         if args.video:
             for key, value in [("src_fn", str(args.video.resolve())), ("rust_camera_id", ""),
@@ -180,14 +210,13 @@ def run(args):
             time.sleep(.4)
 
     try:
+        bridge.request("start", 1)
         bridge.wait(lambda states: len(states) == 4 and all(s["frames"] > 5 for s in states))
         bridge.request("view", 1, diagnostics=True)
         phase = "diagnostics-untouched"
         time.sleep(12)
         root = pointer.window(1)
-        pointer.click(root, 250, 20)
-        time.sleep(.5)
-        pointer.click(root, 320, 130)  # Rig manager in the native More menu.
+        bridge.request("view", 1, rig_manager=True)
         phase = "rig-manager-and-diagnostics"
         time.sleep(8)
         subprocess.run(["xwininfo", "-name", "HejjéTrac · Rig manager"], check=True, stdout=subprocess.DEVNULL)

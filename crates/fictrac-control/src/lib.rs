@@ -752,10 +752,24 @@ impl Controller {
                 fictrac_io::save_sphere_map(path, &template).map_err(display)?;
                 Ok(json!({"path":path,"width":template.width,"height":template.height}))
             }
+            "map_refresh" => {
+                s.tracker.clear_sphere_template().map_err(display)?;
+                s.epoch += 1;
+                Ok(s.status(id))
+            }
             "map_load" => {
                 let template =
                     fictrac_io::load_sphere_map(Path::new(string(a, "path")?)).map_err(display)?;
-                s.tracker.load_sphere_template(template).map_err(display)?;
+                if let Some(value) = a.get("pose_camera") {
+                    s.tracker
+                        .load_sphere_template_at_pose(
+                            template,
+                            serde_json::from_value(value.clone()).map_err(display)?,
+                        )
+                        .map_err(display)?;
+                } else {
+                    s.tracker.load_sphere_template(template).map_err(display)?;
+                }
                 if let Some(recording) = s.recording.take() {
                     recording.finish()?;
                     s.warnings
@@ -963,7 +977,8 @@ pub fn schema() -> Value {
         {"name":"record_start","args":{"directory":"new directory; dat, all-frames, quality, config and raw/debug videos","record_options":"optional {raw:boolean,debug:boolean}; transient override without config edits or tracker reset","recording_tuning":"optional {encoding:configured|mjpeg|raw}; configured preserves vid_codec, MJPEG trades file size for speed, raw retains uncompressed pixels"}},
         {"name":"record_stop","args":{}},
         {"name":"map_save","args":{"path":"new sphere template PGM/PNG path"}},
-        {"name":"map_load","args":{"path":"saved sphere template"}},
+        {"name":"map_load","args":{"path":"saved sphere template","pose_camera":"optional saved axis-angle search seed; fresh confirmation required"}},
+        {"name":"map_refresh","args":{}},
         {"name":"close","args":{"discard":"optional boolean; GUI allows explicit discard, headless closes disposable memory state"}}
     ]})
 }

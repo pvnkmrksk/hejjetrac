@@ -179,6 +179,46 @@ impl Tracker {
     pub fn sphere_template(&self) -> Option<crate::SphereTemplate> {
         self.spherical.as_ref().map(|map| map.template())
     }
+    /// A saved pose is a search seed, never evidence of current orientation.
+    /// Require fresh zero-relative-motion confirmation before resuming tracking.
+    pub fn load_sphere_template_at_pose(
+        &mut self,
+        template: crate::SphereTemplate,
+        pose_camera: [f64; 3],
+    ) -> Result<()> {
+        let pose = DVec3::from_array(pose_camera);
+        if !pose.is_finite() || pose.length() > std::f64::consts::PI + 1e-9 {
+            return Err(Error::Config(
+                "saved atlas pose must be a finite principal axis-angle vector".into(),
+            ));
+        }
+        let map = self.spherical.as_mut().ok_or_else(|| {
+            Error::Config("sphere templates require the spherical-map estimator".into())
+        })?;
+        map.load_template_at_pose(
+            template,
+            DQuat::from_scaled_axis(pose),
+            self.geometry.config.legacy_roi_coordinates,
+        )?;
+        self.prediction = DVec3::ZERO;
+        self.orientation =
+            self.export_basis.inverse() * DQuat::from_scaled_axis(pose) * self.export_basis;
+        self.position = [0.0; 2];
+        self.heading = 0.0;
+        self.previous = None;
+        self.sequence = 0;
+        self.bad_frames = 0;
+        Ok(())
+    }
+    /// Explicitly discard both the imported template and accumulated atlas.
+    pub fn clear_sphere_template(&mut self) -> Result<()> {
+        let map = self.spherical.as_mut().ok_or_else(|| {
+            Error::Config("sphere templates require the spherical-map estimator".into())
+        })?;
+        map.clear_template();
+        self.reset_tracking();
+        Ok(())
+    }
     pub fn debug_views(&self) -> Option<&crate::DebugViews> {
         self.spherical.as_ref().and_then(|m| m.views.as_ref())
     }

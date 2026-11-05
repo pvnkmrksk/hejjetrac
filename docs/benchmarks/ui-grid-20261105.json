@@ -1,0 +1,1263 @@
+{
+  "date": "2026-11-05",
+  "platform": "Ubuntu 22.04, GNOME/Mutter XWayland, Intel HD Graphics 530 Vulkan (Mesa 23.2.1), Nouveau-managed XWayland",
+  "failure": {
+    "source": "local kernel and session journal",
+    "time_local": "2026-11-05 10:58:51 Europe/Berlin",
+    "native_sessions_requested": 16,
+    "app_gpu": "Intel HD Graphics 530 Vulkan",
+    "display_server": "XWayland",
+    "assertion": "Xwayland: ../nouveau/pushbuf.c:730: nouveau_pushbuf_data: Assertion `kref' failed.",
+    "result": "XWayland aborted with signal 6; Hejjetrac and ChatGPT lost their shared X11 connection",
+    "no_evidence_of_oom": true
+  },
+  "correction": {
+    "native_tracking_windows_up_to": 4,
+    "larger_arrays": "one hardware GPU surface; embedded per-rig tiles, settings and rig manager",
+    "independent_workers_and_outputs": true
+  },
+  "five_rig_smoke": {
+    "passed": true,
+    "binary_sha256": "062ea6369930f827c84c7e7992ad06a683ebd7e38b3fc409e525f88871e38509",
+    "native_viewport_count": 1,
+    "native_input_ms": [
+      27.873345999978483,
+      34.844882000470534,
+      31.75959098734893,
+      25.440299010369927,
+      31.391771015478298,
+      27.19970600446686
+    ],
+    "scope": "Five independent real VR3 file decoders; bounded UI smoke, no complete-video parity or restart assertion in this phase"
+  },
+  "final_checks": {
+    "checks": [
+      {
+        "command": [
+          "cargo",
+          "fmt",
+          "--all",
+          "--",
+          "--check"
+        ],
+        "exit_code": 0,
+        "wall_seconds": 0.7286487550009042,
+        "log": "/tmp/hejjetrac-grid-release-check-0.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "clippy",
+          "--workspace",
+          "--all-targets",
+          "--locked",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "exit_code": 0,
+        "wall_seconds": 1.184457902010763,
+        "log": "/tmp/hejjetrac-grid-release-check-1.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--workspace",
+          "--locked"
+        ],
+        "exit_code": 0,
+        "wall_seconds": 294.85026100999676,
+        "log": "/tmp/hejjetrac-grid-release-check-2.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "build",
+          "--release",
+          "--locked",
+          "--workspace",
+          "--bins",
+          "--example",
+          "replay_evidence"
+        ],
+        "exit_code": 0,
+        "wall_seconds": 50.85577057499904,
+        "log": "/tmp/hejjetrac-grid-release-check-3.log"
+      }
+    ],
+    "workspace_tests_passed": 351,
+    "final_desktop_sha256": "bc1ceabef678a447d9d17551ef0eaaa5752025e0387f71fbf47746a0fd230c1c",
+    "final_cli_sha256": "4f5b152c4a8fb114ab1f6598f5a196aa07b76cb99d4e0b3051d1f5db504f2755",
+    "same_desktop_as_full_sixteen_test": true
+  },
+  "earlier_complete_sixteen_runs": [
+    {
+      "passed": true,
+      "binary_sha256": "062ea6369930f827c84c7e7992ad06a683ebd7e38b3fc409e525f88871e38509",
+      "input_sha256": "0cdb83d8468fce955999a54bd04cfde48e652db8c36de9fc45b15d359c521e4b",
+      "reference_sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337",
+      "native_viewport_count": 1,
+      "native_input_seconds": [
+        0.10481614197487943,
+        0.07418561598751694,
+        0.03900696101482026,
+        0.07518210899434052,
+        0.04752934499992989,
+        0.05765855798381381
+      ],
+      "forced_4x4": {
+        "visible_tiles": 16,
+        "minimum_image_fill_fraction": 0.9999996471753387,
+        "outer_rectangles": [
+          [
+            0.0,
+            31.0,
+            230.0,
+            234.5
+          ],
+          [
+            234.0,
+            31.0,
+            230.0,
+            234.5
+          ],
+          [
+            468.0,
+            31.0,
+            173.0,
+            234.99005126953125
+          ],
+          [
+            645.0,
+            31.0,
+            230.0,
+            234.5
+          ],
+          [
+            0.0,
+            269.99005126953125,
+            230.0,
+            234.5
+          ],
+          [
+            234.0,
+            269.99005126953125,
+            230.0,
+            234.5
+          ],
+          [
+            468.0,
+            269.99005126953125,
+            173.0,
+            234.99005126953125
+          ],
+          [
+            645.0,
+            269.99005126953125,
+            230.0,
+            234.5
+          ],
+          [
+            0.0,
+            508.9801025390625,
+            230.0,
+            234.5
+          ],
+          [
+            234.0,
+            508.9801025390625,
+            230.0,
+            234.5
+          ],
+          [
+            468.0,
+            508.9801025390625,
+            173.0,
+            234.99005126953125
+          ],
+          [
+            645.0,
+            508.9801025390625,
+            230.0,
+            234.5
+          ],
+          [
+            0.0,
+            747.9701538085938,
+            230.0,
+            234.5
+          ],
+          [
+            234.0,
+            747.9701538085938,
+            230.0,
+            234.5
+          ],
+          [
+            468.0,
+            747.9701538085938,
+            173.0,
+            234.99005126953125
+          ],
+          [
+            645.0,
+            747.9701538085938,
+            230.0,
+            234.5
+          ]
+        ]
+      },
+      "automatic_grid": {
+        "visible_tiles": 16,
+        "minimum_image_fill_fraction": 1.0,
+        "outer_rectangles": [
+          [
+            0.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            269.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            538.0,
+            31.0,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            795.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            1064.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            1333.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            0.0,
+            349.9854736328125,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            257.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            526.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            795.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            1064.0,
+            349.9854736328125,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            1321.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            0.0,
+            668.970947265625,
+            265.0,
+            260.75
+          ],
+          [
+            269.0,
+            668.970947265625,
+            265.0,
+            260.75
+          ],
+          [
+            538.0,
+            668.970947265625,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            795.0,
+            668.970947265625,
+            265.0,
+            260.75
+          ]
+        ]
+      },
+      "numeric_streams": [
+        {
+          "session": 1,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 2,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 3,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 4,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 5,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 6,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 7,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 8,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 9,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 10,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 11,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 12,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 13,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 14,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 15,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 16,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        }
+      ],
+      "native_input_ms": [
+        104.81614197487943,
+        74.18561598751694,
+        39.00696101482026,
+        75.18210899434052,
+        47.52934499992989,
+        57.65855798381381
+      ],
+      "processed_source_frames_per_rig": 5157,
+      "peak_process_rss_kib": 325056,
+      "restart": {
+        "sessions": 16,
+        "minimum_frames": 329,
+        "all_views_match": true,
+        "all_windows_visible_without_overlap": true,
+        "outer_rectangles": [
+          [
+            0.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            269.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            538.0,
+            31.0,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            795.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            1064.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            1333.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            0.0,
+            349.9854736328125,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            257.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            526.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            795.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            1064.0,
+            349.9854736328125,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            1321.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            0.0,
+            668.970947265625,
+            265.0,
+            260.75
+          ],
+          [
+            269.0,
+            668.970947265625,
+            265.0,
+            260.75
+          ],
+          [
+            538.0,
+            668.970947265625,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            795.0,
+            668.970947265625,
+            265.0,
+            260.75
+          ]
+        ]
+      },
+      "scope": "Sixteen independent pure-Rust real-video decoders and trackers, with lossless source order and accepted UDP numeric output identical to a retained serial VR3 reference. Actual native pointer painting and workspace restart checked on Linux. File processing is slower than 100fps under this load; this is not sixteen physical-camera or simultaneous recording capacity.",
+      "full_video_elapsed_after_ui_checks_seconds": 116.50087648999761
+    },
+    {
+      "passed": true,
+      "binary_sha256": "7d4a50d021b5d9c1fa9452ff310d83a25bb1a2f8576cfc4ed38c0fe1140ad3df",
+      "native_input_seconds": [
+        0.045953666005516425,
+        0.058954570995410904,
+        0.05818801000714302,
+        0.04368477201205678,
+        0.07478345098206773,
+        0.06826695700874552
+      ],
+      "numeric_streams": [
+        {
+          "session": 1,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 2,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 3,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 4,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 5,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 6,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 7,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 8,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 9,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 10,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 11,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 12,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 13,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 14,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 15,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        },
+        {
+          "session": 16,
+          "rows": 5042,
+          "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+        }
+      ],
+      "automatic_grid": {
+        "visible_tiles": 16,
+        "minimum_image_fill_fraction": 1.0,
+        "outer_rectangles": [
+          [
+            0.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            269.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            538.0,
+            31.0,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            795.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            1064.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            1333.0,
+            31.0,
+            265.0,
+            260.75
+          ],
+          [
+            0.0,
+            349.9854736328125,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            257.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            526.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            795.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            1064.0,
+            349.9854736328125,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            1321.0,
+            349.9854736328125,
+            265.0,
+            260.75
+          ],
+          [
+            0.0,
+            668.970947265625,
+            265.0,
+            260.75
+          ],
+          [
+            269.0,
+            668.970947265625,
+            265.0,
+            260.75
+          ],
+          [
+            538.0,
+            668.970947265625,
+            253.0,
+            314.9854736328125
+          ],
+          [
+            795.0,
+            668.970947265625,
+            265.0,
+            260.75
+          ]
+        ]
+      },
+      "forced_4x4": {
+        "visible_tiles": 16,
+        "minimum_image_fill_fraction": 0.9999996471753387,
+        "outer_rectangles": [
+          [
+            0.0,
+            31.0,
+            230.0,
+            234.5
+          ],
+          [
+            234.0,
+            31.0,
+            230.0,
+            234.5
+          ],
+          [
+            468.0,
+            31.0,
+            173.0,
+            234.99005126953125
+          ],
+          [
+            645.0,
+            31.0,
+            230.0,
+            234.5
+          ],
+          [
+            0.0,
+            269.99005126953125,
+            230.0,
+            234.5
+          ],
+          [
+            234.0,
+            269.99005126953125,
+            230.0,
+            234.5
+          ],
+          [
+            468.0,
+            269.99005126953125,
+            173.0,
+            234.99005126953125
+          ],
+          [
+            645.0,
+            269.99005126953125,
+            230.0,
+            234.5
+          ],
+          [
+            0.0,
+            508.9801025390625,
+            230.0,
+            234.5
+          ],
+          [
+            234.0,
+            508.9801025390625,
+            230.0,
+            234.5
+          ],
+          [
+            468.0,
+            508.9801025390625,
+            173.0,
+            234.99005126953125
+          ],
+          [
+            645.0,
+            508.9801025390625,
+            230.0,
+            234.5
+          ],
+          [
+            0.0,
+            747.9701538085938,
+            230.0,
+            234.5
+          ],
+          [
+            234.0,
+            747.9701538085938,
+            230.0,
+            234.5
+          ],
+          [
+            468.0,
+            747.9701538085938,
+            173.0,
+            234.99005126953125
+          ],
+          [
+            645.0,
+            747.9701538085938,
+            230.0,
+            234.5
+          ]
+        ]
+      }
+    }
+  ],
+  "sixteen_rig_full_video": {
+    "passed": true,
+    "binary_sha256": "bc1ceabef678a447d9d17551ef0eaaa5752025e0387f71fbf47746a0fd230c1c",
+    "input_sha256": "0cdb83d8468fce955999a54bd04cfde48e652db8c36de9fc45b15d359c521e4b",
+    "reference_sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337",
+    "native_input_seconds": [
+      0.03432793900719844,
+      0.04145926597993821,
+      0.032511772005818784,
+      0.058455430989852175,
+      0.052090602985117584,
+      0.040421653975499794
+    ],
+    "numeric_streams": [
+      {
+        "session": 1,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 2,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 3,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 4,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 5,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 6,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 7,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 8,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 9,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 10,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 11,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 12,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 13,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 14,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 15,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      },
+      {
+        "session": 16,
+        "rows": 5042,
+        "sha256": "28b6962d80c2cf805b2b78a305b2acb41bccd34f2cd0674334c6de58182c1337"
+      }
+    ],
+    "automatic_grid": {
+      "visible_tiles": 16,
+      "minimum_image_fill_fraction": 1.0,
+      "outer_rectangles": [
+        [
+          0.0,
+          31.0,
+          265.0,
+          260.75
+        ],
+        [
+          269.0,
+          31.0,
+          265.0,
+          260.75
+        ],
+        [
+          538.0,
+          31.0,
+          253.0,
+          314.9854736328125
+        ],
+        [
+          795.0,
+          31.0,
+          265.0,
+          260.75
+        ],
+        [
+          1064.0,
+          31.0,
+          265.0,
+          260.75
+        ],
+        [
+          1333.0,
+          31.0,
+          265.0,
+          260.75
+        ],
+        [
+          0.0,
+          349.9854736328125,
+          253.0,
+          314.9854736328125
+        ],
+        [
+          257.0,
+          349.9854736328125,
+          265.0,
+          260.75
+        ],
+        [
+          526.0,
+          349.9854736328125,
+          265.0,
+          260.75
+        ],
+        [
+          795.0,
+          349.9854736328125,
+          265.0,
+          260.75
+        ],
+        [
+          1064.0,
+          349.9854736328125,
+          253.0,
+          314.9854736328125
+        ],
+        [
+          1321.0,
+          349.9854736328125,
+          265.0,
+          260.75
+        ],
+        [
+          0.0,
+          668.970947265625,
+          265.0,
+          260.75
+        ],
+        [
+          269.0,
+          668.970947265625,
+          265.0,
+          260.75
+        ],
+        [
+          538.0,
+          668.970947265625,
+          253.0,
+          314.9854736328125
+        ],
+        [
+          795.0,
+          668.970947265625,
+          265.0,
+          260.75
+        ]
+      ]
+    },
+    "forced_4x4": {
+      "visible_tiles": 16,
+      "minimum_image_fill_fraction": 0.9999996471753387,
+      "outer_rectangles": [
+        [
+          0.0,
+          31.0,
+          230.0,
+          234.5
+        ],
+        [
+          234.0,
+          31.0,
+          230.0,
+          234.5
+        ],
+        [
+          468.0,
+          31.0,
+          173.0,
+          234.99005126953125
+        ],
+        [
+          645.0,
+          31.0,
+          230.0,
+          234.5
+        ],
+        [
+          0.0,
+          269.99005126953125,
+          230.0,
+          234.5
+        ],
+        [
+          234.0,
+          269.99005126953125,
+          230.0,
+          234.5
+        ],
+        [
+          468.0,
+          269.99005126953125,
+          173.0,
+          234.99005126953125
+        ],
+        [
+          645.0,
+          269.99005126953125,
+          230.0,
+          234.5
+        ],
+        [
+          0.0,
+          508.9801025390625,
+          230.0,
+          234.5
+        ],
+        [
+          234.0,
+          508.9801025390625,
+          230.0,
+          234.5
+        ],
+        [
+          468.0,
+          508.9801025390625,
+          173.0,
+          234.99005126953125
+        ],
+        [
+          645.0,
+          508.9801025390625,
+          230.0,
+          234.5
+        ],
+        [
+          0.0,
+          747.9701538085938,
+          230.0,
+          234.5
+        ],
+        [
+          234.0,
+          747.9701538085938,
+          230.0,
+          234.5
+        ],
+        [
+          468.0,
+          747.9701538085938,
+          173.0,
+          234.99005126953125
+        ],
+        [
+          645.0,
+          747.9701538085938,
+          230.0,
+          234.5
+        ]
+      ]
+    },
+    "native_viewport_count": 1,
+    "closed_first_rig": {
+      "rigs_remaining": 15,
+      "resources_before": {
+        "rss_kib": 326964,
+        "threads": 24,
+        "open_fds": 44
+      },
+      "resources_after": {
+        "rss_kib": 326972,
+        "threads": 23,
+        "open_fds": 43
+      },
+      "continuing_rig": 2,
+      "continuing_rig_frame_delta": 52
+    },
+    "restart": {
+      "sessions": 16,
+      "minimum_frames": 306,
+      "all_views_match": true,
+      "all_windows_visible_without_overlap": true,
+      "outer_rectangles": [
+        [
+          0.0,
+          31.0,
+          265.0,
+          260.75
+        ],
+        [
+          269.0,
+          31.0,
+          265.0,
+          260.75
+        ],
+        [
+          538.0,
+          31.0,
+          253.0,
+          314.9854736328125
+        ],
+        [
+          795.0,
+          31.0,
+          265.0,
+          260.75
+        ],
+        [
+          1064.0,
+          31.0,
+          265.0,
+          260.75
+        ],
+        [
+          1333.0,
+          31.0,
+          265.0,
+          260.75
+        ],
+        [
+          0.0,
+          349.9854736328125,
+          253.0,
+          314.9854736328125
+        ],
+        [
+          257.0,
+          349.9854736328125,
+          265.0,
+          260.75
+        ],
+        [
+          526.0,
+          349.9854736328125,
+          265.0,
+          260.75
+        ],
+        [
+          795.0,
+          349.9854736328125,
+          265.0,
+          260.75
+        ],
+        [
+          1064.0,
+          349.9854736328125,
+          253.0,
+          314.9854736328125
+        ],
+        [
+          1321.0,
+          349.9854736328125,
+          265.0,
+          260.75
+        ],
+        [
+          0.0,
+          668.970947265625,
+          265.0,
+          260.75
+        ],
+        [
+          269.0,
+          668.970947265625,
+          265.0,
+          260.75
+        ],
+        [
+          538.0,
+          668.970947265625,
+          253.0,
+          314.9854736328125
+        ],
+        [
+          795.0,
+          668.970947265625,
+          265.0,
+          260.75
+        ]
+      ]
+    },
+    "processed_source_frames_per_rig": 5157,
+    "peak_rss_kib": 326964,
+    "scope": "Sixteen independent real VR3 file decoders/trackers; all source images processed, accepted UDP data identical to serial reference; actual native pointer input, close-first-rig resource release/continued peer playback, graphical workspace restore. Not sixteen physical cameras or a 100fps/rig capacity claim."
+  },
+  "screen_capture": {
+    "scope": "Development-only native grid capture; FFmpeg is never an app dependency.\n\nCopies saved replay fixtures, disables experiment outputs and records only the\nwindow owned by this test process. This demonstration is separate from input\nlatency and complete-video numerical measurements.\n",
+    "passed": true,
+    "native_viewport_count": 1,
+    "source_frame_deltas_during_capture": [
+      137,
+      133,
+      179,
+      216,
+      117,
+      172,
+      203,
+      137,
+      146,
+      267,
+      195,
+      144,
+      145,
+      176,
+      122,
+      125
+    ],
+    "binary_sha256": "bc1ceabef678a447d9d17551ef0eaaa5752025e0387f71fbf47746a0fd230c1c",
+    "video_sha256": "83de12a159aef8ac287b66091b83719c114c72b02de487b2e3fbc3fa29263b7a",
+    "unsaved_native_close": {
+      "rigs_retained": 16,
+      "draft_retained": true
+    }
+  }
+}

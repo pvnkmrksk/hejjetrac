@@ -19,8 +19,9 @@ Arducam serial procedure. Other suitable cameras work without programming.
 
 ## Creating windows
 
-Numbered desktop windows follow their saved VR/BR slots. A requested missing or
-malformed slot stays visible as a failed rig; subsequent slots still start.
+New desktop windows use existing saved VR/BR slots first. Malformed saved slots
+stay visible as failed rigs; subsequent slots still start. When there is no saved
+slot, New rig creates an editable copy that needs its own source and calibration.
 Unnumbered documents retain the copy workflow, incrementing numeric camera ID,
 enabled ports and instance name; video paths remain paths. Unsaved copies do not
 inherit a save path or camera binding. The recorded-video headless controller
@@ -29,6 +30,10 @@ retains its existing sibling/copy workflow.
 Closing one native tracking window, including the first one opened, leaves the other sessions running. Each remaining window retains its source, clock, outputs and recording. Explicit application shutdown/quit closes all sessions; normal per-window close still observes unsaved-state and recording finalization rules.
 
 ## Manage rigs from the app
+
+[The graphical workspace guide](workspaces.md) covers package installation,
+adding sixteen rigs without a terminal, compact arrangement, startup restoration,
+saved view choices and optional reuse of the latest atlas.
 
 In current source, open **More → Rig manager** to see every running session. Each row opens that rig's **Settings** or its read-only **Full config** text. Review source IDs, calibration and output ports here before an experiment. Save changes through the inspector for that rig.
 

@@ -1,5 +1,7 @@
 # v0.3.6 — progressive atlas learning and responsive calibration
 
+*Historical local preparation, superseded by [v0.4.0](release-v0.4.0.md).*
+
 The atlas can now refine confident cells on later supported revisits, while
 protecting its anchors during a first sweep and rapid/blurred motion. Early
 consecutive-image fitting and verified acceleration confirmation reduce false

@@ -10,7 +10,7 @@
 
 *The native app processing the supplied FicTrac sample. [Watch the video](docs/images/tracking-demo.mp4).*
 
-[Updated real-camera calibration screenshots and native screen capture](docs/release-v0.3.6.md)
+[Updated real-camera calibration screenshots and native screen capture](docs/release-v0.4.0.md)
 show the saved 47° M01–M04 outlines. To adjust a saved outline, choose **Edit ball**
 and drag a numbered rim mark. The rig profiles bind M01–M04 by serial, independently
 of camera enumeration order.
@@ -24,6 +24,10 @@ and serial link per rig. [Multi-camera setup](book/src/rigs.md) explains linking
 array launch and separate outputs. [Example hardware and optional Arducam serial
 programming](book/src/appendix-cameras.md) records our compact OV9281 global-shutter
 boards for replication; a suitable regular webcam also works.
+
+[Saved workspaces and atlas startup](book/src/workspaces.md) explains graphical
+setup of up to sixteen rigs, a single-surface grid for larger arrays, compact arrangement, app-launch restoration,
+remembered full/debug views and optional reuse of the latest accepted atlas.
 
 Created by **[Pavan Kumar Kaushik](https://github.com/pvnkmrksk)**. The name combines **ಹೆಜ್ಜೆ** (*hejjé*, roughly **HEY-jay**), Kannada for a footstep, footprint or path, with **Trac**, following FicTrac’s spelling: **HEY-jay-track**. [Word origin](https://alar.ink/dictionary/kannada/english/%E0%B2%B9%E0%B3%86%E0%B2%9C%E0%B3%8D%E0%B2%9C%E0%B3%86).
 
@@ -43,7 +47,7 @@ Current downloads are ad hoc signed on Mac and unsigned on Windows. Use the proj
 
 - **A focused tracking window.** Ball preview, path, delivered FPS and tracking time stay visible. Settings open in a separate inspector.
 - **Guided calibration.** The ball outline fits live from three rim marks. Redraw exclusions and lab axes in turn, with a precision magnifier, right-click correction and the original FicTrac coordinate conventions.
-- **Independent rigs.** Each window has its own source, calibration, recording and outputs. Tile up to sixteen windows.
+- **Independent rigs.** Each window has its own source, calibration, recording and outputs. Tile up to sixteen independent rigs; larger arrays share one hardware-rendered grid window.
 - **Complete recording.** Save data, source video and diagnostic video. Every take retains all-frame numeric data, quality decisions and its configuration.
 - **Live output.** Use UDP, serial or ZeroMQ for downstream experiments. ZeroMQ is enabled by default on `0.0.0.0:9871`, serving localhost and IPv4 LAN receivers; each rig needs its own unused port. An explicit [legacy MATREX VR mode](docs/matrex-vr.md) matches the Python JSON republisher and old NetMQ handshake; native FT remains the default. The CLI, JSONL and MCP interfaces call the same numerical engine as the desktop.
 - **A Rust application.** Native windows and camera APIs, Rust video codecs and a shared engine. No OpenCV, FFmpeg executable, Python runtime or webview is required.
@@ -115,6 +119,9 @@ The companion CLI is in the extracted folder; on macOS it is inside `hejjetrac.a
 
 [Atlas learning](docs/atlas-learning.md) describes early consecutive-image
 refinement and how later accepted passes can correct saturated map cells.
+[Recorded-clock high-speed checks](docs/recorded-clock.md) explain why a
+constant-rate replay could conceal failures seen with the live camera's
+8/12 ms capture intervals, and how the same core is tested with them.
 
 HejjéTrac preserves FicTrac's legacy config text and data conventions, and checks the full supplied video against the supplied FicTrac output. Known-motion synthetic sequences cover rotation accuracy. The Rust optimizer and recovery policy differ from upstream; [compatibility](docs/parity.md), [validation](docs/validation.md) and [output semantics](docs/output.md) document those details and platform coverage. Rejected frames remain in the all-frame data; motion during a missing interval is left unmeasured.
 
@@ -124,12 +131,12 @@ explicit accuracy limits and a separate post-occlusion control.
 
 Native release CI runs on Windows, Linux, Apple Silicon and Intel Mac. Camera and GUI hardware checks are documented per platform. [Tracking performance](docs/tracking-performance.md) and [resource use](docs/resources.md) contain the fixture, hardware and timing boundaries for the published benchmarks.
 
-The final 47° four-camera six-minute run measured **27.30 ms median preview age**, 44.84 ms
+The November 4 47° four-camera six-minute run measured **27.30 ms median preview age**, 44.84 ms
 p95 and 48.53 ms maximum while each rig processed about 101 frames/s. The maximum
 occurred during steady state. Preview cadence is independent of tracking;
 [the timing explanation and distributions](docs/preview-age.md) describe the
 30 FPS display limit, observed publication rate and relative-clock measurement.
-The separate hand-driven test exposes an unresolved 6.61-second M02 tracking
+The separate historical hand-driven test exposes a 6.61-second M02 tracking
 recovery gap; [fresh validation](docs/validation.md) preserves that failure separately.
 
 ## Build and contribute

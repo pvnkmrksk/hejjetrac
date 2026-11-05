@@ -16,6 +16,14 @@ changes source dimensions or calibration. Poll `status.window_inner_size` to
 observe the applied size; window managers may constrain it to the desktop.
 `window_rect` remains the outer rectangle, including window decoration.
 
+Native `view` also exposes `reuse_atlas`, `rig_manager`, and the explicit
+`settings_section` tab. `arrange_grid` accepts optional `columns`; it accounts
+for the current image aspect and native work area. `workspace_save` stores the
+saved rig paths with optional `restore_on_launch`. View/cache preferences use
+sidecars and do not rewrite calibration text. Poll native `status.atlas_cache`
+for actual load/checkpoint completion rather than treating a queued command as
+completion. [Graphical workflow and sidecar locations](../book/src/workspaces.md).
+
 An active native session reserves its camera. The camera menu disables cameras
 used by another rig, and `source` rejects the same conflict before changing the
 working session. Selecting the already active camera preserves its tracking
@@ -52,6 +60,14 @@ Configuration is a lossless legacy document. `config` returns raw text, fields a
 `calibrate` additionally exposes `resolution_reference` and `resolution_apply`. Reference capture accepts optional `width`/`height` (default current source) and stores `rust_calibration_size`, projection/FOV and normalized extension copies of rim, exclusions and square marks while retaining ordinary pixel fields. Apply requires explicit target dimensions and regenerates only pixel marks for identical aspect ratio and configured field of view/projection; angular `roi_c`/`roi_r` and `c2a_r`/`c2a_t` remain unchanged. Stale marks or incompatible framing reject before mutation. A metadata-free legacy config is never normalized implicitly.
 
 `reset` matches the tracker reset: source position, frame count and integrated displacement continue, while relative sequence, pose, path and heading reset. `rewind` explicitly starts the source again. `map_save` and `map_load` export/import real equal-area sphere templates. Import validates dimensions before mutation.
+
+`map_load` optionally accepts `pose_camera: [x, y, z]`, a finite principal
+scaled-axis pose in the same camera coordinates as output rows. It is only a
+recovery seed: fresh images must confirm it, and missing motion remains zero.
+`map_refresh` discards both imported and accumulated maps while retaining source
+position, clock, frame count and measured integrated displacement. The GUI's
+top-left refresh arrow uses this shared operation.
+
 
 `rows` returns bounded numerical rows including acceptance/status. `snapshot` writes source luma, source color, ROI, warped difference, instant/accumulated maps and the calibrated six-panel debug mosaic as portable PGM/PPM files. `export` writes legacy accepted-row `tracking.dat`, full `all-frames.dat`, all-frame `quality.csv`, config and path SVG. Rejected frames remain observable; frozen paths do not establish zero motion.
 

@@ -12,6 +12,7 @@ const MAX_RECOVERY_EVALUATIONS: usize = 768;
 const RECOVERY_SEARCH_PERIOD: u32 = 6;
 const HISTORY: usize = 32;
 const MIN_MOTION_HISTORY: usize = 8;
+pub(crate) const NORMAL_INTERVAL_RATIO: f64 = 1.8;
 // Per-frame angular allowance, not an FPS-independent physical velocity or
 // measured motion. It permits acceleration after rest or a small historical rate.
 const MOTION_FLOOR_RADIANS: f64 = 0.04;
@@ -251,8 +252,25 @@ impl Recovery {
             || !intervals
                 .iter()
                 .all(|interval| interval.is_finite() && *interval > 0.0)
-            || rates[1] <= rates[0]
         {
+            return false;
+        }
+        let angles = [
+            rates[0] * intervals[0],
+            rates[1] * intervals[1],
+            delta.length(),
+        ];
+        let smallest_interval = intervals.into_iter().fold(f64::INFINITY, f64::min);
+        let largest_interval = intervals.into_iter().fold(0.0, f64::max);
+        // Normal capture-cadence variation (e.g. reported 8/12 ms intervals)
+        // can reverse consecutive angle/dt rates while visible steps grow.
+        // Keep actual timestamps and the existing fit/residual gates. Require
+        // two increasing measured steps; a lone jump after equal steps cannot
+        // use this route. Extended source gaps retain the original rate test.
+        let growing_steps = largest_interval <= smallest_interval * NORMAL_INTERVAL_RATIO
+            && angles[0] < angles[1]
+            && angles[1] < angles[2];
+        if rates[1] <= rates[0] && !growing_steps {
             return false;
         }
         // Consecutive low-resolution fits have transverse quantization noise.
@@ -803,6 +821,62 @@ mod tests {
 #[cfg(test)]
 mod motion_tests {
     use super::*;
+    #[test]
+    fn reported_eight_twelve_ms_cadence_does_not_hide_a_verified_visible_ramp() {
+        let evidence = crate::TemporalEvidence {
+            known_samples: 1468,
+            possible_samples: 2080,
+            binary_mse: Some(3676.481607629428),
+            spatially_supported_fraction: 0.9965940054495913,
+            verified: true,
+            persistent_known_samples: 2001,
+            persistent_chance_mse: Some(27819.934006759737),
+        };
+        // Consecutive independently verified fits from the user's November 5
+        // recording, images 169..171. Identical pixels track with CFR timing;
+        // raw per-interval rate monotonicity wrongly rejects its capture clock.
+        let mut recovery = Recovery::default();
+        for (delta, dt) in [
+            (
+                DVec3::new(
+                    -0.02027533548337883,
+                    -0.00958708211146355,
+                    -0.0003827320940692786,
+                ),
+                7.991998999999851,
+            ),
+            (
+                DVec3::new(
+                    -0.021787334330874146,
+                    -0.01729577797661828,
+                    -0.003661177486088212,
+                ),
+                12.004997000000003,
+            ),
+        ] {
+            recovery.observe_tracked_motion(delta, dt);
+            recovery.observe_temporal_support(true);
+        }
+        let current = DVec3::new(
+            -0.03936939203365758,
+            -0.02017808835859443,
+            -0.014583399390551928,
+        );
+        assert!(recovery.verified_ramp_ok(current, 8.006014999999934, &evidence));
+        assert!(!recovery.verified_ramp_ok(-current, 8.006014999999934, &evidence));
+        let mut steady = Recovery::default();
+        for dt in [8.0, 12.0] {
+            steady.observe_tracked_motion(DVec3::X * 0.02, dt);
+            steady.observe_temporal_support(true);
+        }
+        assert!(!steady.verified_ramp_ok(DVec3::X * 0.05, 8.0, &evidence));
+        let mut gap = Recovery::default();
+        for (angle, dt) in [(0.02, 8.0), (0.03, 40.0)] {
+            gap.observe_tracked_motion(DVec3::X * angle, dt);
+            gap.observe_temporal_support(true);
+        }
+        assert!(!gap.verified_ramp_ok(DVec3::X * 0.05, 8.0, &evidence));
+    }
     #[test]
     fn independent_temporal_ramp_needs_three_visible_increments_and_rejects_jumps() {
         let evidence = crate::TemporalEvidence {

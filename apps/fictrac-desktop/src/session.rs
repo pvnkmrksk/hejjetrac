@@ -10,6 +10,16 @@ pub enum Tool {
     Square,
     Edit,
 }
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum SettingsSection {
+    Source,
+    Calibration,
+    Display,
+    Atlas,
+    Recording,
+    Outputs,
+    Advanced,
+}
 
 pub struct Session {
     pub ui_metrics: crate::ui_metrics::UiMetrics,
@@ -31,6 +41,11 @@ pub struct Session {
     pub show_calibration: bool,
     pub calibration_previous_view: Option<(bool, bool)>,
     pub show_config_text: bool,
+    pub config_text_editing: bool,
+    pub settings_section: SettingsSection,
+    pub reuse_atlas: bool,
+    pub saved_view: crate::state::ViewPreferences,
+    pub view_state_error: String,
     pub show_about: bool,
     pub show_rigs: bool,
     pub show_diagnostics: bool,
@@ -58,8 +73,12 @@ pub struct Session {
     pub magnifier: bool,
     pub points: Vec<[f64; 2]>,
     pub square_slots: Option<[Option<[f64; 2]>; 4]>,
+    pub tile_open_rect: Option<[f32; 4]>,
+    pub tile_rect: Option<[f32; 4]>,
     pub window_rect: Option<[f32; 4]>,
     pub window_inner_size: Option<[f32; 2]>,
+    pub preview_canvas_rect: Option<[f32; 4]>,
+    pub preview_image_rect: Option<[f32; 4]>,
     pub framebuffer_limit: u32,
     pub max_window_inner_size: egui::Vec2,
     pub requested_window_size: Option<egui::Vec2>,
@@ -88,7 +107,7 @@ impl Session {
     pub fn new(id: u64, doc: ConfigDocument, path: Option<PathBuf>) -> Self {
         let text = doc.text().to_owned();
         let source_edit = doc.get("src_fn").unwrap_or("").to_owned();
-        Self {
+        let mut session = Self {
             ui_metrics: crate::ui_metrics::UiMetrics::default(),
             source_base: path.clone(),
             running_source: String::new(),
@@ -108,6 +127,11 @@ impl Session {
             show_calibration: false,
             calibration_previous_view: None,
             show_config_text: false,
+            config_text_editing: false,
+            settings_section: SettingsSection::Source,
+            reuse_atlas: false,
+            saved_view: crate::state::ViewPreferences::default(),
+            view_state_error: String::new(),
             show_about: false,
             show_rigs: false,
             show_diagnostics: false,
@@ -138,8 +162,12 @@ impl Session {
             magnifier: true,
             points: vec![],
             square_slots: None,
+            tile_open_rect: None,
+            tile_rect: None,
             window_rect: None,
             window_inner_size: None,
+            preview_canvas_rect: None,
+            preview_image_rect: None,
             framebuffer_limit: 4096,
             max_window_inner_size: egui::vec2(4096.0, 4096.0),
             requested_window_size: None,
@@ -165,7 +193,98 @@ impl Session {
                 .join(format!("VR{id}"))
                 .to_string_lossy()
                 .into_owned(),
+        };
+        session.restore_view();
+        session
+    }
+    fn view_preferences(&self) -> crate::state::ViewPreferences {
+        let (full_image, overlays) = self
+            .calibration_previous_view
+            .unwrap_or((self.full_image, self.show_overlays));
+        crate::state::ViewPreferences {
+            full_image,
+            diagnostics: self.show_diagnostics,
+            overlays,
+            magnifier: self.magnifier,
+            display_fps: self.display_fps,
+            reuse_atlas: self.reuse_atlas,
         }
+    }
+    fn restore_view(&mut self) {
+        let result = self
+            .path
+            .as_deref()
+            .map(|path| {
+                crate::state::read::<crate::state::ViewPreferences>(
+                    &crate::state::sidecar(path, "view"),
+                    4096,
+                )
+            })
+            .transpose();
+        match result {
+            Ok(view) => {
+                let view = view.flatten().unwrap_or_default();
+                if !(1..=60).contains(&view.display_fps) {
+                    self.view_state_error =
+                        "Saved display FPS is invalid; using the default view".into();
+                    return;
+                }
+                self.full_image = view.full_image;
+                self.show_diagnostics = view.diagnostics;
+                self.show_overlays = view.overlays;
+                self.magnifier = view.magnifier;
+                self.display_fps = view.display_fps;
+                self.reuse_atlas = view.reuse_atlas;
+                self.saved_view = view;
+            }
+            Err(error) => self.view_state_error = error,
+        }
+    }
+    pub fn save_view(&mut self) -> Result<(), String> {
+        let view = self.view_preferences();
+        if view != self.saved_view
+            && let Some(path) = &self.path
+        {
+            crate::state::write(&crate::state::sidecar(path, "view"), &view)?;
+            self.saved_view = view;
+        }
+        Ok(())
+    }
+    pub fn atlas_cache_path(&self) -> Option<PathBuf> {
+        self.path
+            .as_deref()
+            .map(|path| crate::state::sidecar(path, "atlas"))
+    }
+    pub fn set_reuse_atlas(&mut self, enabled: bool) -> Result<(), String> {
+        if enabled {
+            let document = self.document()?;
+            if document
+                .get("src_fn")
+                .is_some_and(|s| s.parse::<u32>().is_ok())
+                && document
+                    .camera_binding()
+                    .map_err(|e| e.to_string())?
+                    .is_none()
+            {
+                return Err(
+                    "Link this rig to its physical camera before enabling automatic atlas reuse"
+                        .into(),
+                );
+            }
+        }
+        let path = if enabled {
+            Some(
+                self.atlas_cache_path()
+                    .ok_or("Save this rig's configuration before enabling atlas reuse")?,
+            )
+        } else {
+            None
+        };
+        if let Some(worker) = &self.worker {
+            worker.send(Command::AtlasCache(path))?;
+        }
+        self.reuse_atlas = enabled;
+        Ok(())
     }
     pub fn use_fallback(&mut self, reason: &str) {
         if self
@@ -504,11 +623,12 @@ impl Session {
             .map_err(|e| e.to_string())?
             .map(str::to_owned);
         self.running_fps = doc.number("src_fps", -1.0);
-        self.worker = Some(Worker::start_at(
+        self.worker = Some(Worker::start_with_cache(
             source,
             doc,
             self.realtime,
             self.path.clone().or(self.source_base.clone()),
+            self.reuse_atlas.then(|| self.atlas_cache_path()).flatten(),
         )?);
         if let Some(worker) = &self.worker {
             worker.send(Command::DisplayFps(self.display_fps))?;
@@ -599,6 +719,10 @@ impl Session {
     }
     pub fn apply(&mut self) -> Result<(), String> {
         let doc = self.document()?;
+        if let Some(image) = &self.snapshot.image {
+            fictrac_io::load_config_text(doc.text(), image.width, image.height)
+                .map_err(|e| format!("Configuration was not applied: {e}"))?;
+        }
         let source = doc.get("src_fn").unwrap_or("");
         let binding = doc.camera_binding().map_err(|e| e.to_string())?;
         let assignment_changed =
@@ -638,6 +762,7 @@ impl Session {
     pub fn load(&mut self, path: PathBuf) -> Result<(), String> {
         let text = crate::array::read_text(&path)?;
         let doc = ConfigDocument::parse(text).map_err(|e| e.to_string())?;
+        self.save_view()?;
         self.worker = None;
         self.sample_fallback_active = false;
         self.record_raw = fictrac_control::RecordOptions::from_document(&doc)
@@ -664,6 +789,7 @@ impl Session {
             .take()
             .unwrap_or(self.paused);
         self.set_calibration_panel(false);
+        self.restore_view();
         self.start()
     }
     pub fn video(&mut self, path: PathBuf) -> Result<(), String> {
@@ -673,6 +799,10 @@ impl Session {
     }
     pub fn save(&mut self, as_new: bool) -> Result<(), String> {
         let mut doc = self.document()?;
+        if let Some(image) = &self.snapshot.image {
+            fictrac_io::load_config_text(doc.text(), image.width, image.height)
+                .map_err(|e| format!("Configuration was not saved: {e}"))?;
+        }
         let path = if as_new || self.path.is_none() || self.temporary_config {
             rfd::FileDialog::new()
                 .add_filter("FicTrac config", &["txt"])
@@ -748,6 +878,9 @@ impl Session {
             self.startup_fallback = None;
         }
         if self.auto_apply && self.changed.is_some_and(|t| t.elapsed().as_millis() > 400) {
+            // A rejected draft is retried only after another edit or Apply,
+            // rather than revalidating it on every repaint indefinitely.
+            self.changed = None;
             let r = self.apply();
             self.report(r);
         }

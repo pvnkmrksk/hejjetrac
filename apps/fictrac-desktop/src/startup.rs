@@ -61,7 +61,7 @@ fn default_at(template: &Path, destination: Result<PathBuf, String>) -> Result<S
     }
 }
 
-fn user_config_path() -> Result<PathBuf, String> {
+pub(crate) fn user_config_path() -> Result<PathBuf, String> {
     config_path(std::env::consts::OS, |name| {
         std::env::var_os(name).map(PathBuf::from)
     })

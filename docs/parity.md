@@ -1,5 +1,25 @@
 # Behavioral parity assessment
 
+## Recorded clock, retained tracking limits and large arrays — 2026-11-05
+
+The final engine uses a joint atlas/previous-image precision proposal for
+uncertain fits and admits supported acceleration across ordinary 8/12 ms clock
+variation. Final acceptance, missing-motion semantics, numerical tolerances and
+upstream oracle constants remain unchanged. Every original six-case serial
+release gate passes. The newest 9,339-image user take retains an 80.011 ms
+unmeasured interval and a short Z-component RMS of 0.02054 rad above the 0.020
+target; neither is hidden by the otherwise improved full-take result.
+[Reproduction and scientific boundaries](recorded-clock.md).
+
+Sixteen independent real-video desktop sessions process the complete VR3 source
+and match its serial accepted output. Five to sixteen rigs now share one native
+hardware-rendered surface to avoid the reproduced XWayland/Nouveau abort from
+many native surfaces. This includes embedded manager/settings and graphical
+workspace restoration. Smaller arrays retain independent native windows.
+This is Linux file replay and UI evidence, not native sixteen-camera capture
+capacity or physical-motion ground truth. [Current evidence](validation.md#recorded-clock-tracking-and-shared-surface-rig-grid--2026-11-05).
+
+
 ## Revisable atlas and early local refinement — 2026-11-04
 
 Resilient tracking can retry an uncertain fit against the previous accepted

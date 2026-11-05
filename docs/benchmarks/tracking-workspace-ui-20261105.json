@@ -1,0 +1,951 @@
+{
+  "status": "passed",
+  "date": "2026-11-05",
+  "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+  "logical_cpus": 8,
+  "cpu_model": "Intel(R) Core(TM) i7-6700K CPU @ 4.00GHz",
+  "build_profile": "Workspace release, thin LTO, codegen-units=1; binaries built before this suite",
+  "rustflags": null,
+  "binary": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/fictrac",
+  "binary_sha256": "ffe3cc675c1e68175cb4f3c030b9028dba5ad6ab93ceb6f400e131802a2da549",
+  "evidence_binary_sha256": "341188c6451cafb6f5075b5dbb2204197b03520d4e884b51594422be55dd1de1",
+  "original_fictrac_sha256": "3e2b3fb4a4b54eca4b9c4e0498226566d726dc46d9d5c7a2280a6e573d8bd5ae",
+  "retained_fixture_sha256": {
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac-data-20261029/performance/source-fixture/config.txt": "34cc8788f8f5d01369b472acaab72f08c48daa17f3f3c79ad7d73c1f9b58982f",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac-data-20261029/performance/source-fixture/fictrac-20261026_212053.dat": "a8bfa7306a2144c5a0233739f9e796bff35fd1f3a7dc371392a18c8f8a852475",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac-data-20261029/performance/source-fixture/fictrac-raw-20261026_212053.avi": "0cdb83d8468fce955999a54bd04cfde48e652db8c36de9fc45b15d359c521e4b",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac-data-20261029/performance/source-fixture/fictrac-vidLogFrames-20261026_212053.txt": "5ad33ec6eebc6cef3444705cbe668da18038e5b1ff6fafce8c671d29a1f3b899",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/recording/epoch-0000-media/raw.avi": "20e1d79f84d85c9b638acb34bdcdb54813f6fcd603a96075796c0fdd11172c45",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/recording/epoch-0000-all-frames.dat": "15ae6ed354f9db37697399712069508dd8760e60d17f03471972724c7aacd4cd",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/rim-check/fictrac/baseline-20261028_120425.dat": "09417db7706c3029c6b6b082c2e5a201fc37d10418c6eeb74f01587ae40af638",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/rim-check/config.txt": "18e54b759dafbc5037ae77db235700254652497120b903f7a201f9e13281e1a5"
+  },
+  "timing_boundary": "Each command runs serially. External wall includes process startup, input/config/decode, numeric outputs and finalization. VR3 and raw47 wrapper timing additionally includes independent reference/control and Python analysis; candidate summary retains tracker/pipeline boundaries. No machine-wide quietness is inferred by this script.",
+  "accuracy_scope": "Fixed fixtures and original FicTrac comparisons, not physical ground truth. Existing tolerances and annotations unchanged; all numerical/quality rows retained. Gap reference composes original delta quaternions across explicitly omitted source images without fitting lag, scale or axes.",
+  "cases": {
+    "demo120": {
+      "oracle": {
+        "expected_delta": [
+          0.006,
+          -0.009,
+          0.004
+        ],
+        "passed": true,
+        "rotation_component_rmse_rad": 0.0003040496948914138,
+        "tolerance_rad": 0.003
+      },
+      "summary": {
+        "version": "0.3.6",
+        "input": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/demo120/sphere.y4m",
+        "video": {
+          "width": 160,
+          "height": 160,
+          "fps": 60.0,
+          "codec": "y4m/mono",
+          "duration_ms": null
+        },
+        "effective_config": {
+          "spherical_map": null,
+          "width": 160,
+          "height": 160,
+          "vfov_deg": 45.0,
+          "fisheye": false,
+          "sphere": {
+            "centre": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "angular_radius": 0.29
+          },
+          "camera_to_lab": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "legacy_roi_coordinates": false,
+          "ignore_polygons": [],
+          "max_rotation": 0.35,
+          "max_error": 0.16,
+          "sample_stride": 2,
+          "iterations": 20,
+          "source": "sphere.y4m"
+        },
+        "frames": 120,
+        "tracked": 119,
+        "relocalized": 0,
+        "rejected": 0,
+        "initializing": 1,
+        "mean_error": 0.016496092142655572,
+        "max_error": 0.01765047398049396,
+        "wall_seconds": 0.514909013,
+        "end_to_end_fps": 233.05088271973983,
+        "tracking_fps": 256.1728405669709,
+        "input_duration_ms": 1983.3333333333333,
+        "final_position": [
+          -1.1854370684376982,
+          -0.39796415863398
+        ],
+        "final_heading": 5.757645264329963,
+        "estimator": "perspective pairwise robust photometric SO(3)",
+        "error_metric": "normalized luma RMSE (0..1)",
+        "warnings": []
+      }
+    },
+    "sample300": {
+      "input_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+      "summary": {
+        "version": "0.3.6",
+        "input": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/sample.mp4",
+        "video": {
+          "width": 384,
+          "height": 288,
+          "fps": null,
+          "codec": "h264 (pure Rust)",
+          "duration_ms": 10000.0
+        },
+        "effective_config": {
+          "spherical_map": {
+            "resilient": true,
+            "resilient_error_floor": 10000.0,
+            "global_search": false,
+            "max_bad_frames": -1,
+            "global_evaluations": 100000,
+            "channel": null,
+            "quality": 6,
+            "threshold_ratio": 1.25,
+            "threshold_window": 0.25,
+            "max_evaluations": 50,
+            "tolerance": 0.001,
+            "max_error": -1.0
+          },
+          "width": 384,
+          "height": 288,
+          "vfov_deg": 45.0,
+          "fisheye": false,
+          "sphere": {
+            "centre": [
+              -0.22938965658632302,
+              0.09996809470952124,
+              0.9681873607372475
+            ],
+            "angular_radius": 0.12481674439688094
+          },
+          "camera_to_lab": [
+            0.722445,
+            -0.131314,
+            -0.460878
+          ],
+          "legacy_roi_coordinates": true,
+          "ignore_polygons": [
+            [
+              [
+                96.0,
+                156.0
+              ],
+              [
+                113.0,
+                147.0
+              ],
+              [
+                106.0,
+                128.0
+              ],
+              [
+                82.0,
+                130.0
+              ],
+              [
+                81.0,
+                150.0
+              ]
+            ],
+            [
+              [
+                71.0,
+                213.0
+              ],
+              [
+                90.0,
+                219.0
+              ],
+              [
+                114.0,
+                218.0
+              ],
+              [
+                135.0,
+                211.0
+              ],
+              [
+                154.0,
+                196.0
+              ],
+              [
+                150.0,
+                217.0
+              ],
+              [
+                121.0,
+                228.0
+              ],
+              [
+                99.0,
+                234.0
+              ],
+              [
+                75.0,
+                225.0
+              ]
+            ]
+          ],
+          "max_rotation": 0.35,
+          "max_error": 0.16,
+          "sample_stride": 2,
+          "iterations": 20,
+          "source": "sample.mp4"
+        },
+        "frames": 300,
+        "tracked": 299,
+        "relocalized": 0,
+        "rejected": 0,
+        "initializing": 1,
+        "mean_error": 6424.500252392103,
+        "max_error": 8268.539271610356,
+        "wall_seconds": 1.91103582,
+        "end_to_end_fps": 156.98292876582502,
+        "tracking_fps": 320.39944805812394,
+        "input_duration_ms": 9966.666666666666,
+        "final_position": [
+          3.620053461636342,
+          -2.6272963157111424
+        ],
+        "final_heading": 6.177704995564479,
+        "estimator": "accumulated spherical map / pure Rust BOBYQA",
+        "error_metric": "mean squared binary intensity (0..65025)",
+        "warnings": []
+      },
+      "comparison": {
+        "comparison": {
+          "candidate_final_position": [
+            3.620053461636,
+            -2.627296315711
+          ],
+          "endpoint_error_sphere_rad": 0.054525318251027806,
+          "frames": 300,
+          "heading_rmse_rad": 0.01318481079068964,
+          "path_point_rmse_sphere_rad": 0.04480675139755788,
+          "reference_final_position": [
+            3.674266189723,
+            -2.6214661833162
+          ],
+          "rotation_component_rmse_rad": [
+            0.008760804755303081,
+            0.008292135984256042,
+            0.014210731643506284
+          ],
+          "timestamp_max_error_ms": 3.456079866737127e-11
+        },
+        "limits": {
+          "heading_rmse_rad": 0.025,
+          "path_rmse_sphere_rad": 0.075,
+          "rotation_component_rmse_rad": 0.02
+        },
+        "passed": true
+      }
+    },
+    "vr3": {
+      "input_sha256": "0cdb83d8468fce955999a54bd04cfde48e652db8c36de9fc45b15d359c521e4b",
+      "video_frames": 5157,
+      "healthy_pre_hand": {
+        "video_frame_interval": [
+          2,
+          4680
+        ],
+        "frames": 4678,
+        "accepted": 4678,
+        "accepted_fraction": 1.0,
+        "statuses": {
+          "tracked": 4678
+        },
+        "fit_error_median": 3745.1705504215,
+        "fit_error_p95": 5032.799517879,
+        "accepted_fit_error_p95": 5032.799517879,
+        "aligned_delta_frames": 4677,
+        "excluded_source_gap_video_frames": [
+          183
+        ],
+        "rotation_component_rmse_rad_all_decisions": [
+          0.006720468516197181,
+          0.00648660205377112,
+          0.009398865586791962
+        ],
+        "rotation_component_mean_error_rad_all_decisions": [
+          3.6565702037976293e-07,
+          -1.2723192560396119e-05,
+          7.215778440868734e-06
+        ],
+        "lab_rotation_component_mean_error_rad_all_decisions": [
+          -1.40608074423746e-05,
+          -4.68566592274943e-07,
+          -4.019319835849392e-06
+        ],
+        "tracked_only_delta_frames": 4677,
+        "rotation_component_rmse_rad_tracked_only_diagnostic": [
+          0.006720468516197181,
+          0.00648660205377112,
+          0.009398865586791962
+        ],
+        "path_point_rmse_sphere_rad": 2.926197772295051,
+        "heading_rmse_rad": 0.0639098462218664,
+        "endpoint_error_sphere_rad": 2.653466035416785,
+        "reference_path_context_from_source_initialization": {
+          "source_frame_interval_inclusive": [
+            0,
+            4685
+          ],
+          "reference_path_length_sphere_rad": 273.9502859263112,
+          "reference_endpoint_displacement_sphere_rad": 12.6524545701225,
+          "path_rmse_divided_by_reference_path_length": 0.01068149194442585,
+          "path_rmse_divided_by_reference_endpoint_displacement": 0.23127510603396853,
+          "note": "Descriptive scale context only. These ratios do not replace raw errors or establish long-sequence path parity."
+        }
+      },
+      "fast_section": {
+        "video_frame_interval": [
+          1690,
+          2100
+        ],
+        "frames": 410,
+        "accepted": 410,
+        "accepted_fraction": 1.0,
+        "statuses": {
+          "tracked": 410
+        },
+        "fit_error_median": 4881.7837765555,
+        "fit_error_p95": 6775.040980313,
+        "accepted_fit_error_p95": 6775.040980313,
+        "aligned_delta_frames": 410,
+        "excluded_source_gap_video_frames": [],
+        "rotation_component_rmse_rad_all_decisions": [
+          0.009698866170682878,
+          0.008175513991664649,
+          0.010765480215678126
+        ],
+        "rotation_component_mean_error_rad_all_decisions": [
+          0.00016324719416765902,
+          1.591881308556765e-05,
+          0.00043860417604939565
+        ],
+        "lab_rotation_component_mean_error_rad_all_decisions": [
+          -0.0002999888337726112,
+          -0.00016913601353368872,
+          0.0003172954251382488
+        ],
+        "tracked_only_delta_frames": 410,
+        "rotation_component_rmse_rad_tracked_only_diagnostic": [
+          0.009698866170682878,
+          0.008175513991664649,
+          0.010765480215678126
+        ],
+        "path_point_rmse_sphere_rad": 3.5520592075822814,
+        "heading_rmse_rad": 0.13270220209854713,
+        "endpoint_error_sphere_rad": 5.35561398572767,
+        "reference_path_context_from_source_initialization": {
+          "source_frame_interval_inclusive": [
+            0,
+            2105
+          ],
+          "reference_path_length_sphere_rad": 63.85235190099726,
+          "reference_endpoint_displacement_sphere_rad": 45.938985768587486,
+          "path_rmse_divided_by_reference_path_length": 0.05562926191175747,
+          "path_rmse_divided_by_reference_endpoint_displacement": 0.07732123703112175,
+          "note": "Descriptive scale context only. These ratios do not replace raw errors or establish long-sequence path parity."
+        },
+        "interval_trajectory": {
+          "video_frame_interval": [
+            1690,
+            2100
+          ],
+          "start_position_and_heading_aligned_path_rmse_sphere_rad": 3.9253938389551903,
+          "start_position_and_heading_aligned_endpoint_error_sphere_rad": 5.887737612132348,
+          "relative_heading_rmse_rad": 0.14363982667440156,
+          "note": "Only the initial position and heading are aligned; no later time-dependent rotation, scaling, trajectory fitting or gap reconstruction is applied. These drift metrics are reported independently of increment gates."
+        }
+      },
+      "post_hand": {
+        "video_frame_interval": [
+          4820,
+          5157
+        ],
+        "frames": 337,
+        "accepted": 337,
+        "accepted_fraction": 1.0,
+        "statuses": {
+          "tracked": 337
+        },
+        "fit_error_median": 3821.185616714,
+        "fit_error_p95": 4682.316593009,
+        "accepted_fit_error_p95": 4682.316593009,
+        "tracked_delta_norm_rms_rad": 0.046685093220187907
+      },
+      "fresh_suffix_control": {
+        "control": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/vr3-control",
+        "control_initialization_video_frame": 4820,
+        "comparison_video_frame_interval": [
+          4920,
+          5157
+        ],
+        "control_frames": 337,
+        "control_accepted": 337,
+        "rotation_component_rmse_rad": [
+          0.008959857985942806,
+          0.006848424799690721,
+          0.010771176006944496
+        ],
+        "note": "Same decoded images, independently initialized atlas. Agreement tests recovered increments; it is not physical ground truth."
+      },
+      "gates": {
+        "healthy_rotation_component_rmse": true,
+        "healthy_acceptance": true,
+        "every_rolling_100_image_rotation_component_rmse": true,
+        "fast_section_rotation_component_rmse": true,
+        "fast_section_every_image_tracked": true,
+        "post_hand_acceptance": true,
+        "confirmed_relocalization_after_hand_arrival": true,
+        "missing_interval_and_relocalization_have_zero_relative_motion": true,
+        "post_hand_is_not_a_frozen_zero_estimate": true,
+        "post_hand_fit_error_p95_within_twice_accepted_healthy": true,
+        "recovered_increments_match_fresh_suffix_control": true,
+        "fresh_suffix_control_accepts_every_image": true,
+        "same_recording_healthy_rotation_component_rmse": true,
+        "same_recording_fast_rotation_component_rmse": true,
+        "same_recording_every_rolling_100_image_rotation_component_rmse": true
+      },
+      "passes": true,
+      "candidate_summary": {
+        "version": "0.3.6",
+        "input": "/home/pkaushi/Documents/ChatGPT/Hejjetrac-data-20261029/performance/source-fixture/fictrac-raw-20261026_212053.avi",
+        "video": {
+          "width": 320,
+          "height": 240,
+          "fps": 100.0,
+          "codec": "avi/h264 (pure Rust)",
+          "duration_ms": 51570.0
+        },
+        "effective_config": {
+          "spherical_map": {
+            "resilient": true,
+            "resilient_error_floor": 10000.0,
+            "global_search": false,
+            "max_bad_frames": -1,
+            "global_evaluations": 100000,
+            "channel": null,
+            "quality": 6,
+            "threshold_ratio": 1.25,
+            "threshold_window": 0.25,
+            "max_evaluations": 50,
+            "tolerance": 0.001,
+            "max_error": -1.0
+          },
+          "width": 320,
+          "height": 240,
+          "vfov_deg": 17.0,
+          "fisheye": false,
+          "sphere": {
+            "centre": [
+              -0.011735,
+              -0.002766,
+              0.999927
+            ],
+            "angular_radius": 0.101985
+          },
+          "camera_to_lab": [
+            0.62993,
+            -0.610275,
+            -1.474518
+          ],
+          "legacy_roi_coordinates": true,
+          "ignore_polygons": [
+            [
+              [
+                121.0,
+                7.0
+              ],
+              [
+                174.0,
+                5.0
+              ],
+              [
+                179.0,
+                37.0
+              ],
+              [
+                168.0,
+                66.0
+              ],
+              [
+                136.0,
+                74.0
+              ],
+              [
+                123.0,
+                50.0
+              ],
+              [
+                120.0,
+                30.0
+              ]
+            ]
+          ],
+          "max_rotation": 0.35,
+          "max_error": 0.16,
+          "sample_stride": 2,
+          "iterations": 20,
+          "source": "4"
+        },
+        "frames": 5157,
+        "tracked": 5040,
+        "relocalized": 1,
+        "rejected": 115,
+        "initializing": 1,
+        "mean_error": 4316.452339179613,
+        "max_error": 36098.72398553636,
+        "wall_seconds": 31.946149931,
+        "end_to_end_fps": 161.4279032415025,
+        "tracking_fps": 251.8535457162169,
+        "input_duration_ms": 51560.0,
+        "final_position": [
+          9.957666668781727,
+          7.848246637482074
+        ],
+        "final_heading": 2.5828418502616213,
+        "estimator": "accumulated spherical map / pure Rust BOBYQA",
+        "error_metric": "mean squared binary intensity (0..65025)",
+        "warnings": []
+      },
+      "process_wall_seconds": 31.948161647014786
+    },
+    "raw47": {
+      "video_sha256": "967bb9df59f7a427ddc9444107f39136b348fbd71a14fc0acb6be1de6a0641d5",
+      "video_frames": 6075,
+      "source_config_sha256": "ff4a91511b2847e21e84a2ed8441ffd5edce45637fad231d34df892e2d028e3f",
+      "source_config_unchanged": true,
+      "all_frames_without_exclusions": {
+        "frames": 6074,
+        "tracked": 6070,
+        "tracked_fraction": 0.9993414553836022,
+        "statuses": {
+          "tracked": 6070,
+          "rejected": 1,
+          "recovering": 2,
+          "relocalized": 1
+        },
+        "rotation_component_rms_all_decisions": [
+          0.006310853262179258,
+          0.0056564017550881475,
+          0.010838438462801877
+        ],
+        "rotation_component_rms_tracked_only_diagnostic": [
+          0.005937179776070099,
+          0.005632475438954342,
+          0.010838639757236259
+        ]
+      },
+      "occlusion_intervals": [
+        [
+          545,
+          625
+        ],
+        [
+          3298,
+          3369
+        ]
+      ],
+      "annotation_provenance": "Input-only upper-hand-presence annotation: >=100 pixels above grayscale60 in source rows0..109 outside fitted ball; intervals [545,625) and [3298,3369), visually checked on linear source images. Selected independently of tracker outputs. Original unexcluded metrics are retained separately.",
+      "clear": {
+        "frames": 5923,
+        "tracked": 5923,
+        "tracked_fraction": 1.0,
+        "statuses": {
+          "tracked": 5923
+        },
+        "rotation_component_rms_all_decisions": [
+          0.005954730521222259,
+          0.005641813929679029,
+          0.010868240174019063
+        ],
+        "rotation_component_rms_tracked_only_diagnostic": [
+          0.005954730521222259,
+          0.005641813929679029,
+          0.010868240174019063
+        ]
+      },
+      "fast": {
+        "frames": 3413,
+        "tracked": 3413,
+        "tracked_fraction": 1.0,
+        "statuses": {
+          "tracked": 3413
+        },
+        "rotation_component_rms_all_decisions": [
+          0.006702904608818417,
+          0.0060566283560570975,
+          0.011700555923535876
+        ],
+        "rotation_component_rms_tracked_only_diagnostic": [
+          0.006702904608818417,
+          0.0060566283560570975,
+          0.011700555923535876
+        ]
+      },
+      "worst_clear_100_image_component_rms": [
+        0.014483335664432438,
+        0.01040500043114967,
+        0.015951776112749505
+      ],
+      "gates": {
+        "complete_video": true,
+        "fast_tracked_fraction_at_least_99_percent": true,
+        "fast_component_rms_below_020": true,
+        "all_clear_100_image_component_rms_below_020": true
+      },
+      "passes": true,
+      "all_frames_sha256": "7c019a1e2aa5dd8223a415b72e99c7422a1f6ece4f3d4b9e1cd370b14cf75e85",
+      "quality_sha256": "15845642ffd52b4862b89b6dffd0084595930362c1a78209cd2db3b9813c1dd5",
+      "reference_sha256": "228d6a9d40fc2cf05291d08cbc97eb9743e30c8bbbc2dfca4fc8dc12e53845b5",
+      "summary": {
+        "version": "0.3.6",
+        "input": "/home/pkaushi/Videos/hejjetrak/VR1/take-1793134575426458881/epoch-0000-media/raw.avi",
+        "video": {
+          "width": 640,
+          "height": 480,
+          "fps": 100.0,
+          "codec": "avi/raw (pure Rust)",
+          "duration_ms": 60750.0
+        },
+        "effective_config": {
+          "spherical_map": {
+            "resilient": true,
+            "resilient_error_floor": 10000.0,
+            "global_search": false,
+            "max_bad_frames": -1,
+            "global_evaluations": 100000,
+            "channel": null,
+            "quality": 6,
+            "threshold_ratio": 1.25,
+            "threshold_window": 0.25,
+            "max_evaluations": 100,
+            "tolerance": 0.001,
+            "max_error": -1.0
+          },
+          "width": 640,
+          "height": 480,
+          "vfov_deg": 47.0,
+          "fisheye": false,
+          "sphere": {
+            "centre": [
+              -0.017762432071228042,
+              0.10368470106343422,
+              0.9944515969982156
+            ],
+            "angular_radius": 0.30915963475766617
+          },
+          "camera_to_lab": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "legacy_roi_coordinates": true,
+          "ignore_polygons": [],
+          "max_rotation": 0.35,
+          "max_error": 0.16,
+          "sample_stride": 2,
+          "iterations": 20,
+          "source": "/home/pkaushi/Videos/hejjetrak/VR1/take-1793134575426458881/epoch-0000-media/raw.avi"
+        },
+        "frames": 6075,
+        "tracked": 6070,
+        "relocalized": 1,
+        "rejected": 3,
+        "initializing": 1,
+        "mean_error": 9748.530213158037,
+        "max_error": 23033.128320392316,
+        "wall_seconds": 32.173402217,
+        "end_to_end_fps": 188.8205654790854,
+        "tracking_fps": 216.70438269052678,
+        "input_duration_ms": 60740.0,
+        "final_position": [
+          8.415736181158543,
+          8.611048449340304
+        ],
+        "final_heading": 4.809471125565977,
+        "estimator": "accumulated spherical map / pure Rust BOBYQA",
+        "error_metric": "mean squared binary intensity (0..65025)",
+        "warnings": []
+      }
+    },
+    "fast47-complete": {
+      "processed_images": 4579,
+      "statuses": {
+        "initializing": 1,
+        "tracked": 4578
+      },
+      "all_decision_component_rms_rad": [
+        0.00698630673276906,
+        0.007872019925870308,
+        0.01239875740989982
+      ],
+      "extended_intervals": 0,
+      "extended_interval_component_rms_rad": null,
+      "worst_100_interval_component_rms_rad": [
+        0.011958609768602088,
+        0.010625490801252972,
+        0.01791108910793824
+      ],
+      "maximum_source_clock_error_ms": 0.0,
+      "evidence_sha256": "9b13b294acd6763bd9e4b2823b80294352772ca07ea4e647ff3e11ec2b44ddb7",
+      "gates": {
+        "every_clear_image_measured": true,
+        "source_clock_preserved": true,
+        "all_decision_component_rms_below_020": true,
+        "every_100_interval_component_rms_below_020": true,
+        "extended_interval_count": true
+      },
+      "passes": true,
+      "input_sha256": "20e1d79f84d85c9b638acb34bdcdb54813f6fcd603a96075796c0fdd11172c45",
+      "byte_identical_to_retained_before_binding": false
+    },
+    "fast47-gap80": {
+      "processed_images": 4408,
+      "statuses": {
+        "initializing": 1,
+        "tracked": 4407
+      },
+      "all_decision_component_rms_rad": [
+        0.00705405770027338,
+        0.007907991557487271,
+        0.012640379419336305
+      ],
+      "extended_intervals": 57,
+      "extended_interval_component_rms_rad": [
+        0.00991280264688238,
+        0.009019980295027699,
+        0.013256936657065514
+      ],
+      "worst_100_interval_component_rms_rad": [
+        0.011742933402393492,
+        0.01065026062218459,
+        0.017767665374391676
+      ],
+      "maximum_source_clock_error_ms": 0.0,
+      "evidence_sha256": "c0998be10989ca70dd44608a4dc99d4675f8c72eba4aaeedeb2e6e5faf793be0",
+      "gates": {
+        "every_clear_image_measured": true,
+        "source_clock_preserved": true,
+        "all_decision_component_rms_below_020": true,
+        "every_100_interval_component_rms_below_020": true,
+        "extended_interval_count": true
+      },
+      "passes": true,
+      "input_sha256": "20e1d79f84d85c9b638acb34bdcdb54813f6fcd603a96075796c0fdd11172c45",
+      "byte_identical_to_retained_before_binding": false
+    }
+  },
+  "commands": [
+    {
+      "name": "demo120",
+      "command": [
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/fictrac",
+        "demo",
+        "--frames",
+        "120",
+        "--output",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/demo120"
+      ],
+      "wall_seconds": 0.7152540039969608,
+      "child_user_seconds": 0.652602,
+      "child_system_seconds": 0.004009,
+      "exit_code": 0,
+      "cwd": "/home/pkaushi/Documents/ChatGPT/Hejjetrac"
+    },
+    {
+      "name": "sample300",
+      "command": [
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/fictrac",
+        "track",
+        "--config",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/sample-config.txt",
+        "--input",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/sample.mp4",
+        "--output",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/sample300"
+      ],
+      "wall_seconds": 1.9174276329868007,
+      "child_user_seconds": 2.814579,
+      "child_system_seconds": 0.028976000000000002,
+      "exit_code": 0,
+      "cwd": "/home/pkaushi/Documents/ChatGPT/Hejjetrac"
+    },
+    {
+      "name": "sample-compare",
+      "command": [
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/fictrac",
+        "compare",
+        "--reference",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/benchmark/upstream.dat",
+        "--candidate",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/sample300/all-frames.dat",
+        "--report",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/sample-comparison.json"
+      ],
+      "wall_seconds": 0.0035606239980552346,
+      "child_user_seconds": 0.0011580000000002144,
+      "child_system_seconds": 0.0011579999999999993,
+      "exit_code": 0,
+      "cwd": "/home/pkaushi/Documents/ChatGPT/Hejjetrac"
+    },
+    {
+      "name": "vr3",
+      "command": [
+        "/home/pkaushi/miniconda3/bin/python3",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/scripts/benchmark_vr3.py",
+        "--binary",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/fictrac",
+        "--reference-dir",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac-data-20261029/performance/source-fixture",
+        "--candidate-dir",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/vr3",
+        "--output",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/vr3-comparison.json",
+        "--suffix-control-dir",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/vr3-control",
+        "--make-suffix-control",
+        "--upstream-replay-dat",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-regression-20261103-verified/upstream-vr3/baseline-20261103_203855.dat",
+        "--require-pass"
+      ],
+      "wall_seconds": 67.93873685700237,
+      "child_user_seconds": 108.482676,
+      "child_system_seconds": 0.6067719999999999,
+      "exit_code": 0,
+      "cwd": "/home/pkaushi/Documents/ChatGPT/Hejjetrac"
+    },
+    {
+      "name": "raw47",
+      "command": [
+        "/home/pkaushi/miniconda3/bin/python3",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/scripts/benchmark_takes.py",
+        "--binary",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/fictrac",
+        "--original-fictrac",
+        "/home/pkaushi/src/fictrac/bin/fictrac",
+        "--take",
+        "/home/pkaushi/Videos/hejjetrak/VR1/take-1793134575426458881",
+        "--annotations",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/benchmark/takes-20261027.json",
+        "--output",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/raw47",
+        "--require-pass"
+      ],
+      "wall_seconds": 82.52592353799264,
+      "child_user_seconds": 97.753238,
+      "child_system_seconds": 7.772473000000001,
+      "exit_code": 0,
+      "cwd": "/home/pkaushi/Documents/ChatGPT/Hejjetrac"
+    },
+    {
+      "name": "fast47-complete",
+      "command": [
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/examples/replay_evidence",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/recording/epoch-0000-media/raw.avi",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/rim-check/config.txt",
+        "4579",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/fast47-complete.jsonl",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/recording/epoch-0000-all-frames.dat"
+      ],
+      "wall_seconds": 31.129018109000754,
+      "child_user_seconds": 30.94149200000001,
+      "child_system_seconds": 0.1469649999999998,
+      "exit_code": 0,
+      "cwd": "/home/pkaushi/Documents/ChatGPT/Hejjetrac"
+    },
+    {
+      "name": "fast47-gap80",
+      "command": [
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/examples/replay_evidence",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/recording/epoch-0000-media/raw.avi",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/rim-check/config.txt",
+        "4579",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-workspace-validated-20261105/fast47-gap80.jsonl",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/recording/epoch-0000-all-frames.dat",
+        "80"
+      ],
+      "wall_seconds": 29.696803516009822,
+      "child_user_seconds": 29.584284000000025,
+      "child_system_seconds": 0.08999099999999949,
+      "exit_code": 0,
+      "cwd": "/home/pkaushi/Documents/ChatGPT/Hejjetrac"
+    }
+  ],
+  "source_commit": "3ce8850a12c7424ebda3f057c8b425b9c6014ffe",
+  "source_dirty": [
+    " M .gitignore",
+    " M Cargo.lock",
+    " M README.md",
+    " M VR1.txt",
+    " M VR2.txt",
+    " M VR3.txt",
+    " M VR4.txt",
+    " M apps/fictrac-desktop/Cargo.toml",
+    " M apps/fictrac-desktop/src/control.rs",
+    " M apps/fictrac-desktop/src/main.rs",
+    " M apps/fictrac-desktop/src/runtime.rs",
+    " M apps/fictrac-desktop/src/session.rs",
+    " M apps/fictrac-desktop/src/startup.rs",
+    " M apps/fictrac-desktop/src/ui.rs",
+    " M book/src/SUMMARY.md",
+    " M book/src/install.md",
+    " M book/src/rigs.md",
+    " M crates/fictrac-control/src/lib.rs",
+    " M crates/fictrac-control/src/schema.rs",
+    " M crates/fictrac-core/src/resilience.rs",
+    " M crates/fictrac-core/src/spherical.rs",
+    " M crates/fictrac-core/src/tracker.rs",
+    " M crates/fictrac-core/tests/recovery.rs",
+    " M docs/architecture.md",
+    " M docs/atlas-learning.md",
+    " M docs/output.md",
+    " M docs/recovery.md",
+    " M docs/ui-design.md",
+    " M scripts/build_site.py",
+    " M scripts/test_daily_ui_visual.py",
+    " M scripts/test_native_ui_interaction.py",
+    "?? apps/fictrac-desktop/src/atlas_cache.rs",
+    "?? apps/fictrac-desktop/src/state.rs",
+    "?? apps/fictrac-desktop/src/tiling.rs",
+    "?? book/src/workspaces.md",
+    "?? docs/recorded-clock.md",
+    "?? scripts/analyze_capture_replay.py",
+    "?? scripts/test_live_atlas_cache.py",
+    "?? scripts/test_sixteen_workspace.py"
+  ],
+  "core_source_sha256": {
+    "crates/fictrac-core/src/calibration.rs": "6c81097ec61c9b620b3918eb4492f541a6f0b531837260e473b97550f9350e82",
+    "crates/fictrac-core/src/config.rs": "751a6ab8da1e8f9800a2fec6f0da88691f701bb18f1394243c842e4f2ae3adbc",
+    "crates/fictrac-core/src/diagnostics.rs": "d51a0104d6c301ae7f071cdf16da7944289d7391caa8ffdde1ea673c064e7edb",
+    "crates/fictrac-core/src/frame.rs": "a4ca945eb614424f564bbc24e410f27b0116fb24ce487f919c88437b722abc02",
+    "crates/fictrac-core/src/geometry.rs": "d0a67a1d3e3e0253d0d8b8298bfd06caad47a4000ec1511a63d40126d803c36d",
+    "crates/fictrac-core/src/lib.rs": "81b6b8884c6dce9b55469145149f3945a1fae6ed487103760cd894f4d4146580",
+    "crates/fictrac-core/src/resilience.rs": "4ef1dc3d2bb7ee5b20ae5a1187a9a47a7dae8e3672cf4fcc8b93acc52996185b",
+    "crates/fictrac-core/src/spherical.rs": "adf9d466bf4b0c18d69a04ce0408940fa2b09d3803b75963da5d759bc2fba9dd",
+    "crates/fictrac-core/src/synthetic.rs": "3cc9b84434d5360bb0dc06c74d5f24b0c488f326f3cd1b25867aa19dc8b0da05",
+    "crates/fictrac-core/src/tracker.rs": "77f95ae7315fa140053dc9db87392c14954ce1fc9dae44809bd8b9658147d4b1"
+  },
+  "rustc_verbose": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.1\nLLVM version: 23.1.1",
+  "vr3_same_avi_reference": {
+    "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/tracking-regression-20261103-verified/upstream-vr3/baseline-20261103_203855.dat",
+    "sha256": "4a73b92a772b928d63a3e5924ee4c1ad971c6eb412cb137d6ff4402c85714b83",
+    "scope": "Original FicTrac replay of the exact compressed AVI, separate from preserved live source rows; not physical ground truth."
+  }
+}

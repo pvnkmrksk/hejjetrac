@@ -46,6 +46,9 @@ const COMMANDS: &[&str] = &[
     "camera_format",
     "record_stop",
     "map_load",
+    "map_refresh",
+    "arrange_grid",
+    "workspace_save",
     "map_save",
     "snapshot",
 ];
@@ -195,6 +198,28 @@ fn read_request(reader: &mut impl BufRead) -> Result<Option<Request>> {
 fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
     fictrac_control::validate_request_arguments(&r.command, &r.args)?;
     match r.command.as_str() {
+        "arrange_grid" => {
+            app.args.grid = r
+                .args
+                .get("columns")
+                .and_then(Value::as_u64)
+                .map(|c| crate::Pair(c as f32, 1.0));
+            app.tile_array_requested = true;
+            return Ok(json!({"queued":true}));
+        }
+        "workspace_save" => {
+            let previous = app.workspace.restore_on_launch;
+            if let Some(value) = r.args.get("restore_on_launch").and_then(Value::as_bool) {
+                app.workspace.restore_on_launch = value;
+            }
+            if let Err(error) = app.save_workspace() {
+                app.workspace.restore_on_launch = previous;
+                return Err(error);
+            }
+            return Ok(
+                json!({"path":crate::state::workspace_path()?,"rigs":app.workspace.rigs,"restore_on_launch":app.workspace.restore_on_launch}),
+            );
+        }
         "camera_list" => {
             let cameras = fictrac_camera::list_cameras().map_err(display)?;
             let result = json!(cameras.iter().map(|camera| json!({"id":camera.id,"name":camera.name,"hardware_id":camera.hardware_id,"port_id":camera.port_id,
@@ -325,8 +350,20 @@ fn status(s: &mut Session) -> Value {
     } else {
         "add"
     });
+    view["reuse_atlas"] = json!(s.reuse_atlas);
+    view["rig_manager"] = json!(s.show_rigs);
+    view["config_text_editing"] = json!(s.config_text_editing);
+    view["settings_section"] = json!(match s.settings_section {
+        crate::session::SettingsSection::Source => "source",
+        crate::session::SettingsSection::Calibration => "calibration",
+        crate::session::SettingsSection::Display => "display",
+        crate::session::SettingsSection::Atlas => "atlas",
+        crate::session::SettingsSection::Recording => "recording",
+        crate::session::SettingsSection::Outputs => "outputs",
+        crate::session::SettingsSection::Advanced => "advanced",
+    });
     view["calibration"] = json!(s.show_settings && s.show_calibration);
-    let mut state = json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"window_rect":s.window_rect,"window_inner_size":s.window_inner_size,"window_title":s.window_title(),"realtime":s.realtime,
+    let mut state = json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"tile_rect":s.tile_rect,"window_rect":s.window_rect,"window_inner_size":s.window_inner_size,"window_title":s.window_title(),"realtime":s.realtime,
         "frames":s.snapshot.frames,"revision":s.snapshot.revision,"requested_revision":s.revision,
         "paused":s.snapshot.paused,"ended":s.snapshot.ended,"recording":s.snapshot.recording,
         "last_row":s.snapshot.row,"notice":s.snapshot.notice,"error":s.error,"status":s.status,
@@ -336,6 +373,15 @@ fn status(s: &mut Session) -> Value {
         "record_options":s.snapshot.record_options,"camera":s.snapshot.camera,"outputs":s.snapshot.outputs,
         "processing_ms":s.snapshot.processing_ms,"tracking_ms":s.snapshot.tracking_ms,"tracking_samples":s.snapshot.tracking_samples,"actual_fps":s.snapshot.actual_fps,"source_fps":s.snapshot.source_fps,"headroom_percent":s.snapshot.headroom_percent,
         "view":view,"source_label":s.snapshot.source_label,"resources":s.snapshot.resources});
+    state["tile_open_rect"] = json!(s.tile_open_rect);
+    state["host_window_title"] = json!(if s.native_window {
+        s.window_title()
+    } else {
+        "HejjéTrac · Rig grid".into()
+    });
+    state["atlas_cache"] = json!({"loaded":s.snapshot.atlas_cache_loaded,"saved_frame":s.snapshot.atlas_cache_saved_frame,"status":s.snapshot.atlas_cache_status,"path":s.atlas_cache_path()});
+    state["preview_canvas_rect"] = json!(s.preview_canvas_rect);
+    state["preview_image_rect"] = json!(s.preview_image_rect);
     state["camera_devices"] = json!(
         s.cameras
             .iter()
@@ -581,6 +627,7 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             }
         }
         "record_stop" => send(s, Command::StopRecord),
+        "map_refresh" => send(s, Command::RefreshAtlas),
         "map_load" => {
             let path = PathBuf::from(string(a, "path")?);
             if !path.is_file() {
@@ -588,7 +635,17 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             }
             // Decoding and quality validation run on the worker; queued is not success.
             s.texture_frame = u64::MAX;
-            send(s, Command::LoadMap(path))
+            if let Some(value) = a.get("pose_camera") {
+                send(
+                    s,
+                    Command::LoadMapAtPose(
+                        path,
+                        serde_json::from_value(value.clone()).map_err(display)?,
+                    ),
+                )
+            } else {
+                send(s, Command::LoadMap(path))
+            }
         }
         "map_save" => {
             let path = PathBuf::from(string(a, "path")?);
@@ -650,6 +707,29 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             }
             if let Some(action) = a.get("calibration_action").and_then(Value::as_str) {
                 s.validate_calibration_action(proposed_tool, action)?;
+            }
+            if a.get("reuse_atlas").and_then(Value::as_bool) == Some(true)
+                && s.atlas_cache_path().is_none()
+            {
+                return Err("Save this rig's configuration before enabling atlas reuse".into());
+            }
+            if let Some(value) = a.get("reuse_atlas").and_then(Value::as_bool) {
+                s.set_reuse_atlas(value)?;
+            }
+            if let Some(value) = a.get("rig_manager").and_then(Value::as_bool) {
+                s.show_rigs = value;
+            }
+            if let Some(value) = a.get("settings_section").and_then(Value::as_str) {
+                use crate::session::SettingsSection;
+                s.settings_section = match value {
+                    "calibration" => SettingsSection::Calibration,
+                    "display" => SettingsSection::Display,
+                    "atlas" => SettingsSection::Atlas,
+                    "recording" => SettingsSection::Recording,
+                    "outputs" => SettingsSection::Outputs,
+                    "advanced" => SettingsSection::Advanced,
+                    _ => SettingsSection::Source,
+                };
             }
             if let Some(fps) = display_fps {
                 s.set_display_fps(fps)?;
@@ -1045,11 +1125,16 @@ mod tests {
             control: None,
             tile_columns: 2,
             window_origin: crate::Pair(12., 36.),
+            dashboard: false,
+            dashboard_focus: None,
+            dashboard_columns: None,
             window_size: crate::Pair(520., 480.),
             root_hidden: false,
             startup_notice: String::new(),
             startup_frames: 0,
             tile_array_requested: false,
+            workspace: crate::state::Workspace::default(),
+            tile_positions: std::collections::BTreeMap::new(),
         };
         app.start_saved_array(0);
         assert_eq!(app.sessions.len(), 4);
@@ -1245,11 +1330,16 @@ mod tests {
             control: None,
             tile_columns: 2,
             window_origin: crate::Pair(12., 36.),
+            dashboard: false,
+            dashboard_focus: None,
+            dashboard_columns: None,
             window_size: crate::Pair(520., 480.),
             root_hidden: false,
             startup_notice: String::new(),
             startup_frames: 0,
             tile_array_requested: false,
+            workspace: crate::state::Workspace::default(),
+            tile_positions: std::collections::BTreeMap::new(),
         };
         let request =
             serde_json::from_value(json!({"id":"root-close","command":"close","session":1}))?;

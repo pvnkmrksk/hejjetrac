@@ -37,3 +37,4 @@ rust_camera_width  : 320
 rust_camera_height : 240
 zmq_port           : 9874
 rust_camera_id     : usb:0c45:6366:M04:video:0
+zmq_output_mode      : legacy_matrex_vr

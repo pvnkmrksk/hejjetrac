@@ -62,6 +62,8 @@ def capture_window(directory, label, title):
     destination = directory / (label + '.png')
     destination.write_bytes(png)
     return {'file': str(destination), 'title': title, 'window_id': match[1],
+            'client_x': int(re.search(r'Absolute upper-left X:\s+(-?\d+)', found.stdout)[1]),
+            'client_y': int(re.search(r'Absolute upper-left Y:\s+(-?\d+)', found.stdout)[1]),
             'width': width, 'height': height, 'sha256': hashlib.sha256(png).hexdigest(),
             'capture': 'actual X11 native window pixels'}
 

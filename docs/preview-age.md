@@ -1,5 +1,26 @@
 # Preview age, tracking rate and display cadence
 
+## Additional four-camera cache check — 2026-11-05
+
+The final 0.4.0 build's separate 35-second cold and 15-second cached-start
+observations contain 972 sampled rig states. Pooled relative preview age is
+**27.06 ms median**, **46.34 ms p95**, and **112.90 ms maximum**. Twelve samples
+exceed 50 ms. The maximum is M02 at 29.46 seconds into the cold observation,
+**during steady state**, not startup. Its preceding/following samples are
+23.42 / 33.18 ms, about 0.23 / 0.21 seconds away. This is an isolated measured
+tail with a prompt return to ordinary age, not evidence of a growing seconds-long
+queue. The sampling does not identify the cause of the tail or establish a hard
+50 ms latency ceiling. Actual four-camera throughput remains 100.72–101.17 FPS.
+
+These observations start only after all rigs track, excluding earlier startup.
+A cached process confirms all four rigs within 1.98 seconds of process launch;
+that includes process, graphics, camera opening and first confirmation. Relative
+worker image age does not measure physical exposure-to-photon latency, and
+background tracking FPS does not establish UI paint responsiveness. The separate
+native pointer tests measure actual painting.
+[Counts, quantile definition, per-phase maxima and cache refresh evidence](benchmarks/live-cache-20261105.json).
+
+
 The current atlas-learning build's **47° four-camera run on November 4** measures
 **26.50 ms median**, **45.56 ms p95**, **105.74 ms maximum** over 2,824 steady-state
 samples. Nine samples exceed 50 ms; one exceeds 100 ms. The maximum is M01,

@@ -10,6 +10,13 @@ The engine and native frontends are separate. [PhotoCraft's architecture](https:
 
 `fictrac` is the CLI frontend. `fictrac-desktop` uses egui/eframe and wgpu (Metal, DX12, Vulkan/GLES) in native windows, with native file dialogs. Each session owns its config document, undo history and worker. Worker commands are bounded, snapshots expose only the latest image/state, and capture/decoding/fitting do not run on the render thread. Invalid numerical settings retain a responsive video preview with an error. Configuration changes reset the tracking epoch; recordings start new data/quality/config files so calibrations do not silently mix.
 
+Arrays larger than four sessions render as tiles in a single native GPU surface.
+Their settings and manager are embedded egui windows. Numerical workers, sources,
+clocks and outputs remain independent; expanding one tile keeps polling all
+workers. Smaller arrays retain native tracking windows. This bounds presentation
+resources and avoids the reproduced hybrid Intel-Vulkan / XWayland-Nouveau
+multi-surface driver abort without replacing hardware graphics with CPU rendering.
+
 On Linux X11/XWayland, compatible hardware Vulkan is preferred for nonblocking
 multiwindow presentation; explicit overrides remain authoritative and hardware
 adapters precede software adapters. The older GLES preference could block every
@@ -20,6 +27,17 @@ per-window UI timing separately from numerical worker/publication FPS.
 [Native minimized-window regression](ui-rendering.md).
 
 ## Legacy spherical-map estimation
+
+Desktop view choices are stored in small per-rig sidecars; the startup workspace
+lists saved configuration paths. Neither rewrites legacy calibration documents.
+An optional per-rig atlas checkpoint includes a source identity, exact numerical
+configuration signature and last accepted camera pose. Checkpoints run on the
+tracking worker every thirty seconds and at clean shutdown. Startup validates
+the bounded cache before import. Core `load_sphere_template_at_pose` treats the
+saved pose only as a recovery seed: fresh confirmation must precede measured
+motion. `clear_sphere_template` discards both imported and accumulated maps.
+Native and headless `map_load`/`map_refresh` share these core operations. Core
+retains no file, UI or codec dependency.
 
 Recorded-video frontends use a one-slot bounded decode producer, overlapping
 codec work and tracking without skipping frames. The synchronous adapter
@@ -54,6 +72,13 @@ use a second bounded optimizer against the previous accepted observation,
 starting from the better temporal seed and retaining the original prediction
 window. Each optimizer is capped by `opt_max_evals`; fallback comparison adds
 five complete score evaluations and two evidence passes at most.
+The previous-image retry now optimizes the sum of known-support-weighted
+bilinear proposals from the persistent atlas and the previous accepted image.
+Agreement with both references prevents an isolated one-image interpolation
+from steering the atlas during a partly unseen first sweep. Proposal and seed
+still use the complete nearest-cell temporal binary score for selection;
+spatial evidence, persistent binary error and motion gates remain unchanged.
+Each candidate evaluates both maps within the same bounded optimizer count.
 Resilient guarded seeding requires mixed local evidence for new cells in
 low-support views and enough supported surface before clean initialization.
 Sufficiently supported accepted images can teach marking interiors normally. One bounded previous-accepted-image
@@ -85,6 +110,12 @@ increments over four images; consistent acceleration and direction checks
 exclude isolated jumps. The ordinary longer-history route remains available.
 Known-view/coarse recovery probes are eligible every six missing-frame
 positions, sharing the same per-call evaluation cap and confirmation rules.
+Normal capture-clock variation can reverse two raw angle/time rates despite
+successively increasing visible angular steps. Within the existing 1.8 interval
+ratio, two strictly increasing measured steps may reach the same four-image
+acceleration fit. Actual timestamps, fitted increasing speeds, residual limits
+and direction checks still apply; extended gaps and isolated jumps cannot use
+that exception.
 [Atlas-learning evidence](atlas-learning.md).
 Mature partial atlas cells acquire up to 16 times the
 inertia against contradictory accepted votes, while new surface and agreeing

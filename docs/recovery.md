@@ -140,11 +140,23 @@ fitted at the three capture-interval midpoints; residuals in each velocity
 component must be within `0.006 / interval_ms + 0.35 × median_speed`. Fitted
 speeds must rise and adjacent fitted direction cosines must be at least 0.75.
 The measured increment is retained, without smoothing or rewriting earlier rows.
+Reported 8/12 ms capture cadence can reverse two raw rates even when image
+steps grow. If all three intervals are within the existing factor of 1.8, two
+strictly increasing measured angular steps may also enter this same fit. The
+fitted speeds must still rise; residual and direction limits do not change.
+Steady motion alone does not bypass the established motion gate.
 This can identify the start
 of a real turn without including earlier stationary jitter in the ramp.
 It cannot authorize an isolated jump, unverified motion, a direction change or
 any motion across rejected images. The complete persistent score, texture and
 explicit user cap still apply.
+
+For local precision, the previous-image retry minimizes the sum of bilinear
+known-support proposals from the persistent atlas and previous accepted image.
+It retains the configured optimizer count/window. Final selection still checks
+the complete nearest-cell temporal binary score, spatial evidence and persistent
+binary error. The published error is the persistent score, never this proposal
+sum. Both references help constrain the pose during a first surface sweep.
 
 While recovering, bounded known-view/coarse searches are now eligible every six
 missing-frame positions instead of every thirty. A search still spends at most

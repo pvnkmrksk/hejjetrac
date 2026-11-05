@@ -55,6 +55,9 @@ pub struct ViewFrame {
 }
 #[derive(Clone, Default)]
 pub struct Snapshot {
+    pub atlas_cache_status: String,
+    pub atlas_cache_loaded: bool,
+    pub atlas_cache_saved_frame: Option<u64>,
     pub actual_camera_id: Option<u32>,
     /// Actual opened video path or native camera identifier; never editor text.
     pub source_label: String,
@@ -281,7 +284,10 @@ pub enum Command {
     Step,
     Advance(usize),
     Reset,
+    RefreshAtlas,
+    AtlasCache(Option<PathBuf>),
     LoadMap(PathBuf),
+    LoadMapAtPose(PathBuf, [f64; 3]),
     SaveMap(PathBuf),
     Record(PathBuf),
     RecordOptions(
@@ -301,16 +307,30 @@ pub struct Worker {
     stop: Arc<AtomicBool>,
     handle: Option<thread::JoinHandle<()>>,
 }
+struct WorkerFiles {
+    config: Option<PathBuf>,
+    atlas: Option<PathBuf>,
+}
 impl Worker {
     #[cfg(test)]
     pub fn start(source: SourceSpec, doc: ConfigDocument, realtime: bool) -> Result<Self> {
         Self::start_at(source, doc, realtime, None)
     }
+    #[cfg(test)]
     pub fn start_at(
         source: SourceSpec,
         doc: ConfigDocument,
         realtime: bool,
         config_path: Option<PathBuf>,
+    ) -> Result<Self> {
+        Self::start_with_cache(source, doc, realtime, config_path, None)
+    }
+    pub fn start_with_cache(
+        source: SourceSpec,
+        doc: ConfigDocument,
+        realtime: bool,
+        config_path: Option<PathBuf>,
+        cache_path: Option<PathBuf>,
     ) -> Result<Self> {
         let (tx, rx) = mpsc::sync_channel(16);
         let snapshot = Arc::new(Mutex::new(Snapshot {
@@ -331,7 +351,10 @@ impl Worker {
                         rx,
                         &shared,
                         &stopped,
-                        config_path.as_deref(),
+                        WorkerFiles {
+                            config: config_path,
+                            atlas: cache_path,
+                        },
                     )
                 }));
                 let error = match result {
@@ -472,6 +495,29 @@ struct Engine {
     tracker: Tracker,
     diagnostics: Diagnostics,
 }
+fn checkpoint_atlas(
+    cache: Option<&Path>,
+    engine: Option<&Engine>,
+    row: Option<&TrackRow>,
+    doc: &ConfigDocument,
+    snapshot: &mut Snapshot,
+) {
+    let (Some(cache), Some(engine), Some(row)) = (cache, engine, row) else {
+        return;
+    };
+    let result = crate::atlas_cache::identity(doc, &snapshot.source_label).and_then(|identity| {
+        crate::atlas_cache::save(cache, &engine.tracker, &engine.config, &identity, row)
+    });
+    match result {
+        Ok(true) => {
+            snapshot.atlas_cache_saved_frame = Some(row.frame);
+            snapshot.atlas_cache_status =
+                format!("Latest accepted atlas saved at source frame {}", row.frame);
+        }
+        Ok(false) => {}
+        Err(error) => snapshot.atlas_cache_status = format!("Atlas cache was not saved: {error}"),
+    }
+}
 fn camera_capture_instant(
     origin: &mut Option<(Instant, f64)>,
     source_time: f64,
@@ -565,8 +611,12 @@ fn run(
     rx: mpsc::Receiver<Command>,
     shared: &Arc<Mutex<Snapshot>>,
     stop: &AtomicBool,
-    config_path: Option<&std::path::Path>,
+    files: WorkerFiles,
 ) -> Result<()> {
+    let config_path = files.config.as_deref();
+    let mut cache_path = files.atlas;
+    let mut last_cache_save = Instant::now() - Duration::from_secs(30);
+    let mut last_cache_row: Option<TrackRow> = None;
     let source_label = match &source {
         SourceSpec::Video(path) => path
             .canonicalize()
@@ -773,11 +823,29 @@ fn run(
                         wall_origin = Instant::now();
                         source_origin = None;
                     }
-                    Command::Reset => {
+                    command @ (Command::Reset | Command::RefreshAtlas) => {
+                        let refresh = matches!(command, Command::RefreshAtlas);
                         snapshot.tracking_ms = 0.0;
                         snapshot.tracking_samples = 0;
                         if let Some(engine) = &mut engine_state {
-                            engine.tracker.reset_tracking();
+                            if refresh {
+                                engine
+                                    .tracker
+                                    .clear_sphere_template()
+                                    .map_err(|e| e.to_string())?;
+                            } else {
+                                engine.tracker.reset_tracking();
+                            }
+                        }
+                        last_cache_row = None;
+                        if refresh && let Some(cache) = &cache_path {
+                            snapshot.atlas_cache_status = match crate::atlas_cache::remove(cache) {
+                                Ok(()) => "Learning a replacement atlas; fresh accepted views will update the cache".into(),
+                                Err(error) => error,
+                            };
+                            snapshot.atlas_cache_loaded = false;
+                            snapshot.atlas_cache_saved_frame = None;
+                            last_cache_save = Instant::now() - Duration::from_secs(30);
                         }
                         path.clear();
                         contact_trace.clear();
@@ -786,11 +854,35 @@ fn run(
                         snapshot.contact_trace = Arc::new(vec![]);
                         snapshot.pose_history = Arc::new(vec![]);
                         snapshot.row = None;
-                        snapshot.notice =
+                        snapshot.notice = if refresh {
+                            "Atlas cleared; learning fresh views. Source time and measured integrated displacement retained.".into()
+                        } else {
                             "Pose/path reset; source counter and integrated displacement retained"
-                                .into();
+                                .into()
+                        };
                     }
-                    Command::LoadMap(filename) => {
+                    Command::AtlasCache(path) => {
+                        cache_path = path;
+                        last_cache_save = Instant::now() - Duration::from_secs(30);
+                        snapshot.atlas_cache_status = if cache_path.is_some() {
+                            "Reuse enabled: saves accepted atlas checkpoints; loads on next source restart".into()
+                        } else {
+                            "Atlas reuse is off; existing saved cache is retained".into()
+                        };
+                        checkpoint_atlas(
+                            cache_path.as_deref(),
+                            engine_state.as_ref(),
+                            last_cache_row.as_ref(),
+                            &doc,
+                            &mut snapshot,
+                        );
+                    }
+                    command @ (Command::LoadMap(_) | Command::LoadMapAtPose(_, _)) => {
+                        let (filename, pose) = match command {
+                            Command::LoadMap(path) => (path, None),
+                            Command::LoadMapAtPose(path, pose) => (path, Some(pose)),
+                            _ => continue,
+                        };
                         let result = fictrac_io::load_sphere_map(&filename)
                             .map_err(|e| e.to_string())
                             .and_then(|map| {
@@ -798,14 +890,17 @@ fn run(
                                     .as_mut()
                                     .ok_or("No calibrated tracker".into())
                                     .and_then(|engine| {
-                                        engine
-                                            .tracker
-                                            .load_sphere_template(map)
-                                            .map_err(|e| e.to_string())
+                                        if let Some(pose) = pose {
+                                            engine.tracker.load_sphere_template_at_pose(map, pose)
+                                        } else {
+                                            engine.tracker.load_sphere_template(map)
+                                        }
+                                        .map_err(|e| e.to_string())
                                     })
                             });
                         snapshot.notice = match result {
                             Ok(()) => {
+                                last_cache_row = None;
                                 path.clear();
                                 contact_trace.clear();
                                 pose_history.clear();
@@ -960,6 +1055,7 @@ fn run(
                 };
                 match engine(&doc, frame.width(), frame.height(), config_path) {
                     Ok((e, _)) => {
+                        last_cache_row = None;
                         engine_state = Some(e);
                         snapshot.notice = "Configuration applied; tracking epoch reset".into();
                     }
@@ -1206,7 +1302,28 @@ fn run(
                 snapshot.tracking_ms = 0.0;
                 snapshot.tracking_samples = 0;
                 match engine(&doc, frame.width(), frame.height(), config_path) {
-                    Ok((e, _)) => {
+                    Ok((mut e, _)) => {
+                        last_cache_row = None;
+                        if let Some(cache) = &cache_path {
+                            let loaded = crate::atlas_cache::identity(&doc, &snapshot.source_label)
+                                .and_then(|identity| {
+                                    crate::atlas_cache::load(
+                                        cache,
+                                        &mut e.tracker,
+                                        &e.config,
+                                        &identity,
+                                    )
+                                });
+                            snapshot.atlas_cache_status = match loaded {
+                                Ok(true) => {
+                                    snapshot.atlas_cache_loaded = true;
+                                    "Saved atlas loaded; confirming current pose from fresh images"
+                                        .into()
+                                }
+                                Ok(false) => "No saved atlas yet; learning fresh views".into(),
+                                Err(error) => error,
+                            };
+                        }
                         snapshot.notice = if e.config.spherical_map.is_some() {
                             "Tracking · FicTrac spherical map / pure Rust BOBYQA".into()
                         } else {
@@ -1246,6 +1363,25 @@ fn run(
             snapshot.processing_fps = 1.0 / tick.elapsed().as_secs_f64().max(1e-9);
             snapshot.frames += 1;
             snapshot.row = row.clone();
+            if cache_path.is_some()
+                && let Some(row) = &row
+            {
+                if row.accepted && row.status == "tracked" {
+                    last_cache_row = Some(row.clone());
+                } else if row.accepted {
+                    last_cache_row = None;
+                }
+            }
+            if cache_path.is_some() && last_cache_save.elapsed() >= Duration::from_secs(30) {
+                checkpoint_atlas(
+                    cache_path.as_deref(),
+                    engine_state.as_ref(),
+                    last_cache_row.as_ref(),
+                    &doc,
+                    &mut snapshot,
+                );
+                last_cache_save = Instant::now();
+            }
             let mut output_error = None;
             if let Some(row) = &row {
                 if row.accepted
@@ -1418,6 +1554,13 @@ fn run(
     // Acquisition has stopped before any graceful shutdown joins. This path
     // also runs after a source/output error, preserving all owned recordings.
     drop(input);
+    checkpoint_atlas(
+        cache_path.as_deref(),
+        engine_state.as_ref(),
+        last_cache_row.as_ref(),
+        &doc,
+        &mut snapshot,
+    );
     let finalizer_result = if let Some(finalizer) = &mut finalizer {
         let result = finalizer.drain();
         finalizer.refresh(&mut snapshot);
@@ -3036,7 +3179,10 @@ mod tests {
             rx,
             &shared,
             &AtomicBool::new(false),
-            None,
+            WorkerFiles {
+                config: None,
+                atlas: None,
+            },
         )
         .err()
         .ok_or("source read failure was swallowed")?;

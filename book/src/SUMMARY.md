@@ -4,7 +4,8 @@
 
 # Getting started
 
-- [v0.3.6 changes and captures](release-v0.3.6.md)
+- [v0.4.0 changes and captures](release-v0.4.0.md)
+- [Earlier v0.3.6 local validation](release-v0.3.6.md)
 - [Download and install](install.md)
 - [Experimental setup](hardware.md)
 - [Your first session](quick-start.md)
@@ -26,6 +27,7 @@
 - [Video and offline tracking](video.md)
 - [Recording and files](recording.md)
 - [Several rigs](rigs.md)
+- [Saved workspaces and atlas startup](workspaces.md)
 - [Legacy MATREX VR output](matrex-vr.md)
 - [Occlusion recovery](recovery.md)
 - [Atlas learning and refinement](atlas-learning.md)
@@ -39,6 +41,7 @@
 - [Preview age and display cadence](preview-age.md)
 - [Recording throughput and limits](recording-performance.md)
 - [VR3 tracking validation](vr3-validation.md)
+- [High-speed recorded-clock validation](recorded-clock.md)
 - [VR3 motion structure](vr3-motion-structure.md)
 - [Original 47° video validation](raw-video-validation.md)
 - [Partial-atlas masking validation](masking-validation.md)

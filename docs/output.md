@@ -1,5 +1,21 @@
 # Output contract
 
+Optional atlas-cache startup uses the existing `recovering`/`relocalized`
+quality states. A stored pose is a search seed; unconfirmed and relocalization
+rows retain zero relative motion. Cached appearance never reconstructs movement
+while the application was closed. `map_refresh` explicitly clears imported and
+accumulated appearance, resets pose/path and retains the source counter, clock
+and measured integrated displacement. Its fresh initialization has zero relative
+motion. `reset` retains its existing configured reset behavior. The error metric
+and all 25 numeric columns remain unchanged.
+
+The uncertain-fit retry can optimize a joint interpolated proposal from the
+persistent atlas and previous accepted image. That internal sum is not the
+reported error: final acceptance and output retain the complete persistent
+nearest-cell binary MSE and the existing spatial/motion checks. Acquisition
+timestamps remain unchanged when validating acceleration against normal
+capture-cadence variation. [Recorded-clock reproduction](recorded-clock.md).
+
 Default resilient local search evaluates **all valid ROI sites** throughout
 `opt_max_evals`, including blurred/high-speed candidate fitting. With
 `rust_resilient : n`, accelerated legacy candidate generation samples a

@@ -1,0 +1,118 @@
+{
+  "passed": true,
+  "binary_sha256": "7d4a50d021b5d9c1fa9452ff310d83a25bb1a2f8576cfc4ed38c0fe1140ad3df",
+  "scope": "Verify opt-in atlas reuse/refresh on four physical serial-bound cameras.\n\nDevelopment harness; copies configurations and disables experiment outputs.\nAirflow jitter supplies observed motion, not physical motion ground truth.\n",
+  "phases": {
+    "cold": {
+      "seconds": 35.187768917006906,
+      "processed_fps": [
+        100.91574741141758,
+        100.71681465110221,
+        100.83049051413957,
+        100.88732844565826
+      ],
+      "sampled_statuses": {
+        "tracked": 680
+      },
+      "initial_resources": {
+        "rss_kib": 125404,
+        "threads": 20,
+        "open_fds": 54
+      },
+      "final_resources": {
+        "rss_kib": 128592,
+        "threads": 20,
+        "open_fds": 52
+      },
+      "samples": 170
+    },
+    "warm": {
+      "seconds": 15.093058018013835,
+      "processed_fps": [
+        101.17234016973221,
+        100.9073176676504,
+        101.03982891869131,
+        100.97357329317086
+      ],
+      "sampled_statuses": {
+        "tracked": 292
+      },
+      "initial_resources": {
+        "rss_kib": 126164,
+        "threads": 20,
+        "open_fds": 52
+      },
+      "final_resources": {
+        "rss_kib": 128192,
+        "threads": 20,
+        "open_fds": 52
+      },
+      "samples": 73
+    }
+  },
+  "warm_all_confirmed_after_process_start_seconds": 1.9776022190053482,
+  "refresh": {
+    "previous_process_checkpoint_frame": 3616,
+    "refresh_after_current_run_source_frame": 1707,
+    "replacement_source_frame": 1743,
+    "old_cache_removed": true,
+    "new_checkpoint_saved": true,
+    "replacement_known_cells": 4216
+  },
+  "original_configs_unchanged": true,
+  "copied_configs_unchanged": true,
+  "preview_age_summary": {
+    "quantile": "Linear interpolation at (n-1)*p; pooled sampled rig states",
+    "overall": {
+      "samples": 972,
+      "median_ms": 27.05723,
+      "p95_ms": 46.33622494999999,
+      "max": {
+        "phase": "cold",
+        "elapsed_seconds": 29.46432060500956,
+        "rig": 2,
+        "ms": 112.898343,
+        "source_frame": 3055,
+        "status": "tracked"
+      },
+      "over_50_ms": 12
+    },
+    "phases": {
+      "cold": {
+        "samples": 680,
+        "median_ms": 27.853856,
+        "p95_ms": 46.5862555,
+        "max": {
+          "phase": "cold",
+          "elapsed_seconds": 29.46432060500956,
+          "rig": 2,
+          "ms": 112.898343,
+          "source_frame": 3055,
+          "status": "tracked"
+        },
+        "over_50_ms": 10
+      },
+      "warm": {
+        "samples": 292,
+        "median_ms": 25.980242,
+        "p95_ms": 45.6751198,
+        "max": {
+          "phase": "warm",
+          "elapsed_seconds": 11.819403911998961,
+          "rig": 1,
+          "ms": 53.632962,
+          "source_frame": 1216,
+          "status": "tracked"
+        },
+        "over_50_ms": 2
+      }
+    },
+    "scope": "Relative image age from latest worker publication; excludes unsampled startup before tracked observation; not absolute sensor-to-screen latency"
+  },
+  "camera_serials": [
+    "M01",
+    "M02",
+    "M03",
+    "M04"
+  ]
+}

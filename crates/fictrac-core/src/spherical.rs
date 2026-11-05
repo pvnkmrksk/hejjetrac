@@ -212,6 +212,29 @@ impl MapTracker {
             pixels: self.sampler.map.clone(),
         }
     }
+    pub fn load_template_at_pose(
+        &mut self,
+        template: SphereTemplate,
+        pose: DQuat,
+        legacy: bool,
+    ) -> Result<()> {
+        self.load_template(template)?;
+        self.orientation = if legacy {
+            pose
+        } else {
+            self.sampler.basis * pose * self.sampler.basis.inverse()
+        };
+        self.ready = true;
+        self.reanchoring = true;
+        self.recovery.reject();
+        Ok(())
+    }
+    pub fn clear_template(&mut self) {
+        self.template.fill(128);
+        self.sampler.map.fill(128);
+        self.reset();
+        self.clean_map = true;
+    }
     pub fn estimate(&mut self, frame: &GrayFrame) -> Estimate {
         self.prepared_temporal = None;
         let previous_interval_ms = self.prepared_delta_ms;
@@ -221,14 +244,14 @@ impl MapTracker {
         let mut prediction = CapturePrediction::Normal;
         if self.settings.resilient && previous_interval_ms > 0.0 {
             let scale = self.prepared_delta_ms / previous_interval_ms;
-            if scale > 1.8 {
+            if scale > crate::resilience::NORMAL_INTERVAL_RATIO {
                 prediction = CapturePrediction::Extended;
             }
-            let predicted = if scale > 1.8 {
+            let predicted = if scale > crate::resilience::NORMAL_INTERVAL_RATIO {
                 self.recovery
                     .recent_motion_prediction(self.prepared_delta_ms)
                     .unwrap_or(self.guess * scale)
-            } else if scale < 1.0 / 1.8 {
+            } else if scale < 1.0 / crate::resilience::NORMAL_INTERVAL_RATIO {
                 self.guess * scale
             } else {
                 self.guess
@@ -404,13 +427,15 @@ impl MapTracker {
             let mut refined = seed;
             self.temporal_solver.minimize(
                 |candidate| {
-                    temporal_objective.local_cost(
-                        DQuat::from_scaled_axis(DVec3::new(
-                            candidate[0],
-                            candidate[1],
-                            candidate[2],
-                        )) * orientation,
-                    )
+                    let pose = DQuat::from_scaled_axis(DVec3::new(
+                        candidate[0],
+                        candidate[1],
+                        candidate[2],
+                    )) * orientation;
+                    // Both maps describe the same physical pose. Use their
+                    // independent smooth proposals together; final selection
+                    // and published error retain the full binary objective.
+                    temporal_objective.smooth_cost(pose) + objective.smooth_cost(pose)
                 },
                 &mut refined,
                 &lower,

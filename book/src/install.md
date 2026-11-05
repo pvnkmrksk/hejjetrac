@@ -56,6 +56,11 @@ New Linux releases are built in an **Ubuntu 22.04** environment, with an enforce
 
 **If an older package asks for `libc6 (>= 2.39)`:** that package was built with the previous Ubuntu 24.04 baseline. Download a release containing this Ubuntu 22.04 compatibility fix. Do not force-install it or lower its dependency by hand: the old portable archive contains the same incompatible executable. Other Linux distributions need glibc 2.35 or newer, the listed desktop/camera libraries and working graphics drivers; that minimum alone does not establish hardware support.
 
+To open all your rigs from the app launcher, use **More → Rig manager**, add the
+saved rigs, enable workspace restoration and save the workspace. The
+[graphical workspace guide](workspaces.md) covers all sixteen slots, view
+preferences and opt-in atlas reuse without editing installed package resources.
+
 ### Portable archive
 
 Extract the tar archive with your archive manager, then run `hejjetrac`. It uses the same Ubuntu 22.04/glibc 2.35 build as the installer. A graphical desktop with a working Vulkan/OpenGL-capable graphics driver is needed for the native GUI. Standard desktop and camera system libraries are not bundled; distributions differ.

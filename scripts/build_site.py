@@ -17,10 +17,10 @@ from urllib.parse import unquote, urlsplit
 ROOT = Path(__file__).resolve().parent.parent
 REPORTS = (
     "ui-rendering.md",
-    "release-v0.3.6.md",
+    "release-v0.3.6.md", "release-v0.4.0.md",
     "agent-control.md", "architecture.md", "camera-controls.md", "output.md",
     "parity.md", "performance.md", "tracking-performance.md", "ui-design.md",
-    "validation.md", "resources.md", "recovery.md", "atlas-learning.md", "matrex-vr.md",
+    "validation.md", "resources.md", "recovery.md", "atlas-learning.md", "recorded-clock.md", "matrex-vr.md",
     "linux-native-validation.md", "overnight-validation.md", "recording-performance.md",
     "storage-retention.md", "vr3-motion-structure.md", "vr3-validation.md",
     "raw-video-validation.md", "masking-validation.md", "take-validation.md", "preview-age.md",

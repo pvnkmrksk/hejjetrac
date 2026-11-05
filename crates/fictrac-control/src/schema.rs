@@ -81,12 +81,25 @@ pub fn request_schema() -> Value {
         "source",
         object(json!({"input":path()}), &["input"]),
     ));
-    for command in ["save_config", "map_load", "map_save"] {
+    for command in ["save_config", "map_save"] {
         variants.push(descriptor(
             command,
             object(json!({"path":path()}), &["path"]),
         ));
     }
+    variants.push(descriptor("map_load", object(json!({"path":path(),"pose_camera":{"type":"array","minItems":3,"maxItems":3,"items":{"type":"number"}}}), &["path"])));
+    variants.push(descriptor("map_refresh", none()));
+    variants.push(descriptor(
+        "arrange_grid",
+        object(
+            json!({"columns":{"type":"integer","minimum":1,"maximum":16}}),
+            &[],
+        ),
+    ));
+    variants.push(descriptor(
+        "workspace_save",
+        object(json!({"restore_on_launch":{"type":"boolean"}}), &[]),
+    ));
     variants.push(descriptor("record_start",object(json!({"directory":path(),"record_options":object(json!({"raw":{"type":"boolean"},"debug":{"type":"boolean"}}),&["raw","debug"]),"recording_tuning":object(json!({"encoding":{"enum":["configured","mjpeg","raw"]}}),&[])}),&["directory"])));
     for command in ["snapshot", "export"] {
         variants.push(descriptor(
@@ -116,7 +129,7 @@ pub fn request_schema() -> Value {
         object(json!({"kind":{"const":"square"},"plane":{"enum":["xy","yz","xz"]},"points":points(4,4)}),&["kind","plane","points"])
     ]});
     variants.push(descriptor("calibrate", calibration));
-    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"calibration":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"},"display_fps":{"type":"integer","minimum":1,"maximum":60},"calibration_step":{"enum":["view","ball","exclude","lab"]},"calibration_action":{"enum":["inspect","edit","redraw","add","keep","continue","finish","cancel"]},"edit_marks":{"type":"boolean"},"magnifier":{"type":"boolean"},"window_size":{"type":"array","minItems":2,"maxItems":2,"items":{"type":"number","minimum":96,"maximum":8192}}}),&[])));
+    variants.push(descriptor("view",object(json!({"reuse_atlas":{"type":"boolean"},"rig_manager":{"type":"boolean"},"settings_section":{"enum":["source","calibration","display","atlas","recording","outputs","advanced"]},"settings":{"type":"boolean"},"calibration":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"},"display_fps":{"type":"integer","minimum":1,"maximum":60},"calibration_step":{"enum":["view","ball","exclude","lab"]},"calibration_action":{"enum":["inspect","edit","redraw","add","keep","continue","finish","cancel"]},"edit_marks":{"type":"boolean"},"magnifier":{"type":"boolean"},"window_size":{"type":"array","minItems":2,"maxItems":2,"items":{"type":"number","minimum":96,"maximum":8192}}}),&[])));
     variants.push(descriptor("camera_status", none()));
     variants.push(descriptor("camera_format",object(json!({"width":{"type":"integer","minimum":16,"maximum":8192},"height":{"type":"integer","minimum":16,"maximum":8192},"fps":{"type":["number","null"],"minimum":0.1,"maximum":1000}}),&["width","height"])));
     variants.push(descriptor("camera_set",json!({"oneOf":[object(json!({"control":{"const":"exposure_mode"},"mode":{"enum":["automatic","locked"]}}),&["control","mode"]),object(json!({"control":{"enum":["exposure","gain"]},"value":{"type":"number"}}),&["control","value"])]})));
@@ -127,17 +140,23 @@ pub fn request_schema() -> Value {
 pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<()> {
     let allowed: &[&str] = match command {
         "schema" | "discover" | "sessions" | "new_instance" | "status" | "config" | "undo"
-        | "redo" | "start" | "pause" | "reset" | "rewind" | "record_stop" => &[],
+        | "redo" | "start" | "pause" | "reset" | "rewind" | "record_stop" | "map_refresh" => &[],
         "close" => &["discard"],
         "realtime" => &["enabled"],
         "open" => &["config", "text", "input"],
         "set" => &["key", "value", "fields"],
         "replace_config" => &["text"],
         "source" => &["input"],
-        "save_config" | "map_load" | "map_save" => &["path"],
+        "save_config" | "map_save" => &["path"],
+        "map_load" => &["path", "pose_camera"],
+        "arrange_grid" => &["columns"],
+        "workspace_save" => &["restore_on_launch"],
         "record_start" => &["directory", "record_options", "recording_tuning"],
         "snapshot" | "export" => &["directory"],
         "view" => &[
+            "reuse_atlas",
+            "rig_manager",
+            "settings_section",
             "settings",
             "calibration",
             "diagnostics",
@@ -171,6 +190,9 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
     }
     for key in [
         "discard",
+        "reuse_atlas",
+        "rig_manager",
+        "restore_on_launch",
         "enabled",
         "settings",
         "calibration",
@@ -185,6 +207,40 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         {
             return Err(format!("args.{key} must be boolean"));
         }
+    }
+    if command == "arrange_grid"
+        && object
+            .get("columns")
+            .is_some_and(|v| !v.as_u64().is_some_and(|c| (1..=16).contains(&c)))
+    {
+        return Err("args.columns must be an integer 1..16".into());
+    }
+    if command == "map_load"
+        && object.get("pose_camera").is_some_and(|v| {
+            !v.as_array().is_some_and(|a| {
+                a.len() == 3 && a.iter().all(|n| n.as_f64().is_some_and(f64::is_finite))
+            })
+        })
+    {
+        return Err("args.pose_camera must contain three finite axis-angle components".into());
+    }
+    if command == "view"
+        && object.get("settings_section").is_some_and(|v| {
+            !v.as_str().is_some_and(|s| {
+                matches!(
+                    s,
+                    "source"
+                        | "calibration"
+                        | "display"
+                        | "atlas"
+                        | "recording"
+                        | "outputs"
+                        | "advanced"
+                )
+            })
+        })
+    {
+        return Err("args.settings_section is unknown".into());
     }
     if command == "view"
         && let Some(value) = object.get("display_fps")
