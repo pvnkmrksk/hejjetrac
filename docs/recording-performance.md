@@ -246,7 +246,7 @@ guard do not remove the need for enough sustained storage bandwidth and space.
 Reproduce the phase profile with:
 
 ```sh
-cargo build --release --locked -p fictrac-io --example profile_recording
+cargo build --release --locked -p hejjetrac-io --example profile_recording
 target/release/examples/profile_recording \
   runs/exposure-vr3/original-snapshot VR3.txt runs/recording-phase-new 20
 ```

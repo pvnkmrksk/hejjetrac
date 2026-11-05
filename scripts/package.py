@@ -28,13 +28,13 @@ DESKTOP_ENTRY = """[Desktop Entry]
 Type=Application
 Name=HejjéTrac
 GenericName=Spherical motion tracker
-Comment=Native spherical-motion tracking and FicTrac-compatible measurements
+Comment=HejjéTrac native spherical-motion tracking
 Exec=hejjetrac
 TryExec=hejjetrac
 Icon=hejjetrak
 Terminal=false
 Categories=Science;Education;
-Keywords=FicTrac;tracking;camera;laboratory;
+Keywords=Hejjetrac;tracking;camera;laboratory;
 StartupNotify=false
 Actions=SafeMode;
 
@@ -71,7 +71,7 @@ def verify_binary_version(binary, version):
 
 def install_binaries(root, destination, suffix, system, version):
     manifest = []
-    for source, target in [('fictrac-desktop', 'hejjetrac'), ('fictrac', 'hejjetrac-cli')]:
+    for source, target in [('hejjetrac', 'hejjetrac'), ('hejjetrac-cli', 'hejjetrac-cli')]:
         compiled = root / 'target/release' / (source + suffix)
         verify_binary_version(compiled, version)
         installed = destination / (target + suffix)
@@ -239,7 +239,7 @@ def build_deb(stage, destination, version, dependencies, assets):
             f'Installed-Size: {(installed_size + 1023) // 1024}\nDepends: {dependencies}\n'
             'Recommends: xdg-desktop-portal, xdg-desktop-portal-gtk | xdg-desktop-portal-kde\n'
             'Homepage: https://github.com/pvnkmrksk/hejjetrak\n'
-            'Description: Native spherical motion tracking compatible with FicTrac\n'
+            'Description: HejjéTrac native spherical motion tracking\n'
             ' Pure Rust numerical engine, native desktop and command-line/agent interfaces.\n'
             ' Includes sample video, calibration examples and dependency notices.\n')
         # Debian metadata uses LF even when these build-tool tests run on Windows.
@@ -282,7 +282,7 @@ def main():
         resource = app / 'Resources'
         binary.mkdir(parents=True)
         resource.mkdir()
-        info = plistlib.loads((root / 'apps/fictrac-desktop/Info.plist').read_bytes())
+        info = plistlib.loads((root / 'apps/hejjetrac-desktop/Info.plist').read_bytes())
         if any(info.get(key) != version for key in ('CFBundleVersion', 'CFBundleShortVersionString')):
             raise ValueError('Info.plist version does not match Cargo.toml; update both before packaging')
         info['CFBundleExecutable'] = 'hejjetrac'

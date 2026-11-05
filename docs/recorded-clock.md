@@ -44,7 +44,7 @@ alone do not establish improved accuracy or justify a release.
 Build the Rust development replay executable:
 
 ```sh
-cargo build --release --locked -p fictrac-io --example replay_evidence
+cargo build --release --locked -p hejjetrac-io --example replay_evidence
 ```
 
 Use a copy of the recorded config with only experiment outputs/recording

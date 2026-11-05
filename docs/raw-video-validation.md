@@ -37,8 +37,8 @@ anatomical/world axes and physical movement accuracy remain unverified. This
 config is for the supplied framing, not an automatic replacement for rig files.
 
 ```sh
-target/release/fictrac-desktop --config examples/raw47/supplied-video.txt
-target/release/fictrac track --config examples/raw47/supplied-video.txt --output runs/raw47-new
+target/release/hejjetrac --config examples/raw47/supplied-video.txt
+target/release/hejjetrac-cli track --config examples/raw47/supplied-video.txt --output runs/raw47-new
 ```
 
 The output directory must be new. Existing VR1–VR4 configurations and installed

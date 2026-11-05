@@ -3,7 +3,7 @@
 
 Requires a .NET SDK and externally supplied historical NetMQ.dll/AsyncIO.dll.
 Build the producer with:
-  cargo build -p fictrac-io --example matrex_legacy_fixture --release --locked
+  cargo build -p hejjetrac-io --example matrex_legacy_fixture --release --locked
 Then pass --publisher target/release/examples/matrex_legacy_fixture and
 --managed-directory PATH/TO/UNCHANGED/VR/Contents/Resources/Data/Managed.
 

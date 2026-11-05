@@ -78,11 +78,11 @@ Build the release CLI, then run this development analysis command with the
 private VR3 directory. All output directories/files must be new:
 
 ```sh
-cargo build --release --locked -p fictrac
+cargo build --release --locked -p hejjetrac-cli
 python3 scripts/benchmark_vr3.py \
   --reference-dir /path/to/VR_array/VR3 \
   --candidate-dir runs/vr3/run \
-  --binary target/release/fictrac \
+  --binary target/release/hejjetrac-cli \
   --suffix-control-dir runs/vr3/control \
   --make-suffix-control \
   --output runs/vr3/comparison.json \

@@ -30,14 +30,14 @@ working session. Selecting the already active camera preserves its tracking
 epoch. Switching to another source or closing the owning rig releases the
 camera; choosing it again reopens capture through the same menu/agent operation.
 
-The packaged `hejjetrac-cli` command is a complete headless frontend to the shared Rust engine; its Cargo compatibility name is `fictrac`. External AI agents can operate it through JSONL or MCP stdio; neither requires a model API key, a network service, Python or a GUI. The desktop also has its own asynchronous stdio bridge; its playback scheduling differs from deterministic recorded-video commands. Numerical fitting and calibration use the same core functions.
+The packaged `hejjetrac-cli` command is a complete headless frontend to the shared Rust engine; its Cargo package and binary are both `hejjetrac-cli`. External AI agents can operate it through JSONL or MCP stdio; neither requires a model API key, a network service, Python or a GUI. The desktop also has its own asynchronous stdio bridge; its playback scheduling differs from deterministic recorded-video commands. Numerical fitting and calibration use the same core functions.
 
 The design follows [PhotoCraft's engine-first architecture](https://github.com/storytold/photocraft/blob/main/docs/architecture.md): native user interfaces and machine interfaces call reusable operations. The transcript regression processes the full supplied video and checks its output against the existing reference gates.
 
 ```sh
-cargo run -p fictrac --release --locked -- --help
-cargo run -p fictrac --release --locked -- schema
-cargo run -p fictrac --release --locked -- agent < examples/agents/sample-session.jsonl
+cargo run -p hejjetrac-cli --release --locked -- --help
+cargo run -p hejjetrac-cli --release --locked -- schema
+cargo run -p hejjetrac-cli --release --locked -- agent < examples/agents/sample-session.jsonl
 ```
 
 `schema` and the `discover` command return descriptions and a JSON Schema 2020-12 for every request. Protocol version is `1`. Each input line is one JSON object, with `id`, `command`, optional `session`, and `args`. Each output line is one response with the same ID, `ok`, `result` and `error`. Diagnostics never mix with protocol stdout. Syntax/argument errors return structured responses and leave the server available for the next command.
@@ -80,21 +80,21 @@ Output paths must be new. Requests are bounded to 1 MB, rows to one million per 
 Register the release executable as a local MCP server:
 
 ```json
-{"mcpServers":{"fictrac":{"command":"/absolute/path/to/hejjetrac-cli","args":["mcp"]}}}
+{"mcpServers":{"hejjetrac":{"command":"/absolute/path/to/hejjetrac-cli","args":["mcp"]}}}
 ```
 
-Use the packaged CLI executable's absolute path (`hejjetrac-cli.exe` on Windows; `hejjetrac.app/Contents/MacOS/hejjetrac-cli` on Mac). Cargo source builds retain the `fictrac` compatibility name. The adapter implements the [MCP initialization lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle), `ping`, `tools/list` and `tools/call` for protocol `2025-06-18`. Its `fictrac_execute` tool advertises the concrete request schema and calls the same controller as JSONL. Results include both text JSON and `structuredContent`; command failures set `isError`. Notifications receive no response. Closing stdin shuts down cleanly. The shared `close` arguments include optional `discard=true`; this explicitly permits discarding unsaved native GUI edits. Headless sessions are disposable in-memory state and close directly. No HTTP listener, cloud connection or credential is created.
+Use the packaged CLI executable's absolute path (`hejjetrac-cli.exe` on Windows; `hejjetrac.app/Contents/MacOS/hejjetrac-cli` on Mac). Cargo source builds produce the same executable name. The adapter implements the [MCP initialization lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle), `ping`, `tools/list` and `tools/call` for protocol `2025-06-18`. Its `hejjetrac_execute` tool advertises the concrete request schema and calls the same controller as JSONL. Results include both text JSON and `structuredContent`; command failures set `isError`. Notifications receive no response. Closing stdin shuts down cleanly. The shared `close` arguments include optional `discard=true`; this explicitly permits discarding unsaved native GUI edits. Headless sessions are disposable in-memory state and close directly. No HTTP listener, cloud connection or credential is created.
 
 ## Conventional CLI compatibility
 
 ```sh
-fictrac track --config config.txt --input recording.mp4 --output runs/experiment
-fictrac config.txt --max-frames 300 --output runs/experiment
-fictrac config --config config.txt --set thr_ratio=1.25 --set opt_do_global=y --output revised.txt
-fictrac compare --reference reference.dat --candidate runs/experiment/tracking.dat
+hejjetrac-cli track --config config.txt --input recording.mp4 --output runs/experiment
+hejjetrac-cli config.txt --max-frames 300 --output runs/experiment
+hejjetrac-cli config --config config.txt --set thr_ratio=1.25 --set opt_do_global=y --output revised.txt
+hejjetrac-cli compare --reference reference.dat --candidate runs/experiment/tracking.dat
 ```
 
-The legacy positional config invocation maps to `track`; with no output flag it chooses a new timestamped directory using `output_fn` as its prefix (including any parent path), otherwise the input video stem, otherwise `fictrac`. Unlike upstream flat timestamped filenames, related artifacts are grouped inside this directory. `config` prints an edited document when `--output` is omitted. Arbitrary calibration editing and multi-session orchestration are exposed through the agent protocol rather than requiring GUI automation. CLI inspection, synthetic demo, rim calibration and benchmark comparison remain available; see each command's `--help`.
+The legacy positional config invocation maps to `track`; with no output flag it chooses a new timestamped directory using `output_fn` as its prefix (including any parent path), otherwise the input video stem, otherwise `hejjetrac`. Unlike upstream flat timestamped filenames, related artifacts are grouped inside this directory. `config` prints an edited document when `--output` is omitted. Arbitrary calibration editing and multi-session orchestration are exposed through the agent protocol rather than requiring GUI automation. CLI inspection, synthetic demo, rim calibration and benchmark comparison remain available; see each command's `--help`.
 
 ## Native display and camera controls
 

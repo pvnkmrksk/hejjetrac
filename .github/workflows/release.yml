@@ -122,7 +122,7 @@ jobs:
       - name: Patched Rust decoder regression suite
         run: cargo test --manifest-path vendor/oxideav-h264/Cargo.toml --lib --locked
       - run: cargo build --workspace --release --locked
-      - run: cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120
+      - run: cargo run -p hejjetrac-cli --release --locked -- demo --output ci-demo --frames 120
       - name: Verify Windows redistributable independence
         if: runner.os == 'Windows'
         shell: pwsh
@@ -132,7 +132,7 @@ jobs:
           $tools = @(Get-ChildItem "$installation\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Sort-Object FullName -Descending)
           if ($tools.Count -eq 0) { throw 'Visual Studio dumpbin was not found; dependency verification cannot run.' }
           $dumpbinPath = $tools[0].FullName
-          foreach ($binary in @('target/release/fictrac.exe', 'target/release/fictrac-desktop.exe')) {
+          foreach ($binary in @('target/release/hejjetrac-cli.exe', 'target/release/hejjetrac.exe')) {
             $dependencies = & $dumpbinPath /DEPENDENTS $binary
             if ($LASTEXITCODE -ne 0) { throw "Cannot inspect $binary" }
             $dependencies | Write-Output

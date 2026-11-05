@@ -331,7 +331,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--configs", type=Path, default=Path("."))
-    parser.add_argument("--binary", type=Path, default=Path("target/release/fictrac-desktop"))
+    parser.add_argument("--binary", type=Path, default=Path("target/release/hejjetrac"))
     parser.add_argument("--max-input-ms", type=float, default=250)
     parser.add_argument("--drag", action="store_true")
     parser.add_argument("--close-root", action="store_true")

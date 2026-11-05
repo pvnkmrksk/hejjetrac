@@ -78,7 +78,7 @@ Tool** in the [official configuration guide](https://docs.arducam.com/UVC-Camera
    Treat the change as verified only if it still reports `HT001`; label the camera.
 6. Unplug it and repeat with the second camera as `HT002`, then through `HT016`
    for the remaining batch. Keep one external camera connected while provisioning.
-7. Return to Linux and check `target/debug/fictrac-desktop --camera-list`.
+7. Return to Linux and check `target/debug/hejjetrac --camera-list`.
    Expect distinct `usb:0c45:6366:HT001:video:0` and
    `usb:0c45:6366:HT002:video:0` identities. Reconnect/change sockets and verify
    them again before replacing any socket binding with the new serial binding.

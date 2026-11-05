@@ -150,7 +150,7 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 ```
 
-Cargo retains the compatibility names `fictrac` and `fictrac-desktop`. The workspace separates `fictrac-core`, I/O, native capture, shared control, CLI and desktop; the engine has no UI, filesystem, network or codec dependencies. [Architecture](docs/architecture.md) · [Contributor guide](AGENTS.md) · [Build instructions](https://pvnkmrksk.github.io/hejjetrak/manual/development.html).
+Cargo builds `hejjetrac` (desktop) and `hejjetrac-cli` directly. The workspace uses `hejjetrac-core`, `hejjetrac-io`, `hejjetrac-camera`, `hejjetrac-control`, `hejjetrac-cli` and `hejjetrac-desktop`; the engine has no UI, filesystem, network or codec dependencies. [Architecture](docs/architecture.md) · [Contributor guide](AGENTS.md) · [Build instructions](https://pvnkmrksk.github.io/hejjetrak/manual/development.html).
 
 ## Citation and license
 

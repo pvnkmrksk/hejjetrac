@@ -139,8 +139,8 @@ def run(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--binary', type=Path, default=Path('target/debug/fictrac-desktop'))
-    parser.add_argument('--cli', type=Path, default=Path('target/debug/fictrac'))
+    parser.add_argument('--binary', type=Path, default=Path('target/debug/hejjetrac'))
+    parser.add_argument('--cli', type=Path, default=Path('target/debug/hejjetrac-cli'))
     parser.add_argument('--config', type=Path, default=Path('examples/benchmark/config.txt'))
     parser.add_argument('--video', type=Path, default=Path('examples/sample.mp4'))
     parser.add_argument('--output', type=Path, required=True)

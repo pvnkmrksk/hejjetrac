@@ -1046,7 +1046,7 @@ each. Component RMS remains below the unchanged **0.008 rad** gate. The proposal
 changes no MSE/edge/motion threshold, confirmation count, 768-evaluation recovery
 cap, atlas probation or missing-motion semantics.
 
-`cargo test -p fictrac-io --test recovery_video --release --locked` also passes.
+`cargo test -p hejjetrac-io --test recovery_video --release --locked` also passes.
 Its full 240-frame obstruction and approximately 70% partial-obstruction cases
 each retain 178 measured suffix rows, with exactly the earlier recorded path,
 heading and rotation errors. Original limits remain 0.075 sphere radians path,
@@ -1631,7 +1631,7 @@ The user's config/data/log are preserved verbatim under `examples/benchmark/`. T
 | Endpoint discrepancy | 0.054525318 sphere rad | 0.075 in regression test |
 | Later video timestamp discrepancy | 3.46e-11 ms | 1 ms |
 
-Final reference position `[3.674266189723,-2.6214661833162]`; candidate `[3.620053461636,-2.627296315711]`. Final heading reference `6.1845202293513`, candidate `6.177704995564` rad. Initialization is excluded from errors; heading wraps angular differences. The anomalous upstream first clock row is not compared as motion. Frame counts and subsequent video timestamps must align. `fictrac compare` returns nonzero when gates fail.
+Final reference position `[3.674266189723,-2.6214661833162]`; candidate `[3.620053461636,-2.627296315711]`. Final heading reference `6.1845202293513`, candidate `6.177704995564` rad. Initialization is excluded from errors; heading wraps angular differences. The anomalous upstream first clock row is not compared as motion. Frame counts and subsequent video timestamps must align. `hejjetrac-cli compare` returns nonzero when gates fail.
 
 The original full-luma decoder oracle remains **33,177,600 bytes**, FNV-1a-64 **7e8d27f58358523f**, sample SHA-256 **afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad**. The AVI B-frame fixture additionally matches ten MP4 presentation frames byte-for-byte in RGB. Applications and tests never invoke FFmpeg; it was used only during development to create independent fixture/oracle evidence, with provenance recorded.
 
@@ -1645,7 +1645,7 @@ FFmpeg/FFprobe are development interoperability tools only. No application comma
 
 ## H.264 recording CPU/quality tradeoff
 
-The production encoder now uses High profile 100, QP20, GOP1, Intra4×4 disabled and deblocking retained. A retained Rust development benchmark (`crates/fictrac-io/examples/h264_probe.rs`) processed three captured-content frames serially per case, after compilers finished. Timing includes RGB→YUV420 conversion, encoder calls and packet drain; it excludes PNG reading/resizing, encoder initialization and disk writes. These short fixture measurements are not general camera throughput guarantees.
+The production encoder now uses High profile 100, QP20, GOP1, Intra4×4 disabled and deblocking retained. A retained Rust development benchmark (`crates/hejjetrac-io/examples/h264_probe.rs`) processed three captured-content frames serially per case, after compilers finished. Timing includes RGB→YUV420 conversion, encoder calls and packet drain; it excludes PNG reading/resizing, encoder initialization and disk writes. These short fixture measurements are not general camera throughput guarantees.
 
 | Captured-content fixture | Previous baseline/GOP30 | Selected High/GOP1 |
 |---|---:|---:|

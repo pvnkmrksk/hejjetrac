@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/fictrac-core", "crates/fictrac-io", "crates/fictrac-camera", "crates/fictrac-control", "apps/fictrac", "apps/fictrac-desktop"]
-default-members = ["apps/fictrac-desktop"]
+members = ["crates/hejjetrac-core", "crates/hejjetrac-io", "crates/hejjetrac-camera", "crates/hejjetrac-control", "apps/hejjetrac-cli", "apps/hejjetrac-desktop"]
+default-members = ["apps/hejjetrac-desktop"]
 exclude = ["vendor/oxideav-h264", "vendor/nokhwa-bindings-linux"]
 resolver = "2"
 
@@ -11,9 +11,9 @@ rust-version = "1.95"
 license = "CC-BY-NC-SA-3.0"
 
 [workspace.dependencies]
-fictrac-core = { path = "crates/fictrac-core" }
-fictrac-io = { path = "crates/fictrac-io" }
-fictrac-control = { path = "crates/fictrac-control" }
+hejjetrac-core = { path = "crates/hejjetrac-core" }
+hejjetrac-io = { path = "crates/hejjetrac-io" }
+hejjetrac-control = { path = "crates/hejjetrac-control" }
 glam = "0.30"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

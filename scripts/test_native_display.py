@@ -163,7 +163,7 @@ def run(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--binary', type=Path, default=Path('target/release/fictrac-desktop'))
+    parser.add_argument('--binary', type=Path, default=Path('target/release/hejjetrac'))
     parser.add_argument('--config', type=Path, default=Path('VR3.txt'))
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--capture-inspector', action='store_true')

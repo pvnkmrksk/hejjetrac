@@ -9,7 +9,7 @@ cargo build --workspace --release --locked
 cargo run --release --locked -- --config examples/upstream-config.txt
 ```
 
-Cargo compatibility names are `fictrac` and `fictrac-desktop`; packaged names are `hejjetrac-cli` and `hejjetrac`. Windows x64 selects static CRT linkage. Platform build dependencies and packaging are encoded in the native CI/release workflows. The runtime does not use Python, C++ OpenCV, a webview or a subprocess media decoder. Build-time Python scripts assemble archives and this documentation only.
+Cargo packages are `hejjetrac-cli` and `hejjetrac-desktop`. Their compiled binaries are `hejjetrac-cli` and `hejjetrac`, the same names used in installed packages. Windows x64 selects static CRT linkage. Platform build dependencies and packaging are encoded in the native CI/release workflows. The runtime does not use Python, C++ OpenCV, a webview or a subprocess media decoder. Build-time Python scripts assemble archives and this documentation only.
 
 ## Contribution checks
 

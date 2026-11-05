@@ -32,7 +32,7 @@ in the UI.
 The launcher looks for the extracted Linux portable app under
 `dist/hejjetrac-linux-x86_64`, then the local release build. You can choose
 executables with `HEJJETRAC_BINARY` and `HEJJETRAC_CLI`; otherwise it finds the
-CLI beside the app or at `target/release/fictrac`. Keep the four Python
+CLI beside the app or at `target/release/hejjetrac-cli`. Keep the four Python
 republishers running. Close original FicTrac and any other camera-owning tracker
 windows before taking over all four cameras; the launcher does not terminate
 other programs or steal their devices.
@@ -210,7 +210,7 @@ physical-camera tracking accuracy or sustained multi-camera capacity.
 Build the Rust fixture:
 
 ```sh
-cargo build -p fictrac-io --example matrex_legacy_fixture --release --locked
+cargo build -p hejjetrac-io --example matrex_legacy_fixture --release --locked
 ```
 
 `scripts/test_matrex_legacy_players.py` accepts paths to the unchanged v0.1.0 and

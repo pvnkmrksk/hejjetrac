@@ -62,7 +62,7 @@ jobs:
       - name: Patched Rust decoder regression suite
         run: cargo test --manifest-path vendor/oxideav-h264/Cargo.toml --lib --locked
       - run: cargo build --workspace --release --locked
-      - run: cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120
+      - run: cargo run -p hejjetrac-cli --release --locked -- demo --output ci-demo --frames 120
       # Include dependency sources and license texts in downloadable artifacts.
       - run: cargo vendor --locked --versioned-dirs third-party-source
       - name: Collect exact dependency notices
@@ -71,12 +71,12 @@ jobs:
         run: python scripts/prepare_missing_notices.py --registry third-party-source --fetch-upstream
       - uses: actions/upload-artifact@v4
         with:
-          name: fictrac-${{ matrix.os }}-${{ runner.arch }}
+          name: hejjetrac-${{ matrix.os }}-${{ runner.arch }}
           path: |
-            target/release/fictrac
-            target/release/fictrac.exe
-            target/release/fictrac-desktop
-            target/release/fictrac-desktop.exe
+            target/release/hejjetrac-cli
+            target/release/hejjetrac-cli.exe
+            target/release/hejjetrac
+            target/release/hejjetrac.exe
             examples/
             README.md
             LICENSE

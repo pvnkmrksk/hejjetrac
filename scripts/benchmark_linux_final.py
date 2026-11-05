@@ -36,7 +36,7 @@ def quiet():
             name = (process / "comm").read_text().strip()
         except OSError:
             continue
-        if name in ("cargo", "rustc", "fictrac", "fictrac-desktop", "hejjetrac", "hejjetrak"):
+        if name in ("cargo", "rustc", "hejjetrac-cli", "hejjetrac", "hejjetrak"):
             busy.append({"pid": int(process.name), "name": name})
     if busy:
         raise RuntimeError(f"serial timing requires no other build/native/tracking process: {busy}")
@@ -87,7 +87,7 @@ def decode(binary, source, frames, output, label):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", type=Path, default=Path("target/release/fictrac"))
+    parser.add_argument("--binary", type=Path, default=Path("target/release/hejjetrac-cli"))
     parser.add_argument("--reference-dir", type=Path, required=True)
     parser.add_argument("--og-replay-dat", type=Path, required=True)
     parser.add_argument("--og-replay-run", type=Path)

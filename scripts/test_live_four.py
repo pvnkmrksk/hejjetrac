@@ -588,8 +588,8 @@ def run(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", type=Path, default=Path("target/release/fictrac-desktop"))
-    parser.add_argument("--cli", type=Path, default=Path("target/release/fictrac"))
+    parser.add_argument("--binary", type=Path, default=Path("target/release/hejjetrac"))
+    parser.add_argument("--cli", type=Path, default=Path("target/release/hejjetrac-cli"))
     parser.add_argument("--rig-directory", type=Path, default=Path("."))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--seconds", type=float, default=60, help="Observation seconds both before and after calibration reviews")

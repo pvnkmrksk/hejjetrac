@@ -40,7 +40,7 @@ Final reference position: `[3.674266189723, -2.6214661833162]`; Rust: `[3.620026
 
 The pairwise alternative retains its existing separate gates and achieves path RMSE about 0.15588 sphere rad, heading RMSE 0.06167 rad on this fixture. Its tests were not loosened to accommodate the new backend. Lower integrated error does not mean every map-mode per-frame component is closer than pairwise.
 
-`fictrac compare` emits the complete report and returns an error if its declared gates fail. The automated map regression tracks the whole sample; the desktop/headless test independently verifies that the same default map frames produce identical deltas, path and error in both frontends. Matching the reference is a sanity check, not physical ground truth. Rust PRIMA BOBYQA differs from upstream NLopt; neither numerical identity nor broad scientific equivalence is established.
+`hejjetrac-cli compare` emits the complete report and returns an error if its declared gates fail. The automated map regression tracks the whole sample; the desktop/headless test independently verifies that the same default map frames produce identical deltas, path and error in both frontends. Matching the reference is a sanity check, not physical ground truth. Rust PRIMA BOBYQA differs from upstream NLopt; neither numerical identity nor broad scientific equivalence is established.
 
 ## Release performance
 
@@ -62,9 +62,9 @@ Wall timing begins before input/config/first decode and includes processing and 
 Commands:
 
 ```sh
-./target/release/fictrac track --config examples/benchmark/config.txt --input examples/sample.mp4 --output runs/benchmark-final-v02
-./target/release/fictrac compare --reference examples/benchmark/upstream.dat --candidate runs/benchmark-final-v02/tracking.dat --report runs/benchmark-final-v02/comparison.json
-./target/release/fictrac demo --output runs/demo-final-v02 --frames 120
+./target/release/hejjetrac-cli track --config examples/benchmark/config.txt --input examples/sample.mp4 --output runs/benchmark-final-v02
+./target/release/hejjetrac-cli compare --reference examples/benchmark/upstream.dat --candidate runs/benchmark-final-v02/tracking.dat --report runs/benchmark-final-v02/comparison.json
+./target/release/hejjetrac-cli demo --output runs/demo-final-v02 --frames 120
 ```
 
 Artifacts are ignored by Git. `comparison.png`/`.pdf` overlay the reference and candidate path/heading and plot point error; these development plots use Matplotlib, which is not an application dependency.

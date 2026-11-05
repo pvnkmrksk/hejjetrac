@@ -37,7 +37,7 @@ def gradient_energy(pixels):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", type=Path, default=Path("target/release/fictrac"))
+    parser.add_argument("--binary", type=Path, default=Path("target/release/hejjetrac-cli"))
     parser.add_argument("--reference-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()

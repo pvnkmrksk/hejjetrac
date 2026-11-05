@@ -61,7 +61,7 @@ An isolated jump cannot establish an epoch. The uncertain-fit retry uses the
 sum of bilinear known-support proposals from both the persistent and previous-image
 maps. Its final binary score and all acceptance checks retain their original meaning.
 
-`crates/fictrac-core/tests/recovery.rs` adds two numerical cases, using the
+`crates/hejjetrac-core/tests/recovery.rs` adds two numerical cases, using the
 existing deterministic 180×90 material pattern, 160×160 camera geometry and
 unchanged 0.008 rad/component RMS gate:
 

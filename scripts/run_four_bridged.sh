@@ -8,7 +8,7 @@ if [ -n "${HEJJETRAC_BINARY:-}" ]; then
 elif [ -x "$hejjetrac_repo/dist/hejjetrac-linux-x86_64/hejjetrac" ]; then
     hejjetrac_binary="$hejjetrac_repo/dist/hejjetrac-linux-x86_64/hejjetrac"
 else
-    hejjetrac_binary="$hejjetrac_repo/target/release/fictrac-desktop"
+    hejjetrac_binary="$hejjetrac_repo/target/release/hejjetrac"
 fi
 if [ ! -x "$hejjetrac_binary" ]; then
     echo "Cannot find HejjéTrac. Extract the portable build into dist/hejjetrac-linux-x86_64, build the release binary, or set HEJJETRAC_BINARY." >&2
@@ -21,8 +21,7 @@ if [ -z "$hejjetrac_cli" ]; then
     for hejjetrac_candidate in \
         "$hejjetrac_binary_dir/hejjetrac-cli" \
         "$hejjetrac_binary_dir/hejjetrak-cli" \
-        "$hejjetrac_binary_dir/fictrac" \
-        "$hejjetrac_repo/target/release/fictrac"; do
+        "$hejjetrac_repo/target/release/hejjetrac-cli"; do
         if [ -x "$hejjetrac_candidate" ]; then
             hejjetrac_cli=$hejjetrac_candidate
             break
@@ -30,7 +29,7 @@ if [ -z "$hejjetrac_cli" ]; then
     done
 fi
 if [ ! -x "$hejjetrac_cli" ]; then
-    echo "Cannot find the paired HejjéTrac CLI. Keep hejjetrac-cli beside the app, build target/release/fictrac, or set HEJJETRAC_CLI." >&2
+    echo "Cannot find the paired HejjéTrac CLI. Keep hejjetrac-cli beside the app, build target/release/hejjetrac-cli, or set HEJJETRAC_CLI." >&2
     exit 1
 fi
 

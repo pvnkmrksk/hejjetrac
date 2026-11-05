@@ -3,6 +3,8 @@ import gzip
 import importlib.util
 import io
 import os
+import plistlib
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -160,7 +162,7 @@ class ReleaseIdentityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'target/release').mkdir(parents=True)
-            (root / 'target/release/fictrac-desktop').write_bytes(b'old executable')
+            (root / 'target/release/hejjetrac').write_bytes(b'old executable')
             destination = root / 'package'
             destination.mkdir()
             old_version = subprocess.CompletedProcess([], 0, stdout='hejjetrak 0.1.3\n')
@@ -221,6 +223,19 @@ class LinuxAbiTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'cannot establish a public glibc ABI'):
                     PACKAGE.linux_abi_requirements(Path('/package'))
 
+
+
+class ApplicationIdentity(unittest.TestCase):
+    def test_mac_bundle_launches_the_actual_cargo_desktop_binary(self):
+        root = Path(__file__).resolve().parent.parent
+        manifest = (root / 'apps/hejjetrac-desktop/Cargo.toml').read_text()
+        binary = re.search(r'(?ms)^\[\[bin\]\]\s*\nname\s*=\s*"([^"\n]+)"',manifest)
+        self.assertIsNotNone(binary, 'Desktop must declare its actual executable name')
+        info = plistlib.loads((root / 'apps/hejjetrac-desktop/Info.plist').read_bytes())
+        self.assertEqual(binary.group(1),'hejjetrac')
+        self.assertEqual(info['CFBundleExecutable'],binary.group(1))
+        self.assertEqual(info['CFBundleDisplayName'],'HejjéTrac')
+        self.assertEqual(info['CFBundleIdentifier'],'io.github.pvnkmrksk.hejjetrac')
 
 if __name__ == '__main__':
     unittest.main()

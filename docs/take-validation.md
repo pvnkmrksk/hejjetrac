@@ -266,7 +266,7 @@ python3 scripts/benchmark_takes.py \
   --output runs/new-vr1-benchmark --require-pass
 ```
 
-Run from the repository root; the default candidate is `target/release/fictrac`.
+Run from the repository root; the default candidate is `target/release/hejjetrac-cli`.
 The output must be new. Repeat `--take` for additional takes. A prefix-only or
 insufficient-fast-motion take produces unavailable gates and cannot pass
 `--require-pass`; use it without that flag to inspect the available prefix.

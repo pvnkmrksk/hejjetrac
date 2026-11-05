@@ -6,7 +6,7 @@ The private recording stays outside the repository. Example:
   python3 scripts/benchmark_vr3.py --reference-dir /path/to/VR3 \
       --candidate-dir runs/vr3 --output runs/vr3-comparison.json
 
-Use --binary target/release/fictrac to produce candidate-dir first. This
+Use --binary target/release/hejjetrac-cli to produce candidate-dir first. This
 copies the original config and changes only recording/output switches; numerical
 settings and all four physical calibration files are left untouched.
 """

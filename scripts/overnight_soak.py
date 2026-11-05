@@ -670,7 +670,7 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     for name in ("run", "start"):
         command = commands.add_parser(name)
-        command.add_argument("--binary", type=Path, default=Path("target/release/fictrac-desktop"))
+        command.add_argument("--binary", type=Path, default=Path("target/release/hejjetrac"))
         command.add_argument("--configs", type=Path, nargs="+", default=[Path(f"VR{i}.txt") for i in range(1, 5)])
         command.add_argument("--output", type=Path, required=True)
         command.add_argument("--until", default="2026-10-27T09:00:00+01:00")

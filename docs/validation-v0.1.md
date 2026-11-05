@@ -10,7 +10,7 @@ Implementation v0.1.0. Tested locally on macOS 27.0.1, Apple Silicon (`aarch64-a
 - `cargo build --release --locked`
 - `cargo check --workspace --locked --target x86_64-pc-windows-msvc`
 - `cargo check --workspace --locked --target x86_64-unknown-linux-gnu`
-- `otool -L target/release/fictrac`: only `/usr/lib/libSystem.B.dylib`
+- `otool -L target/release/hejjetrac-cli`: only `/usr/lib/libSystem.B.dylib`
 
 The toolchain was installed under temporary, task-specific Rust/Cargo homes to avoid changing the user's shell or global Rust installation. Paths above assume an ordinary Rust installation; the resulting binary needs no toolchain to run.
 
@@ -59,8 +59,8 @@ The synthetic sequence uses a fixed material-space analytic texture and per-fram
 Commands and local artifacts:
 
 ```sh
-./target/release/fictrac track --config examples/sample.json --output runs/sample-verified
-./target/release/fictrac demo --output runs/demo-verified --frames 120
+./target/release/hejjetrac-cli track --config examples/sample.json --output runs/sample-verified
+./target/release/hejjetrac-cli demo --output runs/demo-verified --frames 120
 ```
 
 The generated directories are ignored by Git. Each includes data, per-frame quality, a path SVG and summary containing the effective configuration and input metadata. The synthetic root also includes video and oracle.json. The real path SVG was rendered with rsvg-convert and visually inspected; the scientific interpretation still depends on calibration and motion validation.

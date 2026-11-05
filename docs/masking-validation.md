@@ -219,11 +219,11 @@ not speedup or real-time-throughput claims. The 3565-image supplied replay takes
 establish real-time execution.
 
 ```sh
-cargo run --release --locked -p fictrac-io --example masking_audit -- runs/new-masks 10000 full
-cargo run --release --locked -p fictrac-io --example masking_audit -- runs/new-returns 10000 return
-cargo run --release --locked -p fictrac-io --example masking_audit -- runs/new-moving 10000 advanced
-cargo run --release --locked -p fictrac-io --example video_masking_audit -- examples/sample.mp4 CALIBRATION_ONLY_CONFIG runs/new-real-masks
-cargo run --release --locked -p fictrac -- track --config examples/raw47/config.txt --output runs/new-raw
+cargo run --release --locked -p hejjetrac-io --example masking_audit -- runs/new-masks 10000 full
+cargo run --release --locked -p hejjetrac-io --example masking_audit -- runs/new-returns 10000 return
+cargo run --release --locked -p hejjetrac-io --example masking_audit -- runs/new-moving 10000 advanced
+cargo run --release --locked -p hejjetrac-io --example video_masking_audit -- examples/sample.mp4 CALIBRATION_ONLY_CONFIG runs/new-real-masks
+cargo run --release --locked -p hejjetrac-cli -- track --config examples/raw47/config.txt --output runs/new-raw
 ```
 
 Output directories must be new. For the real-image default audit, copy

@@ -195,7 +195,7 @@ def run(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--binary', type=Path, default=Path('target/release/fictrac-desktop'))
+    parser.add_argument('--binary', type=Path, default=Path('target/release/hejjetrac'))
     parser.add_argument('--config', type=Path, default=Path('VR3.txt'))
     parser.add_argument('--video', type=Path, default=Path('/home/pkaushi/src/fictrac/VR_array/VR3/fictrac-raw-20261026_212053.avi'))
     parser.add_argument('--output', type=Path, required=True)

@@ -142,7 +142,7 @@ class BridgedLauncherTests(unittest.TestCase):
         self.log.unlink()
         self.ready.unlink()
         self.env.pop("HEJJETRAC_CLI")
-        self.executable(self.repo / "target/release/fictrac", CLI_STUB)
+        self.executable(self.repo / "target/release/hejjetrac-cli", CLI_STUB)
         self.assertEqual(self.launch().returncode, 0)
         self.assert_four_overrides()
 

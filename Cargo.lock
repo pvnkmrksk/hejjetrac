@@ -1162,24 +1162,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "fictrac"
+name = "hejjetrac-cli"
 version = "0.4.0"
 dependencies = [
  "clap",
- "fictrac-control",
- "fictrac-core",
- "fictrac-io",
+ "hejjetrac-control",
+ "hejjetrac-core",
+ "hejjetrac-io",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "fictrac-camera"
+name = "hejjetrac-camera"
 version = "0.4.0"
 dependencies = [
  "block2 0.6.2",
  "dispatch2",
- "fictrac-core",
+ "hejjetrac-core",
  "image",
  "nokhwa",
  "objc2 0.6.5",
@@ -1194,18 +1194,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "fictrac-control"
+name = "hejjetrac-control"
 version = "0.4.0"
 dependencies = [
- "fictrac-core",
- "fictrac-io",
+ "hejjetrac-core",
+ "hejjetrac-io",
  "rustix 1.1.5",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "fictrac-core"
+name = "hejjetrac-core"
 version = "0.4.0"
 dependencies = [
  "bobyqa",
@@ -1215,15 +1215,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "fictrac-desktop"
+name = "hejjetrac-desktop"
 version = "0.4.0"
 dependencies = [
  "clap",
  "eframe",
- "fictrac-camera",
- "fictrac-control",
- "fictrac-core",
- "fictrac-io",
+ "hejjetrac-camera",
+ "hejjetrac-control",
+ "hejjetrac-core",
+ "hejjetrac-io",
  "glam",
  "image",
  "rfd",
@@ -1235,10 +1235,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "fictrac-io"
+name = "hejjetrac-io"
 version = "0.4.0"
 dependencies = [
- "fictrac-core",
+ "hejjetrac-core",
  "glam",
  "image",
  "oxideav-avi",

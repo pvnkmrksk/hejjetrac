@@ -118,7 +118,7 @@ publication are excluded from the tracking mean. Native agent status exposes
 meaning for existing clients.
 
 ```sh
-cargo build -p fictrac-io --example profile_tracking --release --locked
+cargo build -p hejjetrac-io --example profile_tracking --release --locked
 target/release/examples/profile_tracking examples/sample.mp4 \
   examples/benchmark/config.txt 5 /tmp/hejjetrak-tracking-new
 ```

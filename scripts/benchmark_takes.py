@@ -184,7 +184,7 @@ def one_take(take, output, binary, original, annotations):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--take", type=Path, action="append", required=True)
-    parser.add_argument("--binary", type=Path, default=Path("target/release/fictrac"))
+    parser.add_argument("--binary", type=Path, default=Path("target/release/hejjetrac-cli"))
     parser.add_argument("--original-fictrac", type=Path, required=True)
     parser.add_argument("--annotations", type=Path)
     parser.add_argument("--output", type=Path, required=True)

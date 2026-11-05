@@ -104,7 +104,7 @@ def fast_comparison(path, reference, clock, omit_period):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", type=Path, default=ROOT / "target/release/fictrac")
+    parser.add_argument("--binary", type=Path, default=ROOT / "target/release/hejjetrac-cli")
     parser.add_argument("--evidence-binary", type=Path,
                         default=ROOT / "target/release/examples/replay_evidence")
     parser.add_argument("--original-fictrac", type=Path,
@@ -173,7 +173,7 @@ def main():
     report["source_dirty"] = subprocess.check_output(
         ["git", "status", "--short"], cwd=ROOT, text=True).splitlines()
     report["core_source_sha256"] = {str(path.relative_to(ROOT)): sha256(path)
-                                    for path in sorted((ROOT / "crates/fictrac-core/src").glob("*.rs"))}
+                                    for path in sorted((ROOT / "crates/hejjetrac-core/src").glob("*.rs"))}
     report["rustc_verbose"] = subprocess.check_output(["rustc", "-vV"], text=True).strip()
 
     def save():

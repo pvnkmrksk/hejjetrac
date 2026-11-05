@@ -4,7 +4,7 @@
 
 `hejjetrac-cli` — headless spherical-motion tracking, calibration and local machine control.
 
-Release packages use `hejjetrac-cli` (with the earlier `hejjetrak-cli` name retained as an alias); Cargo's compatibility binary is named `fictrac`. The desktop executable is `hejjetrac` (Cargo: `fictrac-desktop`).
+Release packages use `hejjetrac-cli` (with the earlier `hejjetrak-cli` name retained as an alias); Cargo's compatibility binary is named `hejjetrac-cli`. The desktop executable is `hejjetrac` (Cargo: `hejjetrac-desktop`).
 
 ## Synopsis
 
@@ -21,7 +21,7 @@ hejjetrac-cli agent
 hejjetrac-cli mcp
 ```
 
-Use `--help` or a command's `--help` for the current generated options. Source builds use `cargo run -p fictrac --release --locked -- COMMAND ...`.
+Use `--help` or a command's `--help` for the current generated options. Source builds use `cargo run -p hejjetrac-cli --release --locked -- COMMAND ...`.
 
 ## Description
 

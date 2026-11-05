@@ -87,3 +87,14 @@ continue; closing the whole grid retains unsaved text behind a save/discard/canc
 prompt. Both paths are checked on the actual native window.
 
 ![The grid protects unsaved configuration text](images/grid-unsaved-close-20261105.png)
+
+
+Source builds now use HejjéTrac names throughout: `hejjetrac-core`,
+`hejjetrac-io`, `hejjetrac-camera`, `hejjetrac-control`, `hejjetrac-cli` and
+`hejjetrac-desktop`. The compiled executables are `hejjetrac` and
+`hejjetrac-cli`; MCP exposes `hejjetrac_execute`. macOS application identity,
+camera-permission text, diagnostic labels and CI artifacts use HejjéTrac too.
+Upstream attribution, comparison fixtures and historical benchmark hashes retain
+their original names. The Mac/Windows strict-Clippy failure was an X11-only
+presentation function included in non-Linux tests; it is now compiled only for
+Linux, without relaxing warning checks.

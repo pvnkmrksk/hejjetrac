@@ -429,7 +429,7 @@ def run_group(args, count):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--binary", type=Path, default=Path("target/release/fictrac-desktop"))
+    parser.add_argument("--binary", type=Path, default=Path("target/release/hejjetrac"))
     parser.add_argument("--configs", type=Path, nargs="+", default=[Path(f"VR{i}.txt") for i in range(1, 5)])
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--counts", type=int, nargs="+", choices=(1, 4), default=[1, 4])

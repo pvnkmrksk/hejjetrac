@@ -69,7 +69,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--configs", type=Path, default=Path("/home/pkaushi/.config/hejjetrac"))
-    parser.add_argument("--binary", type=Path, default=Path("target/release/fictrac-desktop"))
+    parser.add_argument("--binary", type=Path, default=Path("target/release/hejjetrac"))
     parser.add_argument("--seconds", type=float, default=40)
     parser.add_argument("--windows", type=int, choices=[1, 4], default=4)
     parser.add_argument("--disable-outputs", action="store_true")

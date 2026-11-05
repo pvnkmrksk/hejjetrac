@@ -84,9 +84,9 @@ run performance cases without concurrent builds or tests:
 ```sh
 cargo build --workspace --release --locked
 python3 scripts/benchmark.py --baseline /path/to/retained-v0.1.1-cli \
-  --candidate target/release/fictrac --output /tmp/hejjetrak-benchmark-new
-cargo run -p fictrac --release --locked -- demo --frames 120 --output /tmp/hejjetrak-known-motion-new
-cargo run -p fictrac-io --example profile_video --release --locked -- examples/sample.mp4 rgb 10
+  --candidate target/release/hejjetrac-cli --output /tmp/hejjetrak-benchmark-new
+cargo run -p hejjetrac-cli --release --locked -- demo --frames 120 --output /tmp/hejjetrak-known-motion-new
+cargo run -p hejjetrac-io --example profile_video --release --locked -- examples/sample.mp4 rgb 10
 cargo test --manifest-path vendor/oxideav-h264/Cargo.toml --lib --locked
 ```
 
