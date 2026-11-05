@@ -10,6 +10,7 @@ Cargo.lock pins the complete dependency graph. These are Rust libraries, not ext
 | oxideav-core 0.1.41, oxideav-h264 0.1.9, oxideav-mp4 0.0.10, oxideav-mpeg4video 0.1.8, oxideav-avi 0.0.10 | Pure Rust media decode/encode/containers | MIT |
 | eframe/egui 0.33.3 | Native desktop GUI | MIT OR Apache-2.0 |
 | wgpu 27 | Native GPU rendering | MIT OR Apache-2.0 |
+| getrandom 0.3 | OS randomness for per-launch local MCP access tokens | MIT OR Apache-2.0 |
 | rfd 0.15 | Native file dialogs | MIT |
 | image 0.25 | Rust image buffers/PNG and bounded camera JPEG decoding | MIT OR Apache-2.0 |
 | Lucide icon artwork | Bundled professional toolbar icons | ISC; Feather-derived subset MIT |

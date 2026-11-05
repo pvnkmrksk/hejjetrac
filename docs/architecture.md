@@ -10,10 +10,10 @@ The engine and native frontends are separate. [PhotoCraft's architecture](https:
 
 `hejjetrac-cli` is the CLI frontend. `hejjetrac-desktop` uses egui/eframe and wgpu (Metal, DX12, Vulkan/GLES) in native windows, with native file dialogs. Each session owns its config document, undo history and worker. Worker commands are bounded, snapshots expose only the latest image/state, and capture/decoding/fitting do not run on the render thread. Invalid numerical settings retain a responsive video preview with an error. Configuration changes reset the tracking epoch; recordings start new data/quality/config files so calibrations do not silently mix.
 
-Arrays larger than four sessions render as tiles in a single native GPU surface.
+Arrays with multiple sessions render as tiles in a single native GPU surface.
 Their settings and manager are embedded egui windows. Numerical workers, sources,
 clocks and outputs remain independent; expanding one tile keeps polling all
-workers. Smaller arrays retain native tracking windows. This bounds presentation
+workers. A single rig retains its native tracking window. This bounds presentation
 resources and avoids the reproduced hybrid Intel-Vulkan / XWayland-Nouveau
 multi-surface driver abort without replacing hardware graphics with CPU rendering.
 
@@ -218,3 +218,14 @@ remain scoped separately in [output semantics](output.md).
 Camera capabilities and setters are typed DTOs in hejjetrac-camera. Format changes validate against advertised formats, update rust_camera_width/rust_camera_height/src_fps and reopen acquisition. Opted-in resolution metadata can adapt legacy pixel marks only after compatible-reference validation; other formats require calibration review. Exposure/gain setters run on the worker with native readback. Unsupported values never become fabricated controls. GUI view/camera operations are discoverable native agent actions. Transient recording options affect an effective recording-document copy, preserving canonical config and tracker state.
 
 OutputSinks owns the shared transport/payload reconfiguration transaction: unchanged healthy actors are reused; changed outputs reopen with rollback. ZMQ transport has its own bounded Rust actor with staged ZMTP 2/3 negotiation, per-peer queues and deadlines, so a slow peer cannot block numerical processing or healthy subscribers. Explicit MATREX JSON framing lives entirely in I/O, derived from the exact native FT row; the shared core and recorded numeric data retain their coordinate and unit conventions. Fixed ROI-to-atlas geometry is cached per calibration. Resilient local fitting uses the complete ROI; legacy candidate generation retains subset sampling with complete final scores reserved in the configured budget. Decoder pixel oracles and declared healthy-trajectory regression gates remain fixed; the default resilient acceptance guard is a separately documented behavior change with a legacy opt-out.
+
+## Desktop agent transport
+
+Each graphical process starts a loopback-only authenticated MCP HTTP listener.
+Four fixed transport workers submit bounded messages to the existing GUI command
+dispatcher; they never own or mutate numerical sessions. An egui plugin injects
+queued input before viewport input processing and collects native screenshot
+events. PNG encoding runs off the render thread. Typed calibration, config,
+camera, recording and array actions use the same native dispatcher as JSONL.
+No new dependency enters core or I/O; no browser, model credentials or subprocess
+is needed. [Connection, bounds and protocol details](agent-control.md#automatic-desktop-mcp).

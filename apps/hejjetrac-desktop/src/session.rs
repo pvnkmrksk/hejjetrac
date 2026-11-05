@@ -208,6 +208,15 @@ impl Session {
             magnifier: self.magnifier,
             display_fps: self.display_fps,
             reuse_atlas: self.reuse_atlas,
+            window_size: if self.native_window {
+                self.calibration_preview_size
+                    .map(|v| [v.x, v.y])
+                    .or(self.requested_window_size.map(|v| [v.x, v.y]))
+                    .or(self.window_inner_size)
+                    .or(self.saved_view.window_size)
+            } else {
+                self.saved_view.window_size
+            },
         }
     }
     fn restore_view(&mut self) {
@@ -224,7 +233,11 @@ impl Session {
         match result {
             Ok(view) => {
                 let view = view.flatten().unwrap_or_default();
-                if !(1..=60).contains(&view.display_fps) {
+                if !(1..=60).contains(&view.display_fps)
+                    || view
+                        .window_size
+                        .is_some_and(|s| !crate::state::valid_window_size(s))
+                {
                     self.view_state_error =
                         "Saved display FPS is invalid; using the default view".into();
                     return;
@@ -235,6 +248,7 @@ impl Session {
                 self.magnifier = view.magnifier;
                 self.display_fps = view.display_fps;
                 self.reuse_atlas = view.reuse_atlas;
+                self.requested_window_size = view.window_size.map(|s| egui::vec2(s[0], s[1]));
                 self.saved_view = view;
             }
             Err(error) => self.view_state_error = error,
@@ -442,6 +456,10 @@ impl Session {
         }
     }
     pub fn begin_recording(&mut self) {
+        let result = self.queue_recording();
+        self.report(result);
+    }
+    pub(crate) fn queue_recording(&mut self) -> Result<(), String> {
         let options = hejjetrac_control::RecordOptions {
             raw: self.record_raw,
             debug: self.record_debug,
@@ -453,14 +471,50 @@ impl Session {
             .map(|d| d.as_nanos())
             .unwrap_or(0);
         let path = PathBuf::from(&self.recording_path).join(format!("take-{stamp}"));
-        self.send(Command::RecordOptions(
-            path,
-            options,
-            hejjetrac_control::MediaRecordingTuning {
-                encoding: self.recording_encoding,
-                ..hejjetrac_control::MediaRecordingTuning::default()
-            },
-        ));
+        self.worker
+            .as_ref()
+            .ok_or("Start this rig before recording")?
+            .send(Command::RecordOptions(
+                path,
+                options,
+                hejjetrac_control::MediaRecordingTuning {
+                    encoding: self.recording_encoding,
+                    ..hejjetrac_control::MediaRecordingTuning::default()
+                },
+            ))
+    }
+    /// Stable identity order for compact titles, tiles and the manager.
+    pub fn compact_identity(&self) -> String {
+        self.window_title_for_width(0.0)
+    }
+    fn camera_identity(&self, input: &str) -> Option<(String, String)> {
+        input.parse::<u32>().ok()?;
+        let doc = self.document().ok();
+        let binding = self.running_camera_binding.as_deref().or_else(|| {
+            doc.as_ref()
+                .and_then(|d| d.get("rust_camera_id"))
+                .filter(|s| !s.is_empty())
+        });
+        let hardware = binding
+            .map(|id| {
+                if id.starts_with("usb:") {
+                    id.split(':').nth(3).unwrap_or(id)
+                } else {
+                    id
+                }
+            })
+            .unwrap_or("unbound");
+        let camera = self
+            .snapshot
+            .actual_camera_id
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| input.to_owned());
+        let label = &self.snapshot.source_label;
+        let device = label
+            .find("/dev/")
+            .map(|start| label[start..].split([')', ' ']).next().unwrap_or("unknown"))
+            .unwrap_or("device pending");
+        Some((format!("Cam {hardware} (#{camera})"), device.into()))
     }
     pub fn window_title(&self) -> String {
         self.window_title_for_width(self.window_rect.map(|r| r[2]).unwrap_or(520.0))
@@ -523,6 +577,17 @@ impl Session {
                 })
                 .unwrap_or_default()
         };
+        if let Some((camera, device)) = self.camera_identity(input) {
+            let suffix = if width >= 650.0 || (zmq == "off" && udp != "off") {
+                format!(" · UDP {udp}")
+            } else {
+                String::new()
+            };
+            return format!(
+                "{} · {camera} · ZMQ {zmq} · {device}{suffix}",
+                self.display_name()
+            );
+        }
         if width >= 900.0 {
             format!(
                 "{} · ZMQ {zmq} · {short_source} · UDP {udp} · HejjéTrac · {source}",
@@ -845,6 +910,7 @@ impl Session {
         self.source_base = Some(path);
         self.disk_conflict = false;
         self.temporary_config = false;
+        self.save_view()?;
         self.status = "Configuration saved".into();
         Ok(())
     }
@@ -1315,7 +1381,10 @@ mod tests {
         let doc = ConfigDocument::parse("src_fn:4\nsock_port:1113\nzmq_port:-1\n".into())
             .map_err(|e| e.to_string())?;
         let mut session = Session::new(3, doc, None);
-        assert_eq!(session.window_title(), "VR3 · UDP 1113 · Camera 4");
+        assert_eq!(
+            session.window_title(),
+            "VR3 · Cam unbound (#4) · ZMQ off · device pending · UDP 1113"
+        );
         session.snapshot.outputs = Some(hejjetrac_io::OutputStatus {
             udp_enabled: true,
             udp_destination: Some("127.0.0.1:1114".into()),
@@ -1323,11 +1392,17 @@ mod tests {
             zmq_payload: None,
             zmq: None,
         });
-        assert_eq!(session.window_title(), "VR3 · UDP 1114 · Camera 4");
+        assert_eq!(
+            session.window_title(),
+            "VR3 · Cam unbound (#4) · ZMQ off · device pending · UDP 1114"
+        );
         if let Some(outputs) = &mut session.snapshot.outputs {
             outputs.udp_enabled = false;
         }
-        assert_eq!(session.window_title(), "VR3 · Outputs off · Camera 4");
+        assert_eq!(
+            session.window_title(),
+            "VR3 · Cam unbound (#4) · ZMQ off · device pending"
+        );
         Ok(())
     }
     #[test]

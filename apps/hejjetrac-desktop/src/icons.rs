@@ -17,6 +17,8 @@ pub enum Icon {
     Step,
     Link,
     Unlink,
+    Grid,
+    Rigs,
 }
 fn artwork(icon: Icon, active: bool) -> (&'static str, &'static [u8]) {
     macro_rules! asset {
@@ -32,7 +34,7 @@ fn artwork(icon: Icon, active: bool) -> (&'static str, &'static [u8]) {
         Icon::Record if active => asset!("square"),
         Icon::Record => asset!("circle-dot"),
         Icon::Settings => asset!("sliders-horizontal"),
-        Icon::Diagnostics => asset!("layout-dashboard"),
+        Icon::Diagnostics | Icon::Grid | Icon::Rigs => asset!("layout-dashboard"),
         Icon::Refresh => asset!("refresh-cw"),
         Icon::Crop if active => asset!("maximize"),
         Icon::Crop => asset!("minimize"),
@@ -46,7 +48,10 @@ fn artwork(icon: Icon, active: bool) -> (&'static str, &'static [u8]) {
     }
 }
 fn native_button(ui: &egui::Ui, icon: Icon, active: bool) -> egui::Button<'static> {
-    if matches!(icon, Icon::Calibration | Icon::Link | Icon::Unlink) {
+    if matches!(
+        icon,
+        Icon::Calibration | Icon::Link | Icon::Unlink | Icon::Grid | Icon::Rigs
+    ) {
         return egui::Button::new("")
             .min_size(Vec2::splat(30.0))
             .selected(active)
@@ -97,7 +102,48 @@ fn native_button(ui: &egui::Ui, icon: Icon, active: bool) -> egui::Button<'stati
         .frame(active)
 }
 pub fn button(ui: &mut egui::Ui, icon: Icon, active: bool, help: &str) -> egui::Response {
-    let response = ui.add(native_button(ui, icon, active));
+    sized_button(ui, icon, active, help, 30.0)
+}
+pub fn toolbar_button(ui: &mut egui::Ui, icon: Icon, active: bool, help: &str) -> egui::Response {
+    sized_button(ui, icon, active, help, 38.0)
+}
+fn sized_button(
+    ui: &mut egui::Ui,
+    icon: Icon,
+    active: bool,
+    help: &str,
+    size: f32,
+) -> egui::Response {
+    let response = ui.add_sized(Vec2::splat(size), native_button(ui, icon, active));
+    if matches!(icon, Icon::Grid | Icon::Rigs) {
+        let center = response.rect.center();
+        let stroke = egui::Stroke::new(1.6_f32, ui.visuals().text_color());
+        if matches!(icon, Icon::Grid) {
+            for x in [-4.5, 4.5] {
+                for y in [-4.5, 4.5] {
+                    ui.painter().rect_stroke(
+                        egui::Rect::from_center_size(center + egui::vec2(x, y), Vec2::splat(6.0)),
+                        1.0,
+                        stroke,
+                        egui::StrokeKind::Inside,
+                    );
+                }
+            }
+        } else {
+            for y in [-6.0, 0.0, 6.0] {
+                ui.painter().rect_stroke(
+                    egui::Rect::from_center_size(center + egui::vec2(-6.0, y), Vec2::splat(3.0)),
+                    0.5,
+                    stroke,
+                    egui::StrokeKind::Inside,
+                );
+                ui.painter().line_segment(
+                    [center + egui::vec2(-1.0, y), center + egui::vec2(8.0, y)],
+                    stroke,
+                );
+            }
+        }
+    }
     if matches!(icon, Icon::Calibration) {
         let center = response.rect.center();
         let stroke = egui::Stroke::new(1.6_f32, ui.visuals().text_color());
@@ -161,6 +207,28 @@ pub fn menu<R>(
     let (response, inner) =
         egui::containers::menu::MenuButton::from_button(native_button(ui, icon, false))
             .ui(ui, content);
+    response
+        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), help));
+    egui::InnerResponse {
+        response: response.on_hover_text(help),
+        inner: inner.map(|r| r.inner),
+    }
+}
+
+/// Larger target for the shared array recording action, using the same artwork.
+pub fn record_all(ui: &mut egui::Ui, active: bool, help: &str) -> egui::Response {
+    toolbar_button(ui, Icon::Record, active, help)
+}
+
+pub fn toolbar_menu<R>(
+    ui: &mut egui::Ui,
+    help: &str,
+    content: impl FnOnce(&mut egui::Ui) -> R,
+) -> egui::InnerResponse<Option<R>> {
+    let (response, inner) = egui::containers::menu::MenuButton::from_button(
+        native_button(ui, Icon::More, false).min_size(Vec2::splat(38.0)),
+    )
+    .ui(ui, content);
     response
         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), help));
     egui::InnerResponse {

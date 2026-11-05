@@ -18,6 +18,7 @@ pub struct ViewPreferences {
     pub magnifier: bool,
     pub display_fps: u32,
     pub reuse_atlas: bool,
+    pub window_size: Option<[f32; 2]>,
 }
 impl Default for ViewPreferences {
     fn default() -> Self {
@@ -28,6 +29,7 @@ impl Default for ViewPreferences {
             magnifier: true,
             display_fps: 30,
             reuse_atlas: false,
+            window_size: None,
         }
     }
 }
@@ -36,6 +38,14 @@ impl Default for ViewPreferences {
 pub struct Workspace {
     pub restore_on_launch: bool,
     pub rigs: Vec<PathBuf>,
+    /// None uses the nearest square; otherwise rows follow the active rig count.
+    pub columns: Option<usize>,
+    pub rows: Option<usize>,
+    pub grid_window_size: Option<[f32; 2]>,
+}
+pub fn valid_window_size(size: [f32; 2]) -> bool {
+    size.iter()
+        .all(|v| v.is_finite() && (96.0..=8192.0).contains(v))
 }
 pub fn sidecar(config: &Path, kind: &str) -> PathBuf {
     let name = config.file_name().unwrap_or_default().to_string_lossy();
@@ -109,6 +119,19 @@ pub fn workspace_path() -> Result<PathBuf, String> {
 mod tests {
     use super::*;
     #[test]
+    fn old_preferences_remain_compatible() -> Result<(), String> {
+        let view: ViewPreferences =
+            serde_json::from_str(r#"{"full_image":true}"#).map_err(|e| e.to_string())?;
+        assert_eq!(view.window_size, None);
+        let workspace: Workspace = serde_json::from_str(r#"{"rigs":[],"restore_on_launch":true}"#)
+            .map_err(|e| e.to_string())?;
+        assert_eq!(workspace.columns, None);
+        assert_eq!(workspace.rows, None);
+        assert!(!valid_window_size([f32::NAN, 300.]));
+        assert!(!valid_window_size([20., 300.]));
+        Ok(())
+    }
+    #[test]
     fn sidecar_roundtrip_is_bounded_and_preserves_config() -> Result<(), String> {
         let dir = std::env::temp_dir().join(format!(
             "hejjetrac-view-{}-{}",
@@ -123,6 +146,7 @@ mod tests {
             full_image: true,
             diagnostics: true,
             reuse_atlas: true,
+            window_size: Some([333., 247.]),
             ..Default::default()
         };
         write(&path, &view)?;

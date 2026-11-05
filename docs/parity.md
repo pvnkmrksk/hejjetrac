@@ -12,10 +12,10 @@ target; neither is hidden by the otherwise improved full-take result.
 [Reproduction and scientific boundaries](recorded-clock.md).
 
 Sixteen independent real-video desktop sessions process the complete VR3 source
-and match its serial accepted output. Five to sixteen rigs now share one native
+and match its serial accepted output. Multi-rig arrays now share one native
 hardware-rendered surface to avoid the reproduced XWayland/Nouveau abort from
 many native surfaces. This includes embedded manager/settings and graphical
-workspace restoration. Smaller arrays retain independent native windows.
+workspace restoration. A single rig retains its own native tracking window.
 This is Linux file replay and UI evidence, not native sixteen-camera capture
 capacity or physical-motion ground truth. [Current evidence](validation.md#recorded-clock-tracking-and-shared-surface-rig-grid--2026-11-05).
 
@@ -350,7 +350,7 @@ Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc
 | Calibration | Shared rim/masks/forward/square and resolution-reference operations; guided active-step editor and 4× current-view cursor loupe; saved square slots preserve order. F reflected-seed alternate fit differs from NLopt and can report no alternate branch; saved angular/pose values retain precedence |
 | Resolution portability | Explicit normalized extension reference can regenerate legacy pixel marks for matching aspect/FOV/projection; angular fits stay unchanged. Imported legacy files are never silently normalized; sensor crop/optical changes need review |
 | Config/file state | Lossless comments/unknown fields/CRLF, raw/field synchronization, history, external conflict guard; transactional agent edits |
-| Multi-instance | Independent native windows/headless sessions; VR/BR files, incremented camera IDs/ports, preserved video paths; explicit window size/position and up to 16 grid cells |
+| Multi-instance | Independent sessions in a shared native rig grid or headless controller; VR/BR files, incremented camera IDs/ports, preserved video paths; explicit window size/position and up to 16 grid cells |
 | Full CLI | Conventional commands plus legacy positional config invocation; structured status, schema, all numerical/calibration/recording operations through JSONL |
 | AI agent control | JSONL/MCP share the numerical controller; native GUI JSONL controls displayed sessions, including calibration steps/edit/loupe/full-image choices. Historical v0.1.1 native video/camera/grid transcripts and current validation are distinguished in validation.md |
 | Video inputs | H.264 MP4/MOV/AVI (including B-frame ordering), MPEG-4 Part 2 MP4/MOV/AVI, MJPEG/raw AVI and mono/420 Y4M |

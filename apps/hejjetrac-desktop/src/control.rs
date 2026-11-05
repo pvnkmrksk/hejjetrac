@@ -49,6 +49,10 @@ const COMMANDS: &[&str] = &[
     "map_refresh",
     "arrange_grid",
     "workspace_save",
+    "array_view",
+    "array_record",
+    "rig_focus",
+    "rig_grid",
     "map_save",
     "snapshot",
 ];
@@ -195,15 +199,68 @@ fn read_request(reader: &mut impl BufRead) -> Result<Option<Request>> {
         .map(Some)
         .map_err(|e| format!("invalid JSON request: {e}"))
 }
-fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
+pub(crate) fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
     hejjetrac_control::validate_request_arguments(&r.command, &r.args)?;
     match r.command.as_str() {
+        "array_view" => {
+            app.set_array_view(&r.args)?;
+            return Ok(json!({"applied":true}));
+        }
+        "array_record" => {
+            return app.record_array(
+                r.args
+                    .get("start")
+                    .and_then(Value::as_bool)
+                    .ok_or("args.start is required")?,
+                r.args
+                    .get("directory")
+                    .and_then(Value::as_str)
+                    .map(Path::new),
+            );
+        }
+        "rig_focus" => {
+            let id = r.session.ok_or("session is required")?;
+            if !app.sessions.iter().any(|s| !s.closed && s.id == id) {
+                return Err("Unknown rig session".into());
+            }
+            app.dashboard_focus = Some(id);
+            return Ok(json!({"focused":id}));
+        }
+        "rig_grid" => {
+            if app
+                .sessions
+                .iter()
+                .any(|s| !s.closed && s.tool != crate::session::Tool::Inspect)
+            {
+                return Err("Finish or cancel calibration before returning to the grid".into());
+            }
+            app.dashboard_focus = None;
+            return Ok(json!({"grid":true}));
+        }
         "arrange_grid" => {
-            app.args.grid = r
+            let columns = r
                 .args
                 .get("columns")
                 .and_then(Value::as_u64)
-                .map(|c| crate::Pair(c as f32, 1.0));
+                .map(|v| v as usize);
+            let rows = r
+                .args
+                .get("rows")
+                .and_then(Value::as_u64)
+                .map(|v| v as usize);
+            if columns
+                .zip(rows)
+                .is_some_and(|(c, r)| c * r < app.sessions.iter().filter(|s| !s.closed).count())
+            {
+                return Err("Grid has fewer cells than open rigs".into());
+            }
+            app.workspace.rows = rows;
+            app.workspace.columns = r
+                .args
+                .get("columns")
+                .and_then(Value::as_u64)
+                .map(|c| c as usize);
+            app.args.grid = None;
             app.tile_array_requested = true;
             return Ok(json!({"queued":true}));
         }
@@ -443,7 +500,7 @@ fn edited(s: &mut Session, doc: ConfigDocument) -> Result<Value> {
         .map_err(|e| format!("configuration edited but apply is pending: {e}"))?;
     Ok(json!({"queued":s.worker.is_some(),"status":status(s)}))
 }
-fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
+pub(crate) fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
     match command {
         "status" => Ok(status(s)),
         "config" => {
@@ -836,6 +893,7 @@ fn save_config(s: &mut Session, path: &Path) -> Result<Value> {
     s.path = Some(path.to_path_buf());
     s.source_base = s.path.clone();
     s.disk_conflict = false;
+    s.save_view()?;
     Ok(json!({"path":path,"bytes":doc.text().len(),"status":status(s)}))
 }
 fn calibrate(s: &Session, doc: &mut ConfigDocument, a: &Value) -> Result<()> {
@@ -1126,6 +1184,7 @@ mod tests {
             requested_screenshot: false,
             last_state: std::time::Instant::now(),
             control: None,
+            mcp: None,
             tile_columns: 2,
             window_origin: crate::Pair(12., 36.),
             dashboard: false,
@@ -1331,6 +1390,7 @@ mod tests {
             requested_screenshot: false,
             last_state: std::time::Instant::now(),
             control: None,
+            mcp: None,
             tile_columns: 2,
             window_origin: crate::Pair(12., 36.),
             dashboard: false,

@@ -27,7 +27,7 @@ boards for replication; a suitable regular webcam also works.
 
 [Saved workspaces and atlas startup](book/src/workspaces.md) explains graphical
 setup of up to sixteen rigs, a single-surface grid for larger arrays, compact arrangement, app-launch restoration,
-remembered full/debug views and optional reuse of the latest accepted atlas.
+remembered window sizes, square/custom grid layouts, shared view/record controls and optional reuse of the latest accepted atlas.
 
 Created by **[Pavan Kumar Kaushik](https://github.com/pvnkmrksk)**. The name combines **ಹೆಜ್ಜೆ** (*hejjé*, roughly **HEY-jay**), Kannada for a footstep, footprint or path, with **Trac**, following FicTrac’s spelling: **HEY-jay-track**. [Word origin](https://alar.ink/dictionary/kannada/english/%E0%B2%B9%E0%B3%86%E0%B2%9C%E0%B3%8D%E0%B2%9C%E0%B3%86).
 
@@ -47,9 +47,9 @@ Current downloads are ad hoc signed on Mac and unsigned on Windows. Use the proj
 
 - **A focused tracking window.** Ball preview, path, delivered FPS and tracking time stay visible. Settings open in a separate inspector.
 - **Guided calibration.** The ball outline fits live from three rim marks. Redraw exclusions and lab axes in turn, with a precision magnifier, right-click correction and the original FicTrac coordinate conventions.
-- **Independent rigs.** Each window has its own source, calibration, recording and outputs. Tile up to sixteen independent rigs; larger arrays share one hardware-rendered grid window.
+- **Independent rigs.** Each window has its own source, calibration, recording and outputs. View up to sixteen independent rigs in a hardware-rendered grid. Double-click a tile for individual controls and return with Back to rigs.
 - **Complete recording.** Save data, source video and diagnostic video. Every take retains all-frame numeric data, quality decisions and its configuration.
-- **Live output.** Use UDP, serial or ZeroMQ for downstream experiments. ZeroMQ is enabled by default on `0.0.0.0:9871`, serving localhost and IPv4 LAN receivers; each rig needs its own unused port. An explicit [legacy MATREX VR mode](docs/matrex-vr.md) matches the Python JSON republisher and old NetMQ handshake; native FT remains the default. The CLI, JSONL and MCP interfaces call the same numerical engine as the desktop.
+- **Live output.** Use UDP, serial or ZeroMQ for downstream experiments. ZeroMQ is enabled by default on `0.0.0.0:9871`, serving localhost and IPv4 LAN receivers; each rig needs its own unused port. An explicit [legacy MATREX VR mode](docs/matrex-vr.md) matches the Python JSON republisher and old NetMQ handshake; native FT remains the default. The CLI, JSONL and MCP interfaces call the same numerical engine as the desktop. Every desktop launch also starts a local [agent MCP endpoint](docs/agent-control.md#automatic-desktop-mcp) with screenshots and JSON control of the running app.
 - **A Rust application.** Native windows and camera APIs, Rust video codecs and a shared engine. No OpenCV, FFmpeg executable, Python runtime or webview is required.
 
 ![The native tracking window](docs/images/preview.png)

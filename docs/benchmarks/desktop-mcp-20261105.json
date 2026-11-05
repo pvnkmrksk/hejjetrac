@@ -1,0 +1,285 @@
+{
+  "passed": true,
+  "binary_sha256": "e859eef0defc1ca783b33a7ff69c6767180529a965415dae10cede70e5475408",
+  "video_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+  "platform": "Linux",
+  "launch": "native --config --array without control-stdio",
+  "grid": [
+    [
+      0.0,
+      42.0,
+      399.5,
+      233.0
+    ],
+    [
+      403.5,
+      42.0,
+      399.5,
+      233.0
+    ],
+    [
+      807.0,
+      42.0,
+      399.5,
+      233.0
+    ],
+    [
+      1210.5,
+      42.0,
+      399.5,
+      233.0
+    ],
+    [
+      0.0,
+      279.0,
+      399.5,
+      233.0
+    ],
+    [
+      403.5,
+      279.0,
+      399.5,
+      233.0
+    ],
+    [
+      807.0,
+      279.0,
+      399.5,
+      233.0
+    ],
+    [
+      1210.5,
+      279.0,
+      399.5,
+      233.0
+    ],
+    [
+      0.0,
+      516.0,
+      399.5,
+      233.0
+    ],
+    [
+      403.5,
+      516.0,
+      399.5,
+      233.0
+    ],
+    [
+      807.0,
+      516.0,
+      399.5,
+      233.0
+    ],
+    [
+      1210.5,
+      516.0,
+      399.5,
+      233.0
+    ],
+    [
+      0.0,
+      753.0,
+      399.5,
+      233.0
+    ],
+    [
+      403.5,
+      753.0,
+      399.5,
+      233.0
+    ],
+    [
+      807.0,
+      753.0,
+      399.5,
+      233.0
+    ],
+    [
+      1210.5,
+      753.0,
+      399.5,
+      233.0
+    ]
+  ],
+  "recordings": [
+    {
+      "rig": "rig-1",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-10",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-11",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-12",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-13",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-14",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-15",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-16",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-2",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-3",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-4",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-5",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-6",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-7",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-8",
+      "rows": 3,
+      "media_bytes": 3092972
+    },
+    {
+      "rig": "rig-9",
+      "rows": 3,
+      "media_bytes": 3092972
+    }
+  ],
+  "restored_single_size": [
+    432.0,
+    321.0
+  ],
+  "workspace_restored_rigs": 16,
+  "saved_layout": {
+    "restore_on_launch": true,
+    "rigs": [
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR1.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR2.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR3.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR4.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR5.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR6.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR7.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR8.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR9.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR10.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR11.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR12.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR13.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR14.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR15.txt",
+      "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/desktop-exclusive-controls-20261105/configs/VR16.txt"
+    ],
+    "columns": 4,
+    "rows": 4,
+    "grid_window_size": [
+      1610.0,
+      986.0
+    ]
+  },
+  "checks": {
+    "workspace_tests": 359,
+    "format_check": "passed",
+    "clippy_workspace_all_targets_locked_deny_warnings": "passed"
+  },
+  "screenshots": {
+    "rig-manager.png": "44bc0867948577c69ebbd61688dfa57c4001141190ead7ba5d095bef46ff71f9",
+    "grid-custom-layout.png": "c5a7a19c00ca67c2b3e3ff37629096fac531c128742f07bcd8dbb47606353fac",
+    "restored-workspace.png": "f09a393154351c9e203fae3eefd7ea610d417968da46311546c2f412c5c55973",
+    "grid-4x4.png": "5efe3dcecac325a9208286bf98ad4e3e6e1d7172dca00c8d8d644f473944d6a6",
+    "individual-debug.png": "12af9f4d95d1a157cdfc942a4351460fd68f68002a73a27142cbcce1abbfe81c"
+  },
+  "grid_window_restored_pixels": [
+    1610,
+    986
+  ],
+  "toolbar_modes": "Visually verified: grid displays only shared controls; expanded rig displays only individual controls and Back; Rig Manager is hidden while expanded.",
+  "hardware_probe": {
+    "passed": true,
+    "scope": "Identity rendering on a four-rig grid; only streaming cameras establish native capture coverage",
+    "binary_sha256": "c5c53ed924c10b26cbb4cab574374ad46604c97a10a66b91abcbf4ebc708b905",
+    "sources": [
+      {
+        "rig": 1,
+        "source": "",
+        "binding": "usb:0c45:6366:M01:video:0",
+        "title": "VR1 \u00b7 Cam M01 (#0) \u00b7 ZMQ off \u00b7 device pending \u00b7 UDP off",
+        "frames": 0,
+        "error": "worker command not applied: sending on a closed channel",
+        "notice": "camera: cannot open camera 4: Could not set device property Resolution, FrameFormat with value 1280x800@120FPS, MJPEG Format: Device or resource busy (os error 16). Check /dev/video device access (usually the video group), the USB connection, and close other camera apps before Connect again.",
+        "ended": true
+      },
+      {
+        "rig": 2,
+        "source": "",
+        "binding": "usb:0c45:6366:M02:video:0",
+        "title": "VR2 \u00b7 Cam M02 (#2) \u00b7 ZMQ off \u00b7 device pending \u00b7 UDP off",
+        "frames": 0,
+        "error": "worker command not applied: sending on a closed channel",
+        "notice": "camera: cannot open camera 0: Could not set device property Resolution, FrameFormat with value 1280x800@120FPS, MJPEG Format: Device or resource busy (os error 16). Check /dev/video device access (usually the video group), the USB connection, and close other camera apps before Connect again.",
+        "ended": true
+      },
+      {
+        "rig": 3,
+        "source": "",
+        "binding": "usb:0c45:6366:M03:video:0",
+        "title": "VR3 \u00b7 Cam M03 (#4) \u00b7 ZMQ off \u00b7 device pending \u00b7 UDP off",
+        "frames": 0,
+        "error": "worker command not applied: sending on a closed channel",
+        "notice": "camera: cannot open camera 6: Could not set device property Resolution, FrameFormat with value 1280x800@120FPS, MJPEG Format: Device or resource busy (os error 16). Check /dev/video device access (usually the video group), the USB connection, and close other camera apps before Connect again.",
+        "ended": true
+      },
+      {
+        "rig": 4,
+        "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+        "binding": "usb:0c45:6366:M04:video:0",
+        "title": "VR4 \u00b7 Cam M04 (#2) \u00b7 ZMQ off \u00b7 /dev/video2 \u00b7 UDP off",
+        "frames": 16,
+        "error": "",
+        "notice": "Tracking \u00b7 spherical atlas / Rust BOBYQA",
+        "ended": false
+      }
+    ]
+  },
+  "hardware_limit": "M04 streamed; M01\u2013M03 reported device/resource busy. This is not a four-camera acquisition validation.",
+  "scope": "Linux native UI/MCP integration and real-video outputs. No numerical engine change or scientific parity/performance claim."
+}

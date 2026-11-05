@@ -4,18 +4,191 @@ use crate::{Desktop, session::Tool, tiling};
 use eframe::egui;
 
 pub fn required(active: usize) -> bool {
-    active > 4
+    active > 1
 }
 
 impl Desktop {
+    pub(crate) fn set_array_view(&mut self, args: &serde_json::Value) -> Result<(), String> {
+        if self
+            .sessions
+            .iter()
+            .any(|s| !s.closed && s.show_calibration)
+        {
+            return Err("Finish or close calibration before changing all rig views".into());
+        }
+        for s in self.sessions.iter_mut().filter(|s| !s.closed) {
+            if let Some(v) = args.get("full_image").and_then(serde_json::Value::as_bool) {
+                s.full_image = v;
+            }
+            if let Some(v) = args.get("diagnostics").and_then(serde_json::Value::as_bool) {
+                s.show_diagnostics = v;
+            }
+            if let Some(v) = args.get("overlays").and_then(serde_json::Value::as_bool) {
+                s.show_overlays = v;
+            }
+        }
+        Ok(())
+    }
+    pub(crate) fn record_array(
+        &mut self,
+        start: bool,
+        directory: Option<&std::path::Path>,
+    ) -> Result<serde_json::Value, String> {
+        if start
+            && self.sessions.iter().any(|s| {
+                !s.closed
+                    && (s.worker.is_none()
+                        || s.snapshot.ended
+                        || s.tool != Tool::Inspect
+                        || s.snapshot.recording)
+            })
+        {
+            return Err("Every rig must be running, outside calibration and not already recording before Record all".into());
+        }
+        if start && let Some(path) = directory {
+            std::fs::create_dir(path).map_err(|e| {
+                format!(
+                    "Cannot create new array recording folder {}: {e}",
+                    path.display()
+                )
+            })?;
+        }
+        let mut results = vec![];
+        for s in self.sessions.iter_mut().filter(|s| !s.closed) {
+            let result = if start {
+                if let Some(path) = directory {
+                    let args = serde_json::json!({"directory":path.join(format!("rig-{}",s.id)),"record_options":{"raw":s.record_raw,"debug":s.record_debug},"recording_tuning":{"encoding":s.recording_encoding}});
+                    crate::control::execute_session(s, "record_start", &args).map(|_| ())
+                } else {
+                    s.queue_recording()
+                }
+            } else if s.worker.is_some() {
+                s.worker
+                    .as_ref()
+                    .ok_or("Worker unavailable")?
+                    .send(crate::runtime::Command::StopRecord)
+            } else {
+                Ok(())
+            };
+            if let Err(e) = &result {
+                s.error = e.clone();
+            }
+            results.push(
+                serde_json::json!({"session":s.id,"queued":result.is_ok(),"error":result.err()}),
+            );
+        }
+        Ok(
+            serde_json::json!({"rigs":results,"completion":"Poll sessions.recording and recording_finalizations; each rig reports failures independently."}),
+        )
+    }
+    pub(crate) fn array_controls(&mut self, ui: &mut egui::Ui) {
+        let active = self.sessions.iter().filter(|s| !s.closed).count();
+        let recording = self
+            .sessions
+            .iter()
+            .filter(|s| !s.closed && s.snapshot.recording)
+            .count();
+        let help = if recording > 0 {
+            format!("Stop all recordings ({recording}/{active})")
+        } else {
+            format!("Record all {active} rigs")
+        };
+        if crate::icons::record_all(ui, recording > 0, &help).clicked()
+            && let Err(e) = self.record_array(recording == 0, None)
+        {
+            self.startup_notice = e;
+        }
+        let enabled = !self
+            .sessions
+            .iter()
+            .any(|s| !s.closed && s.show_calibration);
+        ui.add_enabled_ui(enabled, |ui| {
+            let full = self
+                .sessions
+                .iter()
+                .filter(|s| !s.closed)
+                .all(|s| s.full_image);
+            let debug = self
+                .sessions
+                .iter()
+                .filter(|s| !s.closed)
+                .all(|s| s.show_diagnostics);
+            let outlines = self
+                .sessions
+                .iter()
+                .filter(|s| !s.closed)
+                .all(|s| s.show_overlays);
+            let controls = [
+                (
+                    crate::icons::Icon::Crop,
+                    !full,
+                    "full_image",
+                    !full,
+                    if full {
+                        "Zoom to ball · all rigs"
+                    } else {
+                        "Show full frame · all rigs"
+                    },
+                ),
+                (
+                    crate::icons::Icon::Diagnostics,
+                    debug,
+                    "diagnostics",
+                    !debug,
+                    if debug {
+                        "Show footage · all rigs"
+                    } else {
+                        "Show debug view · all rigs"
+                    },
+                ),
+                (
+                    crate::icons::Icon::Calibration,
+                    outlines,
+                    "overlays",
+                    !outlines,
+                    if outlines {
+                        "Hide calibration outlines · all rigs"
+                    } else {
+                        "Show calibration outlines · all rigs"
+                    },
+                ),
+            ];
+            for (icon, active, key, value, help) in controls {
+                if crate::icons::toolbar_button(ui, icon, active, help).clicked() {
+                    let mut args = serde_json::json!({});
+                    args[key] = serde_json::json!(value);
+                    if let Err(e) = self.set_array_view(&args) {
+                        self.startup_notice = e;
+                    }
+                }
+            }
+        });
+    }
+
     pub(crate) fn ensure_dashboard(&mut self, ctx: &egui::Context) {
         if !self.dashboard && required(self.sessions.iter().filter(|s| !s.closed).count()) {
             self.dashboard = true;
-            self.dashboard_columns = self.args.grid.map(|p| p.0 as usize);
+            self.dashboard_columns = self
+                .args
+                .grid
+                .map(|p| p.0 as usize)
+                .or(self.workspace.columns);
             self.root_hidden = false;
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
             ctx.send_viewport_cmd(egui::ViewportCommand::Title("HejjéTrac · Rig grid".into()));
-            ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
+            if let Some(size) = self
+                .args
+                .window_size
+                .map(|p| [p.0, p.1])
+                .or(self.workspace.grid_window_size)
+            {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(false));
+                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
+                    size[0], size[1],
+                )));
+            } else {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
+            }
         }
     }
 
@@ -41,29 +214,30 @@ impl Desktop {
             session.tile_rect = None;
             session.tile_open_rect = None;
         }
-        egui::TopBottomPanel::top("grid-actions").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.strong("Rig grid");
-                if ui.button("All rigs").clicked() {
-                    self.dashboard_focus = None;
-                    for session in &mut self.sessions {
-                        if session.tool != Tool::Inspect {
-                            session.cancel_calibration();
-                            session.set_calibration_panel(false);
-                        }
+        if self.dashboard_focus.is_none() {
+            egui::TopBottomPanel::top("grid-actions").show(ctx, |ui| {
+                ui.spacing_mut().interact_size.y = 38.0;
+                ui.horizontal_wrapped(|ui| {
+                    ui.strong("Rig grid");
+                    if crate::icons::toolbar_button(
+                        ui,
+                        crate::icons::Icon::Rigs,
+                        false,
+                        "Rig manager",
+                    )
+                    .clicked()
+                        && let Some(session) = self.sessions.iter_mut().find(|s| !s.closed)
+                    {
+                        session.show_rigs = true;
                     }
-                }
-                if ui.button("Rig manager…").clicked()
-                    && let Some(session) = self.sessions.iter_mut().find(|s| !s.closed)
-                {
-                    session.show_rigs = true;
-                }
-                ui.small(format!(
-                    "{} independent rigs",
-                    self.sessions.iter().filter(|s| !s.closed).count()
-                ));
+                    self.array_controls(ui);
+                    ui.small(format!(
+                        "{} rigs",
+                        self.sessions.iter().filter(|s| !s.closed).count()
+                    ));
+                });
             });
-        });
+        }
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
             .show(ctx, |ui| {
@@ -74,18 +248,25 @@ impl Desktop {
                     .filter(|(_, s)| !s.closed && self.dashboard_focus.is_none_or(|id| s.id == id))
                     .map(|(i, s)| (i, s.content_aspect()))
                     .collect();
-                let aspects: Vec<_> = active.iter().map(|(_, a)| *a).collect();
                 let focused = self.dashboard_focus.is_some();
-                let tiles = tiling::plan(
-                    ui.available_rect_before_wrap(),
-                    &aspects,
-                    egui::Vec2::ZERO,
-                    if focused {
-                        Some(1)
-                    } else {
-                        self.dashboard_columns
-                    },
-                );
+                let (columns, rows) = if focused {
+                    (Some(1), None)
+                } else if self
+                    .dashboard_columns
+                    .zip(self.workspace.rows)
+                    .is_some_and(|(c, r)| c * r < active.len())
+                {
+                    (None, None)
+                } else {
+                    (self.dashboard_columns, self.workspace.rows)
+                };
+                let tiles =
+                    tiling::grid(ui.available_rect_before_wrap(), active.len(), columns, rows);
+                if tiles.is_empty() && !active.is_empty() {
+                    ui.centered_and_justified(|ui| {
+                        ui.label("Enlarge the window or adjust the grid layout in Rig Manager.");
+                    });
+                }
                 for ((index, _), tile) in active.into_iter().zip(tiles) {
                     let session = &mut self.sessions[index];
                     if session.show_tile(
@@ -183,6 +364,7 @@ mod tests {
             requested_screenshot: false,
             last_state: std::time::Instant::now(),
             control: None,
+            mcp: None,
             window_size: Pair(520., 480.),
             window_origin: Pair(0., 0.),
             tile_columns: 4,

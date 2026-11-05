@@ -617,10 +617,12 @@ impl Session {
             .calibration_previous_paused
             .take()
             .unwrap_or(self.paused);
-        self.show_overlays = false;
-        self.full_image = false;
         self.send(Command::Pause(self.paused));
-        self.restore_calibration_view_if_closed();
+        self.set_calibration_panel(false);
+        self.show_settings = false;
+        if self.history.text != self.saved && self.path.is_some() && !self.temporary_config {
+            self.save(false)?;
+        }
         Ok(())
     }
 }

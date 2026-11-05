@@ -423,24 +423,41 @@ impl Session {
                 .max_rect(rect),
             |ui| {
                 ui.set_clip_rect(rect);
-                let header = Rect::from_min_size(rect.min, egui::vec2(rect.width(), 40.0));
+                let identity = self.compact_identity();
+                let identity_height = ui
+                    .painter()
+                    .layout(
+                        identity.clone(),
+                        egui::FontId::proportional(11.0),
+                        ui.visuals().text_color(),
+                        (rect.width() - 4.0).max(32.0),
+                    )
+                    .size()
+                    .y;
+                let header_height = (identity_height + if expanded { 40.0 } else { 4.0 })
+                    .max(if expanded { 64.0 } else { 32.0 });
+                let header = Rect::from_min_size(rect.min, egui::vec2(rect.width(), header_height));
                 ui.scope_builder(egui::UiBuilder::new().max_rect(header), |ui| {
-                    ui.horizontal_centered(|ui| {
-                        ui.strong(self.display_name());
-                        let response =
-                            ui.selectable_label(expanded, if expanded { "Grid" } else { "Open" });
-                        self.tile_open_rect = Some([
-                            response.rect.min.x,
-                            response.rect.min.y,
-                            response.rect.width(),
-                            response.rect.height(),
-                        ]);
-                        focus = response.clicked();
-                        self.toolbar(ui);
-                    });
+                    ui.add(egui::Label::new(egui::RichText::new(identity).size(11.0)).wrap());
+                    if expanded {
+                        ui.horizontal(|ui| {
+                            let response = icons::button(ui, Icon::Grid, false, "Back to rig grid");
+                            self.tile_open_rect = Some([
+                                response.rect.min.x,
+                                response.rect.min.y,
+                                response.rect.width(),
+                                response.rect.height(),
+                            ]);
+                            focus = response.clicked();
+                            self.toolbar_row(ui);
+                        });
+                    } else {
+                        self.tile_open_rect =
+                            Some([rect.min.x, rect.min.y, rect.width(), rect.height()]);
+                    }
                 });
                 let mut canvas = Rect::from_min_max(
-                    rect.min + egui::vec2(0.0, 40.0),
+                    rect.min + egui::vec2(0.0, header_height),
                     rect.max - egui::vec2(0.0, 22.0),
                 );
                 if self.tool != Tool::Inspect {
@@ -464,6 +481,26 @@ impl Session {
                 });
             },
         );
+        if !expanded {
+            let response = ui.interact(
+                rect,
+                egui::Id::new(("open-rig", self.id)),
+                egui::Sense::click(),
+            );
+            response
+                .clone()
+                .on_hover_cursor(egui::CursorIcon::PointingHand)
+                .on_hover_text("Double-click for rig controls");
+            if response.hovered() {
+                ui.painter().rect_stroke(
+                    rect.shrink(1.0),
+                    4.0,
+                    egui::Stroke::new(1.5_f32, ui.visuals().selection.stroke.color),
+                    egui::StrokeKind::Inside,
+                );
+            }
+            focus |= response.double_clicked();
+        }
         self.show_dialogs(&ctx, true);
         self.ui_metrics.show_ms = started.elapsed().as_secs_f64() * 1000.;
         focus
@@ -552,7 +589,7 @@ impl Session {
             }
         }
         icons::menu(ui, Icon::More, "View, rigs and settings", |ui| {
-            if ui.button("Rig manager…").clicked() {
+            if self.native_window && ui.button("Rig manager…").clicked() {
                 self.show_rigs = true;
                 ui.close();
             }
@@ -907,8 +944,8 @@ impl Session {
             );
             let label = if self.calibration_review {
                 if self.tool == Tool::Square { "Keep saved & finish" } else { "Keep saved / skip" }
-            } else if self.tool == Tool::Square { "Finish calibration" } else { "Use fit & continue" };
-            if ui.add_enabled(ready, egui::Button::new(label)).on_hover_text("Use the current valid fit and go to the next step. Save configuration afterward to keep it for future launches.").clicked() {
+            } else if self.tool == Tool::Square { "Finish calibration & save" } else { "Use fit & continue" };
+            if ui.add_enabled(ready, egui::Button::new(label)).on_hover_text("Use the current valid fit and go to the next step. Finishing saves an existing rig configuration and closes calibration.").clicked() {
                 let result = self.advance_calibration_step();
                 self.report(result);
             }
@@ -959,19 +996,14 @@ impl Session {
         ui.heading("Check calibration");
         ui.label("Compare the saved outlines and axes with the live image before your run. Alignment needs a visual check; the saved setup alone cannot detect a bumped camera or holder.");
         self.camera_geometry_help(ui);
-        if ui.add_enabled(self.history.text != self.saved, egui::Button::new("Save calibration")).on_hover_text("Save this rig's configuration after a calibrated change (same as Save configuration).").clicked() {
-            let result = self.save(false); self.report(result);
-        }
-        if self.history.text != self.saved {
-            ui.colored_label(ui.visuals().warn_fg_color, "Unsaved calibration changes");
-        }
         ui.add_space(6.0);
         if self.tool == Tool::Inspect {
             self.calibration_overview(ui);
             ui.add_space(6.0);
             ui.horizontal(|ui| {
-                if ui.button("Done checking").clicked() {
-                    self.set_calibration_panel(false);
+                if ui.button("Done").clicked() {
+                    let result = self.complete_calibration();
+                    self.report(result);
                 }
                 if ui.button("Configure rig…").clicked() {
                     self.set_settings_panel(true);
@@ -1021,7 +1053,7 @@ impl Session {
             if ui.button("Full configuration…").clicked() { self.set_settings_panel(true); self.show_config_text = true; }
         });
         ui.checkbox(&mut self.show_overlays, "Show saved outlines and axes");
-        ui.small("Keep any layer that already lines up. Save after recalibration to use the new setup next time.");
+        ui.small("Keep any layer that already lines up. Finish saves changes to this rig and returns to tracking.");
     }
     #[cfg(test)]
     fn diagnostic_calibration_controls(&mut self, ui: &mut egui::Ui) {
@@ -1104,7 +1136,7 @@ impl Session {
                     }
                     ui.horizontal_wrapped(|ui| {
                         let valid = !self.points.is_empty() && self.calibration_draft_document().is_ok();
-                        if ui.add_enabled(valid, egui::Button::new(if self.tool == Tool::Square { "Finish calibration" } else { "Continue" })).on_hover_text("Use the automatic fit and continue. This step becomes one undoable edit.").clicked() { let result = self.advance_calibration_step(); self.report(result); }
+                        if ui.add_enabled(valid, egui::Button::new(if self.tool == Tool::Square { "Finish calibration & save" } else { "Continue" })).on_hover_text("Use the automatic fit and continue. This step becomes one undoable edit.").clicked() { let result = self.advance_calibration_step(); self.report(result); }
                         if self.tool == Tool::Exclude && ui.add_enabled(valid, egui::Button::new("Add this region")).on_hover_text("Use this polygon and immediately draw another region.").clicked() { let result = self.finish_points().and_then(|_| self.choose_calibration_action("add")); self.report(result); }
                         if ui.button("Clear draft points").clicked() { self.points.clear(); self.square_slots = None; }
                         if self.tool == Tool::Exclude && self.calibration_redraw && self.points.is_empty() && ui.button("Use no exclusions").on_hover_text("Remove all exclusion polygons as one undoable edit; keep the ball and lab calibration.").clicked() {
@@ -1136,7 +1168,7 @@ impl Session {
                 });
                 if ui.add_enabled(!self.calibration_review && !self.calibration_redraw, egui::Button::new("Alternate fitted orientation  F")).on_hover_text("Choose Edit saved marks to refit the alternate pose branch without changing corner order.").clicked() { let result = self.cycle_square(); self.report(result); }
             }
-            if ui.button("Finish calibration").on_hover_text("Apply any valid current draft and restore the prior playback state. Save configuration preserves changes across launches.").clicked() {
+            if ui.button("Finish calibration & save").on_hover_text("Apply any valid current draft and restore the prior playback state. Save configuration preserves changes across launches.").clicked() {
                 let result = self.complete_calibration(); self.report(result);
             }
         }
@@ -3430,6 +3462,44 @@ mod tests {
             }
         }
         Ok(())
+    }
+    #[test]
+    fn finishing_calibration_saves_once_closes_and_preserves_conflicts() -> Result<(), String> {
+        let mut s = session()?;
+        let root = std::env::temp_dir().join(format!(
+            "hejjetrac-finish-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_nanos()
+        ));
+        std::fs::create_dir(&root).map_err(|e| e.to_string())?;
+        let path = root.join("VR1.txt");
+        std::fs::write(&path, &s.saved).map_err(|e| e.to_string())?;
+        s.path = Some(path.clone());
+        s.full_image = true;
+        s.set_calibration_panel(true);
+        s.fields(&[("thr_ratio", "1.26".into())])?;
+        s.complete_calibration()?;
+        assert!(!s.show_calibration && !s.show_settings);
+        assert!(s.full_image);
+        assert_eq!(s.history.text, s.saved);
+        assert_eq!(
+            std::fs::read_to_string(&path).map_err(|e| e.to_string())?,
+            s.saved
+        );
+        s.set_calibration_panel(true);
+        s.fields(&[("thr_ratio", "1.27".into())])?;
+        let external = format!("{}# external edit\n", s.saved);
+        std::fs::write(&path, &external).map_err(|e| e.to_string())?;
+        assert!(s.complete_calibration().is_err());
+        assert_ne!(s.history.text, s.saved);
+        assert_eq!(
+            std::fs::read_to_string(&path).map_err(|e| e.to_string())?,
+            external
+        );
+        std::fs::remove_dir_all(root).map_err(|e| e.to_string())
     }
     #[test]
     fn saved_calibration_review_is_read_only_and_keep_advances_without_rewriting()

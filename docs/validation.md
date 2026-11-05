@@ -1,5 +1,37 @@
 # HejjéTrac validation evidence
 
+## Automatic desktop MCP and shared rig controls — 2026-11-05
+
+Formatting, strict workspace/all-target Clippy and **359 workspace tests** pass.
+The final icon/layout pass also passes all **128 desktop tests**. The native
+release opens sixteen real-video sessions without `--control-stdio`; its
+loopback MCP endpoint initializes, advertises typed commands, returns PNG app
+screenshots, and handles real double-click/Back input. Shared footage/debug,
+zoom/full-frame and outline controls apply to all sessions; individual view
+choices survive grid navigation. Distinct manager/grid/debug icons and toolbar
+alignment are visually inspected. Shared controls appear only in grid view; an
+expanded rig shows only its individual toolbar and Back, with Rig Manager hidden.
+
+One shared recording command produces sixteen takes with three numeric, quality
+and source-video images each. Every saved video decodes independently through
+the Rust CLI, preserving all 48 rows. Calibration completion saves the existing
+rig and closes its inspector. The forward-calibration point argument remains
+independent of the shared record command's boolean start argument. A second app
+uses a separate endpoint/token; config save/relaunch restores **432×321** logical
+pixels. A graphical relaunch restores all sixteen saved rigs, a **4×4** layout
+and the grid-window dimensions. Credential permissions, incorrect authorization,
+browser Origin rejection and clean descriptor removal are checked.
+
+A separate native camera probe renders M01–M04 identities and streams M04 with
+its actual `/dev/video2` path. M01–M03 report device/resource busy; this probe does
+not establish four-camera acquisition. Missing device paths are not invented.
+These are Linux UI/transport and recorded-output checks; native MCP execution on
+macOS/Windows, sixteen-camera capacity, physical calibration ground truth and
+new performance claims remain outside this evidence.
+[Hashes, exact scope and artifact counts](benchmarks/desktop-mcp-20261105.json) ·
+[Reproduction client](../scripts/test_desktop_mcp.py) ·
+[Connection and tool contracts](agent-control.md#automatic-desktop-mcp).
+
 ## Recorded-clock tracking and shared-surface rig grid — 2026-11-05
 
 The unchanged six-case serial release suite passes the 120-image known-motion

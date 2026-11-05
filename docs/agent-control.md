@@ -75,6 +75,73 @@ top-left refresh arrow uses this shared operation.
 
 Output paths must be new. Requests are bounded to 1 MB, rows to one million per session and queries to 10,000 rows. Exhausting a bound returns an actionable error. The process has its ordinary local filesystem permissions; applications connecting an AI client should grant only the local access they intend that client to use.
 
+## Automatic desktop MCP
+
+Every graphical launch starts an in-process **Streamable HTTP MCP** endpoint for
+that running desktop, including normal app-launcher, config-file, array and
+`--control-stdio` launches. It uses protocol `2025-11-25` and also negotiates
+`2025-06-18` / `2025-03-26`. It follows the
+[MCP HTTP transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
+with stateless JSON responses; GET returns 405 because no SSE stream is offered.
+The separate CLI stdio server below still owns headless sessions.
+
+The first desktop binds `http://127.0.0.1:17871/mcp`; other processes use the next
+free port through 17934. The endpoint lasts for the app process. Rig Manager
+shows its address and **Copy connection JSON** copies a client connection object:
+
+```json
+{"url":"http://127.0.0.1:17871/mcp","headers":{"Authorization":"Bearer <per-launch token>"}}
+```
+
+The same connection is discoverable under `mcp/<PID>.json` beside `workspace.json`
+(`HEJJETRAC_STATE_DIR` overrides that folder). Each descriptor contains PID,
+protocol version and `connection`. On Unix it is created with mode 0600; clean
+shutdown removes it. A crash can leave a stale descriptor: verify the PID and
+endpoint rather than treating the file as proof the app is running. Tokens change
+on every launch. No credentials are printed in logs. The listener rejects browser
+Origin headers, non-loopback Host values and missing/wrong bearer tokens. Queue,
+message, socket-worker and request-time bounds keep network clients off the render
+thread. A startup failure is visible in Rig Manager and stderr.
+
+Initialize the client, then use `tools/list`:
+
+| Tool | Purpose |
+|---|---|
+| `hejjetrac_execute` | Existing native JSON commands and full argument schema. Start with `discover` and `sessions`. |
+| `hejjetrac_surfaces` | Visible native surfaces, titles, logical size and pixels per point. |
+| `hejjetrac_screenshot` | Actual rendered app content as an MCP PNG image, including tiles, controls and embedded inspectors. Optional `surface` defaults to `root`. |
+| `hejjetrac_ui` | `click`, `move`, `press`, `release`, `scroll`, `text`, or `key` on a surface. Pointer coordinates are logical pixels; divide screenshot pixels by `pixels_per_point`. |
+
+Clicks use separate press/release frames. Two clicks within the normal double-click
+interval open a compact tile. `press` → `move` → `release` drags calibration marks
+or sliders. Use `button: "secondary"` for right-click. Key names include `Enter`,
+`Escape`, `Tab`, `ArrowDown` and `Backspace`, with optional `ctrl`/`shift`. All app
+controls go through egui input; OS window decorations and native OS file dialogs
+are outside this input/screenshot surface. Use typed `open`, `source`, `save_config`
+and recording path arguments for file operations. No shell execution is exposed.
+
+The shared Rig Manager controls have matching native commands:
+
+```json
+{"command":"array_view","args":{"full_image":true,"diagnostics":false,"overlays":true}}
+{"command":"array_record","args":{"start":true,"directory":"/new/array-take"}}
+{"command":"array_record","args":{"start":false}}
+{"command":"rig_focus","session":2}
+{"command":"rig_grid"}
+{"command":"arrange_grid","args":{"columns":4,"rows":4}}
+```
+
+`array_record` checks all rigs before starting. An explicit new parent directory
+gets `rig-<session>` subfolders; omission uses each rig's configured recording
+folder. Starts/stops remain independent queued worker operations, not synchronized
+camera triggers. Poll every rig's `recording`, `recording_finalizations`, errors
+and output directory. A send/storage failure on one rig stays visible while other
+rigs continue. Shared view changes are rejected during calibration. Grid/focus
+navigation preserves per-rig view choices. Shared grid controls and Rig Manager are
+hidden while a rig is expanded; use `rig_grid` to return to shared controls.
+Window sizes, workspace grid dimensions
+and grid-window size are saved separately from legacy calibration text.
+
 ## MCP stdio
 
 Register the release executable as a local MCP server:
@@ -83,7 +150,7 @@ Register the release executable as a local MCP server:
 {"mcpServers":{"hejjetrac":{"command":"/absolute/path/to/hejjetrac-cli","args":["mcp"]}}}
 ```
 
-Use the packaged CLI executable's absolute path (`hejjetrac-cli.exe` on Windows; `hejjetrac.app/Contents/MacOS/hejjetrac-cli` on Mac). Cargo source builds produce the same executable name. The adapter implements the [MCP initialization lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle), `ping`, `tools/list` and `tools/call` for protocol `2025-06-18`. Its `hejjetrac_execute` tool advertises the concrete request schema and calls the same controller as JSONL. Results include both text JSON and `structuredContent`; command failures set `isError`. Notifications receive no response. Closing stdin shuts down cleanly. The shared `close` arguments include optional `discard=true`; this explicitly permits discarding unsaved native GUI edits. Headless sessions are disposable in-memory state and close directly. No HTTP listener, cloud connection or credential is created.
+Use the packaged CLI executable's absolute path (`hejjetrac-cli.exe` on Windows; `hejjetrac.app/Contents/MacOS/hejjetrac-cli` on Mac). Cargo source builds produce the same executable name. The adapter implements the [MCP initialization lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle), `ping`, `tools/list` and `tools/call` for protocol `2025-06-18`. Its `hejjetrac_execute` tool advertises the concrete request schema and calls the same controller as JSONL. Results include both text JSON and `structuredContent`; command failures set `isError`. Notifications receive no response. Closing stdin shuts down cleanly. The shared `close` arguments include optional `discard=true`; this explicitly permits discarding unsaved native GUI edits. Headless sessions are disposable in-memory state and close directly. This CLI stdio mode creates no HTTP listener or credential; the desktop endpoint above is separate.
 
 ## Conventional CLI compatibility
 

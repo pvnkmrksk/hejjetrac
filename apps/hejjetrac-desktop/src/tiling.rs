@@ -132,7 +132,17 @@ fn fit(available: Vec2, aspect: f32) -> Vec2 {
     }
     best
 }
+#[cfg(test)]
 pub fn plan(work: Rect, aspects: &[f32], decorations: Vec2, columns: Option<usize>) -> Vec<Tile> {
+    plan_layout(work, aspects, decorations, columns, None)
+}
+pub fn plan_layout(
+    work: Rect,
+    aspects: &[f32],
+    decorations: Vec2,
+    columns: Option<usize>,
+    rows: Option<usize>,
+) -> Vec<Tile> {
     if aspects.is_empty()
         || aspects.len() > 16
         || !work.is_finite()
@@ -153,12 +163,23 @@ pub fn plan(work: Rect, aspects: &[f32], decorations: Vec2, columns: Option<usiz
         .collect();
     let decorations = decorations.max(Vec2::ZERO).min(egui::vec2(64.0, 96.0));
     let gap = 4.0;
+    let columns = Some(
+        columns
+            .unwrap_or_else(|| {
+                rows.map(|r| aspects.len().div_ceil(r.max(1)))
+                    .unwrap_or_else(|| square_columns(aspects.len()))
+            })
+            .clamp(1, 16),
+    );
     let mut best = (0.0, vec![]);
-    for cols in 1..=aspects.len() {
+    for cols in 1..=16 {
         if columns.is_some_and(|desired| desired != cols) {
             continue;
         }
-        let rows = aspects.len().div_ceil(cols);
+        let rows = rows.unwrap_or_else(|| aspects.len().div_ceil(cols));
+        if rows == 0 || rows > 16 || rows * cols < aspects.len() {
+            continue;
+        }
         let cell = egui::vec2(
             (work.width() - gap * (cols - 1) as f32) / cols as f32,
             (work.height() - gap * (rows - 1) as f32) / rows as f32,
@@ -169,30 +190,32 @@ pub fn plan(work: Rect, aspects: &[f32], decorations: Vec2, columns: Option<usiz
         }
         let mut tiles = vec![];
         let mut area = 0.0;
-        let mut y = work.top();
-        for row in aspects.chunks(cols) {
+
+        for (row_index, row) in aspects.chunks(cols).enumerate() {
+            let y = work.top() + row_index as f32 * (cell.y + gap);
             let sizes: Vec<_> = row.iter().map(|a| fit(available, *a)).collect();
             if sizes.iter().any(|s| s.x < 96.0 || s.y < 96.0) {
                 break;
             }
-            let mut x = work.left();
-            let mut height = 0.0_f32;
-            for inner in sizes {
+
+            for (column_index, inner) in sizes.into_iter().enumerate() {
+                let x = work.left() + column_index as f32 * (cell.x + gap);
                 tiles.push(Tile {
                     position: egui::pos2(x, y),
                     inner,
                 });
                 area += inner.x * (inner.y - chrome(inner));
-                x += inner.x + decorations.x + gap;
-                height = height.max(inner.y + decorations.y);
             }
-            y += height + gap;
         }
         if tiles.len() == aspects.len() && area > best.0 {
             best = (area, tiles);
         }
     }
     best.1
+}
+
+pub fn square_columns(count: usize) -> usize {
+    (count.clamp(1, 16) as f32).sqrt().ceil() as usize
 }
 
 #[cfg(test)]
@@ -235,4 +258,61 @@ mod tests {
             }
         }
     }
+}
+
+#[cfg(test)]
+mod layout_tests {
+    use super::*;
+    #[test]
+    fn square_default_and_reserved_rows_keep_exact_cells() {
+        let work = Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1920., 1080.));
+        let tiles = plan_layout(work, &[4. / 3.; 16], Vec2::ZERO, None, None);
+        assert_eq!(tiles.len(), 16);
+        assert_eq!(tiles[0].position.y, tiles[3].position.y);
+        assert!(tiles[4].position.y > tiles[0].position.y);
+        assert_eq!(tiles[12].position.x, tiles[0].position.x);
+        let reserved = plan_layout(work, &[4. / 3.; 8], Vec2::ZERO, Some(4), Some(4));
+        assert_eq!(reserved.len(), 8);
+        assert_eq!(reserved[4].position, tiles[4].position);
+        assert!(plan_layout(work, &[1.; 16], Vec2::ZERO, Some(3), Some(3)).is_empty());
+        assert_eq!(
+            (1..=16).map(square_columns).collect::<Vec<_>>(),
+            vec![1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4]
+        );
+    }
+}
+
+/// Equal dashboard cells; the preview fits its image inside each cell.
+pub fn grid(work: Rect, count: usize, columns: Option<usize>, rows: Option<usize>) -> Vec<Tile> {
+    if count == 0 || count > 16 || !work.is_finite() {
+        return vec![];
+    }
+    let cols = columns.unwrap_or_else(|| {
+        rows.map(|r| count.div_ceil(r.max(1)))
+            .unwrap_or_else(|| square_columns(count))
+    });
+    if !(1..=16).contains(&cols) {
+        return vec![];
+    }
+    let rows = rows.unwrap_or_else(|| count.div_ceil(cols));
+    if !(1..=16).contains(&rows) || cols * rows < count {
+        return vec![];
+    }
+    let size = egui::vec2(
+        (work.width() - 4. * (cols - 1) as f32) / cols as f32,
+        (work.height() - 4. * (rows - 1) as f32) / rows as f32,
+    );
+    if size.x < 96. || size.y < 96. {
+        return vec![];
+    }
+    (0..count)
+        .map(|i| Tile {
+            position: work.min
+                + egui::vec2(
+                    (i % cols) as f32 * (size.x + 4.),
+                    (i / cols) as f32 * (size.y + 4.),
+                ),
+            inner: size,
+        })
+        .collect()
 }

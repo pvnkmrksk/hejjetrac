@@ -24,7 +24,16 @@ fn descriptor(command: &str, args: Value) -> Value {
     let mut properties = json!({"command":{"const":command},"id":{},"args":args,"session":{"type":"integer","minimum":1}});
     let global = matches!(
         command,
-        "open" | "schema" | "discover" | "sessions" | "camera_list"
+        "open"
+            | "schema"
+            | "discover"
+            | "sessions"
+            | "camera_list"
+            | "array_view"
+            | "array_record"
+            | "rig_grid"
+            | "arrange_grid"
+            | "workspace_save"
     );
     if global && let Some(p) = properties.as_object_mut() {
         p.remove("session");
@@ -59,6 +68,8 @@ pub fn request_schema() -> Value {
         "reset",
         "rewind",
         "record_stop",
+        "rig_focus",
+        "rig_grid",
     ] {
         variants.push(descriptor(command, none()));
     }
@@ -92,8 +103,16 @@ pub fn request_schema() -> Value {
     variants.push(descriptor(
         "arrange_grid",
         object(
-            json!({"columns":{"type":"integer","minimum":1,"maximum":16}}),
+            json!({"columns":{"type":"integer","minimum":1,"maximum":16},"rows":{"type":"integer","minimum":1,"maximum":16}}),
             &[],
+        ),
+    ));
+    variants.push(descriptor("array_view",object(json!({"full_image":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"}}),&[])));
+    variants.push(descriptor(
+        "array_record",
+        object(
+            json!({"start":{"type":"boolean"},"directory":path()}),
+            &["start"],
         ),
     ));
     variants.push(descriptor(
@@ -149,7 +168,7 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "source" => &["input"],
         "save_config" | "map_save" => &["path"],
         "map_load" => &["path", "pose_camera"],
-        "arrange_grid" => &["columns"],
+        "arrange_grid" => &["columns", "rows"],
         "workspace_save" => &["restore_on_launch"],
         "record_start" => &["directory", "record_options", "recording_tuning"],
         "snapshot" | "export" => &["directory"],
@@ -173,6 +192,9 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "camera_format" => &["width", "height", "fps"],
         "camera_set" => &["control", "mode", "value"],
         "step" | "run" => &["frames"],
+        "array_view" => &["full_image", "diagnostics", "overlays"],
+        "array_record" => &["start", "directory"],
+        "rig_focus" | "rig_grid" => &[],
         "rows" => &["offset", "limit"],
         "calibrate" => &[
             "kind", "points", "start", "end", "plane", "width", "height", "polygons",
@@ -208,12 +230,25 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
             return Err(format!("args.{key} must be boolean"));
         }
     }
-    if command == "arrange_grid"
+    if command == "array_record" && !object.get("start").is_some_and(Value::is_boolean) {
+        return Err("args.start must be boolean".into());
+    }
+    if command == "array_record"
         && object
-            .get("columns")
-            .is_some_and(|v| !v.as_u64().is_some_and(|c| (1..=16).contains(&c)))
+            .get("directory")
+            .is_some_and(|v| !v.as_str().is_some_and(|s| !s.is_empty()))
     {
-        return Err("args.columns must be an integer 1..16".into());
+        return Err("args.directory must be a nonempty path".into());
+    }
+    if command == "arrange_grid" {
+        for key in ["columns", "rows"] {
+            if object
+                .get(key)
+                .is_some_and(|v| !v.as_u64().is_some_and(|n| (1..=16).contains(&n)))
+            {
+                return Err(format!("args.{key} must be an integer 1..16"));
+            }
+        }
     }
     if command == "map_load"
         && object.get("pose_camera").is_some_and(|v| {
@@ -393,6 +428,12 @@ pub fn headless_request_schema() -> Value {
                 v["properties"]["command"]["const"].as_str(),
                 Some(
                     "view"
+                        | "array_view"
+                        | "array_record"
+                        | "rig_focus"
+                        | "rig_grid"
+                        | "arrange_grid"
+                        | "workspace_save"
                         | "start_array"
                         | "camera_list"
                         | "camera_status"
@@ -408,6 +449,42 @@ pub fn headless_request_schema() -> Value {
 #[cfg(test)]
 mod tuning_tests {
     use super::*;
+    #[test]
+    fn array_controls_are_typed_and_native_only() {
+        for invalid in [
+            json!({"columns":0}),
+            json!({"rows":17}),
+            json!({"rows":1.5}),
+            json!({"columns":"4"}),
+        ] {
+            assert!(validate_arguments("arrange_grid", &invalid).is_err());
+        }
+        assert!(validate_arguments("arrange_grid", &json!({"columns":4,"rows":4})).is_ok());
+        assert!(validate_arguments("array_view", &json!({"full_image":"true"})).is_err());
+        assert!(validate_arguments("array_record", &json!({"start":"yes"})).is_err());
+        assert!(
+            validate_arguments(
+                "calibrate",
+                &json!({"kind":"forward","start":[100,100],"end":[150,120]})
+            )
+            .is_ok()
+        );
+        let schema = headless_request_schema();
+        for name in [
+            "array_view",
+            "array_record",
+            "rig_focus",
+            "rig_grid",
+            "arrange_grid",
+            "workspace_save",
+        ] {
+            assert!(!schema["oneOf"].as_array().is_some_and(|items| {
+                items
+                    .iter()
+                    .any(|v| v["properties"]["command"]["const"] == name)
+            }));
+        }
+    }
     #[test]
     fn display_rate_and_recording_encoding_are_strictly_typed() {
         for fps in [json!(1), json!(30), json!(60)] {

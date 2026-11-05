@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 [dependencies]
+getrandom = "0.3"
 hejjetrac-core.workspace = true
 hejjetrac-io.workspace = true
 hejjetrac-control.workspace = true

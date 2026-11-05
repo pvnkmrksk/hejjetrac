@@ -23,14 +23,14 @@ user configurations. You can keep experiment configs in another writable folder.
 ## Set up the rigs graphically
 
 1. Open **More → Rig manager** in a tracking window.
-2. **Add saved rigs…** selects existing configuration files, including files
+2. **More → Add saved rigs…** selects existing configuration files, including files
    from different folders. **New rig** creates another editable session. The
    limit is sixteen open rigs.
-3. Open a rig's **Settings… → Source**. Select its camera or video. For live
+3. Open a rig's settings icon, then **Source**. Select its camera or video. For live
    cameras, use the link icon to bind the exact physical identity, then save
    the configuration. A camera can be owned by only one session.
 4. Choose **Calibration → Open graphical calibration…**. Review, edit or redraw
-   the ball, exclusions and lab layers. Save the calibration. The guided editor
+   the ball, exclusions and lab layers. Finish to save the calibration. The guided editor
    uses the full image and restores the previous normal view afterward. Each
    physical rig needs its own fit.
 5. In **Outputs**, assign distinct enabled ports. For example, UDP destinations
@@ -41,34 +41,26 @@ user configurations. You can keep experiment configs in another writable folder.
    Those choices and preview FPS return on clean close/relaunch of the saved
    rig, without rewriting its calibration text.
 
-For numbered files in one folder, **Start saved array** opens the existing
+For numbered files in one folder, **More → Open saved array** opens the existing
 `VR1.txt`–`VR16.txt` or `BR1.txt`–`BR16.txt` siblings and reports failures
-independently. **Start all** resumes paused rigs, retries stopped sources and
+independently. The play icon resumes paused rigs, retries stopped sources and
 replays finished files. An array never replaces a failed camera with a sample.
 
 ## Fit every rig on screen
 
-Finish or close calibration, then choose **Arrange in a grid**. Up to four rigs
-keep independent native windows fitted to their image aspect ratios and the
-current monitor's available space. Close or minimize the rig manager to see them.
+Finish or close calibration, then click the grid icon. Multiple rigs
+share one hardware-rendered grid window. Each rig retains its independent
+source, tracker, calibration, outputs and view preferences. Manager and settings
+open within the same surface. The grid defaults to a square layout, or uses the
+columns/rows selected in Rig Manager.
 
-**Five to sixteen rigs use one hardware-rendered Rig grid window.** Each tile
-retains its independent source, tracker, calibration, outputs and saved view.
-This bounds presentation to one GPU surface and avoids the observed XWayland /
-Nouveau crash when creating many native surfaces on a hybrid-GPU desktop. The
-app keeps hardware Vulkan rendering; it does not switch the grid to CPU graphics.
-The rig manager and settings open inside this grid window too.
-
-Choose **Open** on a tile for a larger view, diagnostics or graphical calibration;
-choose **Grid** or **All rigs** to return to the complete grid. All other trackers
-continue while one rig is expanded. Use a tile’s **More → Close this rig**
-to remove it; unsaved edits offer Save, Discard or Cancel. Closing the first
-rig leaves the grid and other trackers running. Closing the whole grid asks
-before discarding any rig’s unsaved configuration text. Calibration uses the same source-space
-editor and shared numerical commands as independent windows. Refresh, recording
-and More remain available in compact tiles. Hover over the status for timing.
-Images fit their own tile, so unused space can remain around the group when
-source/debug aspect ratios differ. The optional terminal equivalent is:
+Double-click a tile to expand it for individual controls, diagnostics and graphical
+calibration. The **Back to rig grid** icon returns to the grid and retains that rig's selected
+view. Shared grid controls appear only in grid view; an expanded rig shows only
+its individual controls and Back. All other trackers continue. Compact tiles show identity and status, without
+individual toolbars. Shared view and recording controls are available in Rig
+Manager and the grid toolbar. Closing the whole grid asks before discarding
+unsaved configuration text. The optional terminal equivalent is:
 
 ```sh
 hejjetrac --config VR1.txt --array --grid 4x4
@@ -145,3 +137,30 @@ actual configuration filename. The startup manifest is `workspace.json` in the
 per-user HejjéTrac configuration directory. Keep `.hejjetrac` with the rig when
 moving it. Removing a view sidecar restores display defaults; removing an atlas
 sidecar forces fresh learning. Neither action changes the calibration file.
+
+## Shared grid controls and saved dimensions
+
+Multiple rigs now share the rig grid, including small arrays. The default is the
+nearest square column count: sixteen rigs use 4×4. Rig Manager's **Grid layout**
+can select a column count and explicit rows (0 means automatic rows). A layout
+needs at least one cell per rig. Save the workspace to keep its rig list and
+restore it on graphical launch. Grid dimensions and the grid-window size are
+remembered; each separately opened rig also remembers its window size beside its
+configuration. Saving a config saves that view sidecar as well. Older sidecars
+without dimensions still use defaults. Display/framebuffer limits apply on restore.
+
+The full-frame/zoom, footage/debug, outline and recording icons
+apply to all open rigs. Recording uses each rig's folder, raw/debug selection and
+codec; stop waits for each worker to finalize its files. Each rig reports its own
+errors. Compact tiles show VR, camera serial/number, ZMQ port and actual device
+path when known. They have no individual toolbar. Hover for a highlight and hint;
+double-click to expand a rig, then use the **Back to rig grid** icon to return. View choices
+made for that rig remain selected.
+
+Finishing calibration closes the inspector and saves changes to an existing rig
+configuration. Unsaved/temporary configurations still need their ordinary first
+Save As. Disk conflicts and write failures preserve edits and remain visible;
+there is no second Save calibration button.
+
+Rig Manager also shows the automatically started local **Agent MCP** endpoint and
+can copy its client connection JSON. [Agent setup and screenshot/input tools](../../docs/agent-control.md#automatic-desktop-mcp).

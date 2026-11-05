@@ -9,6 +9,7 @@ mod graphics;
 mod icons;
 #[cfg(target_os = "linux")]
 mod launch;
+mod mcp;
 mod runtime;
 mod session;
 mod startup;
@@ -160,6 +161,7 @@ struct Desktop {
     requested_screenshot: bool,
     last_state: Instant,
     control: Option<control::Bridge>,
+    mcp: Option<mcp::Server>,
     window_size: Pair,
     window_origin: Pair,
     tile_columns: usize,
@@ -227,9 +229,13 @@ impl Desktop {
         let normal_startup = args.config.is_none() && !args.control_stdio;
         let workspace =
             state::workspace_path().and_then(|path| state::read::<state::Workspace>(&path, 65536));
-        let workspace = match workspace {
+        let mut workspace = match workspace {
             Ok(Some(value))
-                if value.rigs.len() <= 16 && value.rigs.iter().all(|p| p.is_absolute()) =>
+                if value.rigs.len() <= 16
+                    && value.rigs.iter().all(|p| p.is_absolute())
+                    && value.columns.is_none_or(|c| (1..=16).contains(&c))
+                    && value.rows.is_none_or(|r| (1..=16).contains(&r))
+                    && value.grid_window_size.is_none_or(state::valid_window_size) =>
             {
                 value
             }
@@ -243,6 +249,10 @@ impl Desktop {
                 state::Workspace::default()
             }
         };
+        if let Some(grid) = args.grid {
+            workspace.columns = Some(grid.0 as usize);
+            workspace.rows = Some(grid.1 as usize);
+        }
         let restoring_workspace = normal_startup
             && args.windows == 1
             && !args.array
@@ -341,16 +351,19 @@ impl Desktop {
         let grid = args
             .grid
             .unwrap_or(Pair((monitor.x / 520.0).floor().max(1.0), 1.0));
-        let requested_size = args.window_size.unwrap_or_else(|| {
-            if args.grid.is_some() {
-                Pair(
-                    (monitor.x / grid.0 - 8.0).max(96.0),
-                    ((monitor.y - 50.0) / grid.1 - 32.0).max(96.0),
-                )
-            } else {
-                Pair(520.0, 480.0)
-            }
-        });
+        let requested_size = args
+            .window_size
+            .or(first.saved_view.window_size.map(|s| Pair(s[0], s[1])))
+            .unwrap_or_else(|| {
+                if args.grid.is_some() {
+                    Pair(
+                        (monitor.x / grid.0 - 8.0).max(96.0),
+                        ((monitor.y - 50.0) / grid.1 - 32.0).max(96.0),
+                    )
+                } else {
+                    Pair(520.0, 480.0)
+                }
+            });
         let window_size = Pair(
             requested_size.0.min(first.max_window_inner_size.x),
             requested_size.1.min(first.max_window_inner_size.y),
@@ -361,6 +374,7 @@ impl Desktop {
                 window_size.0, window_size.1
             );
         }
+        first.requested_window_size = Some(egui::vec2(window_size.0, window_size.1));
         let window_origin = args.window_position.unwrap_or(Pair(12.0, 36.0));
         cc.egui_ctx
             .send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
@@ -379,7 +393,7 @@ impl Desktop {
             }
             startup_notice.push_str(&format!("Compatible {mode} graphics startup is active. Use --diagnostics to locate the startup log."));
         }
-        let arrange_on_start = restoring_workspace || args.grid.is_some();
+        let arrange_on_start = args.grid.is_some();
         let mut app = Self {
             dashboard: false,
             dashboard_focus: None,
@@ -391,6 +405,7 @@ impl Desktop {
             requested_screenshot: false,
             last_state: Instant::now() - std::time::Duration::from_secs(1),
             control,
+            mcp: None,
             window_size,
             window_origin,
             tile_columns: grid.0 as usize,
@@ -410,6 +425,13 @@ impl Desktop {
         if restoring_workspace {
             for path in app.workspace.rigs.clone().into_iter().skip(1) {
                 app.spawn_saved(path);
+            }
+        }
+        match mcp::Server::start(cc.egui_ctx.clone()) {
+            Ok(server) => app.mcp = Some(server),
+            Err(e) => {
+                eprintln!("{e}");
+                app.startup_notice = e;
             }
         }
         Ok(app)
@@ -587,6 +609,9 @@ impl Desktop {
     }
 
     fn rig_manager(&mut self, ctx: &egui::Context) {
+        if self.dashboard && self.dashboard_focus.is_some() {
+            return;
+        }
         if !self
             .sessions
             .iter()
@@ -606,84 +631,168 @@ impl Desktop {
             .first()
             .map(|s| s.framebuffer_limit)
             .unwrap_or(4096);
+        let dashboard = self.dashboard;
         let mut contents = |ui: &mut egui::Ui| {
-            ui.heading("Your rigs");
-            ui.label("Each rig has its own source, calibration and outputs.");
+            let row_height = ui.spacing().interact_size.y;
+            ui.spacing_mut().interact_size.y = 38.0;
             ui.horizontal_wrapped(|ui| {
-                        start_all = ui.button("Start all").on_hover_text("Resume paused sessions, replay finished videos and retry stopped sources. Finish active calibration first.").clicked();
-                        open_four = ui.button("Start saved array").on_hover_text("Start saved VR1–VR16 or BR1–BR16 files beside this rig. Each failed rig stays visible; working rigs continue. No sample substitution.").clicked();
-                        tile = ui.button("Arrange in a grid").clicked();
-                        let all_overlays = self.sessions.iter().filter(|s| !s.closed).all(|s| s.show_overlays);
-                        if icons::button(
-                            ui,
-                            icons::Icon::Calibration,
-                            all_overlays,
-                            if all_overlays { "Hide calibration outlines and axes on all rigs" } else { "Show calibration outlines and axes on all rigs" },
-                        ).clicked() {
-                            for session in self.sessions.iter_mut().filter(|s| !s.closed) {
-                                session.show_overlays = !all_overlays;
-                            }
-                        }
-                        add_rigs = ui.button("Add saved rigs…").clicked();
-                        new_rig = ui.add_enabled(self.sessions.iter().filter(|s| !s.closed).count() < 16, egui::Button::new("New rig")).clicked();
-                    });
+                start_all =
+                    icons::toolbar_button(ui, icons::Icon::Play, false, "Start all rigs").clicked();
+                tile = icons::toolbar_button(ui, icons::Icon::Grid, false, "Arrange rig grid")
+                    .clicked();
+                self.array_controls(ui);
+                icons::toolbar_menu(ui, "Rigs and workspace", |ui| {
+                    open_four = ui.button("Open saved array").clicked();
+                    add_rigs = ui.button("Add saved rigs…").clicked();
+                    new_rig = ui
+                        .add_enabled(
+                            self.sessions.iter().filter(|s| !s.closed).count() < 16,
+                            egui::Button::new("New rig"),
+                        )
+                        .clicked();
+                    if open_four || add_rigs || new_rig {
+                        ui.close();
+                    }
+                });
+            });
+            ui.spacing_mut().interact_size.y = row_height;
             ui.add_space(6.0);
-            ui.checkbox(
-                &mut self.workspace.restore_on_launch,
-                "Restore saved workspace on graphical launch",
-            );
-            save_workspace = ui
-                .button("Save current rigs as startup workspace")
-                .clicked();
-            ui.small(format!(
-                "{} of 16 rigs open. Save each rig's configuration before saving the workspace.",
-                self.sessions.iter().filter(|s| !s.closed).count()
-            ));
+            ui.horizontal_wrapped(|ui| {
+                ui.label("Layout");
+                let mut columns = self.workspace.columns.unwrap_or(0);
+                egui::ComboBox::from_id_salt("rig-grid-columns")
+                    .selected_text(if columns == 0 {
+                        "Auto square".into()
+                    } else {
+                        format!("{columns} columns")
+                    })
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut columns, 0, "Auto square");
+                        for c in 1..=16 {
+                            ui.selectable_value(&mut columns, c, format!("{c} columns"));
+                        }
+                    });
+                let count = self.sessions.iter().filter(|s| !s.closed).count();
+                let mut rows = self.workspace.rows.unwrap_or(0);
+                ui.label("Rows");
+                ui.add(egui::DragValue::new(&mut rows).range(0..=16))
+                    .on_hover_text("Rows · 0 chooses automatically");
+                let proposed = (
+                    (columns != 0).then_some(columns),
+                    (rows != 0).then_some(rows),
+                );
+                if proposed != (self.workspace.columns, self.workspace.rows) {
+                    if proposed
+                        .0
+                        .zip(proposed.1)
+                        .is_some_and(|(c, r)| c * r < count)
+                    {
+                        self.startup_notice = "Grid needs at least one cell per open rig".into();
+                    } else {
+                        (self.workspace.columns, self.workspace.rows) = proposed;
+                        self.args.grid = None;
+                        tile = true;
+                    }
+                }
+                let cols = self.workspace.columns.unwrap_or_else(|| {
+                    self.workspace
+                        .rows
+                        .map(|r| count.div_ceil(r))
+                        .unwrap_or_else(|| tiling::square_columns(count))
+                });
+                ui.small(format!(
+                    "{} × {}",
+                    cols,
+                    self.workspace.rows.unwrap_or_else(|| count.div_ceil(cols))
+                ));
+            });
+            if let Some(server) = &self.mcp {
+                ui.horizontal_wrapped(|ui| {
+                    ui.small(format!("Agent MCP: {}", server.url));
+                    if ui.small_button("Copy connection JSON").clicked() {
+                        ui.ctx().copy_text(server.connection.to_string());
+                    }
+                });
+            }
+            ui.checkbox(&mut self.workspace.restore_on_launch, "Restore on launch");
+            save_workspace = ui.button("Save workspace").clicked();
             if !self.startup_notice.is_empty() {
                 ui.colored_label(ui.visuals().warn_fg_color, &self.startup_notice);
             }
             ui.separator();
             egui::ScrollArea::vertical().show(ui, |ui| {
-                        for session in self.sessions.iter_mut().filter(|session| !session.closed) {
-                            ui.push_id(session.id, |ui| {
-                            ui.group(|ui| {
-                                ui.horizontal(|ui| {
-                                    ui.strong(session.display_name());
-                                    ui.label(session.launch_state());
-                                    if ui.button("Settings…").clicked() {
-                                        session.show_settings = true;
-                                        ui.ctx().send_viewport_cmd_to(
-                                            egui::ViewportId::from_hash_of(("settings", session.id)),
-                                            egui::ViewportCommand::Focus,
-                                        );
-                                    }
-                                });
-                                ui.small(session.path.as_ref().map(|path| path.display().to_string()).unwrap_or_else(|| "Unsaved configuration · use Save As to keep this rig".into()));
-                                let actual_source = if session.snapshot.source_label.is_empty() { &session.running_source } else { &session.snapshot.source_label };
-                                ui.small(format!("{} · {:.1} fps · {:.2} ms tracking", actual_source, session.snapshot.actual_fps, session.snapshot.tracking_ms))
-                                    .on_hover_text(session.running_camera_binding.as_deref().unwrap_or("No hardware binding"));
-                                if !session.fallback_notice.is_empty() {
-                                    ui.small(&session.fallback_notice);
-                                }
-                                ui.collapsing("Full config", |ui| {
-                                    let mut text = session.history.text.clone();
-                                    ui.add(egui::TextEdit::multiline(&mut text).code_editor().desired_rows(10).desired_width(f32::INFINITY).interactive(false));
-                                    ui.small("Edit and save this configuration from its Settings window.");
-                                });
-                                if !session.error.is_empty() {
-                                    ui.colored_label(ui.visuals().error_fg_color, &session.error);
-                                }
-                                if session.snapshot.ended && !session.snapshot.notice.is_empty() {
-                                    ui.colored_label(ui.visuals().error_fg_color, &session.snapshot.notice);
+                for session in self.sessions.iter_mut().filter(|session| !session.closed) {
+                    ui.push_id(session.id, |ui| {
+                        ui.group(|ui| {
+                            ui.horizontal(|ui| {
+                                ui.strong(session.display_name());
+                                ui.label(session.launch_state());
+                                if icons::button(ui, icons::Icon::Settings, false, "Configure rig")
+                                    .clicked()
+                                {
+                                    session.show_settings = true;
+                                    ui.ctx().send_viewport_cmd_to(
+                                        egui::ViewportId::from_hash_of(("settings", session.id)),
+                                        egui::ViewportCommand::Focus,
+                                    );
                                 }
                             });
+                            ui.small(session.compact_identity());
+
+                            let actual_source = if session.snapshot.source_label.is_empty() {
+                                &session.running_source
+                            } else {
+                                &session.snapshot.source_label
+                            };
+                            ui.small(format!(
+                                "{:.1} fps · {:.2} ms",
+                                session.snapshot.actual_fps, session.snapshot.tracking_ms
+                            ))
+                            .on_hover_text(format!(
+                                "{}\n{}\n{}",
+                                actual_source,
+                                session
+                                    .running_camera_binding
+                                    .as_deref()
+                                    .unwrap_or("No hardware binding"),
+                                session
+                                    .path
+                                    .as_ref()
+                                    .map(|p| p.display().to_string())
+                                    .unwrap_or_else(|| "Unsaved configuration".into())
+                            ));
+                            if !session.fallback_notice.is_empty() {
+                                ui.small(&session.fallback_notice);
+                            }
+                            ui.collapsing("Full config", |ui| {
+                                let mut text = session.history.text.clone();
+                                ui.add(
+                                    egui::TextEdit::multiline(&mut text)
+                                        .code_editor()
+                                        .desired_rows(10)
+                                        .desired_width(f32::INFINITY)
+                                        .interactive(false),
+                                );
+                                ui.small(
+                                    "Edit and save this configuration from its Settings window.",
+                                );
                             });
-                        }
-                        ui.add_space(8.0);
-                        ui.small("Add up to 16 saved configurations here, arrange them, then save this workspace. The app launcher can restore it without a terminal.");
+                            if !session.error.is_empty() {
+                                ui.colored_label(ui.visuals().error_fg_color, &session.error);
+                            }
+                            if session.snapshot.ended && !session.snapshot.notice.is_empty() {
+                                ui.colored_label(
+                                    ui.visuals().error_fg_color,
+                                    &session.snapshot.notice,
+                                );
+                            }
+                        });
                     });
+                }
+                ui.add_space(8.0);
+            });
         };
-        if self.dashboard {
+        if dashboard {
             let mut open = true;
             egui::Window::new("Rig manager")
                 .id(egui::Id::new("grid-rig-manager"))
@@ -759,7 +868,7 @@ impl Desktop {
         }
         if save_workspace {
             match self.save_workspace() {
-                Ok(()) => self.startup_notice = "Startup workspace saved. View preferences are stored separately from calibration text.".into(),
+                Ok(()) => self.startup_notice = "Workspace saved.".into(),
                 Err(error) => self.startup_notice = error,
             }
         }
@@ -799,6 +908,7 @@ impl Desktop {
         }
     }
     fn arrange(&mut self, ctx: &egui::Context, columns: Option<usize>) {
+        let columns = columns.or(self.workspace.columns);
         if self
             .sessions
             .iter()
@@ -808,11 +918,20 @@ impl Desktop {
                 "Finish or close calibration before arranging the tracking windows".into();
             return;
         }
+        let count = self.sessions.iter().filter(|s| !s.closed).count();
+        if columns
+            .zip(self.workspace.rows)
+            .is_some_and(|(c, r)| c * r < count)
+        {
+            self.startup_notice =
+                "The selected grid has fewer cells than open rigs. Increase columns or rows."
+                    .into();
+            return;
+        }
         self.ensure_dashboard(ctx);
         if self.dashboard {
             self.dashboard_columns = columns;
             self.dashboard_focus = None;
-            ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
             return;
         }
         let monitor = ctx
@@ -835,7 +954,7 @@ impl Desktop {
             .filter_map(|(_, s)| s.window_rect.zip(s.window_inner_size))
             .map(|(outer, inner)| egui::vec2(outer[2] - inner[0], outer[3] - inner[1]))
             .fold(egui::vec2(0.0, 32.0), |a, b| a.max(b));
-        let tiles = tiling::plan(work, &aspects, decorations, columns);
+        let tiles = tiling::plan_layout(work, &aspects, decorations, columns, self.workspace.rows);
         if tiles.len() != active.len() {
             self.startup_notice = "This display cannot fit every window at its minimum size. Use fewer rigs on this display or a larger desktop.".into();
             return;
@@ -861,6 +980,10 @@ impl Desktop {
 }
 impl eframe::App for Desktop {
     fn on_exit(&mut self) {
+        if let Err(error) = state::workspace_path().and_then(|p| state::write(&p, &self.workspace))
+        {
+            eprintln!("{error}");
+        }
         for session in &mut self.sessions {
             if let Err(error) = session.save_view() {
                 eprintln!("{error}");
@@ -884,8 +1007,16 @@ impl eframe::App for Desktop {
             bridge.poll(self);
             self.control = Some(bridge);
         }
+        if let Some(mut server) = self.mcp.take() {
+            server.poll(self, ctx);
+            self.mcp = Some(server);
+        }
         self.ensure_dashboard(ctx);
         if self.dashboard {
+            let size = ctx.content_rect().size();
+            if state::valid_window_size([size.x, size.y]) {
+                self.workspace.grid_window_size = Some([size.x, size.y]);
+            }
             self.show_dashboard(ctx);
         } else {
             if !self.sessions[0].closed {
@@ -919,7 +1050,9 @@ impl eframe::App for Desktop {
                             self.window_origin.1
                                 + (cell / self.tile_columns) as f32 * (self.window_size.1 + 32.0),
                         ),
-                        inner: egui::vec2(self.window_size.0, self.window_size.1),
+                        inner: session
+                            .requested_window_size
+                            .unwrap_or(egui::vec2(self.window_size.0, self.window_size.1)),
                     });
                 ctx.show_viewport_immediate(
                     id,
