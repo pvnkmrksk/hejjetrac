@@ -40,6 +40,17 @@ class GraphicsLogTests(unittest.TestCase):
             with self.subTest(stdout=stdout, stderr=stderr), self.assertRaises(RuntimeError):
                 QA.graphics_adapter(stdout, stderr)
 
+    def test_current_hardware_vulkan_fallback_notice_keeps_actual_gl_evidence(self):
+        actual = 'Graphics: NV136 (Gl, Other)\n'
+        notice = ('Graphics: no matching hardware Vulkan adapter supports this window surface; '
+                  'using the compatible OpenGL adapter\n')
+        for stdout, stderr in [(actual, notice), (notice, actual)]:
+            self.assertEqual(QA.graphics_adapter(stdout, stderr),
+                             {'name': 'NV136', 'backend': 'Gl', 'device_type': 'Other'})
+        for stdout, stderr in [('', notice), (actual + actual, notice)]:
+            with self.subTest(stdout=stdout, stderr=stderr), self.assertRaises(RuntimeError):
+                QA.graphics_adapter(stdout, stderr)
+
     def test_missing_or_duplicate_initializations_are_rejected(self):
         line = 'Graphics: NV136 (Gl, Other)\n'
         for stdout, stderr in [('', ''), ('Linux window system: X11/XWayland\n', ''),

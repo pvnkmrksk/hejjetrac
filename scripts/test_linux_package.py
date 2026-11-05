@@ -152,10 +152,14 @@ def graphics_environment_evidence(env):
 def graphics_adapter(stdout, stderr=''):
     # Linux and macOS may put startup diagnostics on different streams. Match
     # whole individual lines so malformed multi-line names cannot be accepted.
-    fallback_notice = ('Graphics: no matching OpenGL adapter supports this window surface; '
-                       'using the compatible Vulkan adapter')
+    fallback_notices = {
+        'Graphics: no matching OpenGL adapter supports this window surface; '
+        'using the compatible Vulkan adapter',
+        'Graphics: no matching hardware Vulkan adapter supports this window surface; '
+        'using the compatible OpenGL adapter',
+    }
     lines = [line for stream in (stdout, stderr) for line in stream.splitlines()
-             if line.startswith('Graphics:') and line != fallback_notice]
+             if line.startswith('Graphics:') and line not in fallback_notices]
     if len(lines) != 1:
         raise RuntimeError('Expected exactly one actual Gl/Vulkan adapter initialization log')
     match = re.fullmatch(
@@ -192,7 +196,7 @@ def gui_arguments(binary, state, screenshot, config_path):
 
 
 def gui(binary, directory, label, *, config_path=None, expect_fallback=False,
-        env_overrides=None, expected_backend='Gl'):
+        env_overrides=None, expected_backend='Vulkan'):
     state = directory / (label + '.json')
     screenshot = directory / (label + '.png')
     runtime = directory / (label + '-runtime')
@@ -319,6 +323,11 @@ def check_install(root, directory):
     if summary['frames'] != 300 or summary['rejected'] != 0 or not comparison['passed']:
         raise RuntimeError(f'{root}: full sample failed: {summary}, {comparison}')
     checks.append(gui(root / 'hejjetrac', directory, 'native-video', config_path=configured))
+    # The default now prefers Vulkan, but explicit GL must still render the
+    # sample. Keep positive coverage of both supported Linux X11 backends.
+    checks.append(gui(root / 'hejjetrac', directory, 'native-explicit-gl',
+                      config_path=configured, env_overrides={'WGPU_BACKEND': 'gl'},
+                      expected_backend='Gl'))
     graphics_fallback = automatic_graphics_fallback(root / 'hejjetrac', directory, configured)
     return {'root': str(root), 'build': build, 'dependency_packages_with_verified_notice_text': verified_notices,
             'sample': summary, 'comparison': comparison, 'checks': checks,
@@ -338,7 +347,7 @@ def main():
     report = {'distribution': platform.freedesktop_os_release(), 'libc': platform.libc_ver(),
               'archive_sha256': hashlib.sha256(args.archive.read_bytes()).hexdigest(),
               'harness_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-              'scope': 'Actual packaged CLI, Xvfb/Mesa GLES and automatic Vulkan fallback; '
+              'scope': 'Actual packaged CLI, Xvfb/Mesa default Vulkan, explicit GLES and Vulkan without EGL; '
                        'no physical V4L camera, hardware hybrid-GPU or Wayland claim',
               'status': 'running', 'checks': []}
     try:
