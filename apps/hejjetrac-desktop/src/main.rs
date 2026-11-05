@@ -613,6 +613,17 @@ impl Desktop {
                         start_all = ui.button("Start all").on_hover_text("Resume paused sessions, replay finished videos and retry stopped sources. Finish active calibration first.").clicked();
                         open_four = ui.button("Start saved array").on_hover_text("Start saved VR1–VR16 or BR1–BR16 files beside this rig. Each failed rig stays visible; working rigs continue. No sample substitution.").clicked();
                         tile = ui.button("Arrange in a grid").clicked();
+                        let all_overlays = self.sessions.iter().filter(|s| !s.closed).all(|s| s.show_overlays);
+                        if icons::button(
+                            ui,
+                            icons::Icon::Calibration,
+                            all_overlays,
+                            if all_overlays { "Hide calibration outlines and axes on all rigs" } else { "Show calibration outlines and axes on all rigs" },
+                        ).clicked() {
+                            for session in self.sessions.iter_mut().filter(|s| !s.closed) {
+                                session.show_overlays = !all_overlays;
+                            }
+                        }
                         add_rigs = ui.button("Add saved rigs…").clicked();
                         new_rig = ui.add_enabled(self.sessions.iter().filter(|s| !s.closed).count() < 16, egui::Button::new("New rig")).clicked();
                     });
