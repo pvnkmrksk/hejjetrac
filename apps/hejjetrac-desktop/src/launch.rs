@@ -229,9 +229,17 @@ impl Observation {
 fn pump(mut input: impl Read, log: Log, observation: Observation, stderr: bool) {
     let mut buffer = [0u8; 4096];
     let mut tail = Vec::new();
+    let mut pending = Vec::new();
     loop {
         let count = match input.read(&mut buffer) {
-            Ok(0) | Err(_) => break,
+            Ok(0) | Err(_) => {
+                if let Some(log) = &log
+                    && let Ok(mut log) = log.lock()
+                {
+                    log.write(&pending);
+                }
+                break;
+            }
             Ok(n) => n,
         };
         let bytes = &buffer[..count];
@@ -240,10 +248,29 @@ fn pump(mut input: impl Read, log: Log, observation: Observation, stderr: bool) 
         if tail.len() > 256 {
             tail.drain(..tail.len() - 256);
         }
-        if let Some(log) = &log
-            && let Ok(mut log) = log.lock()
-        {
-            log.write(bytes);
+        // stdout and stderr have independent readers. Publish complete lines
+        // under one journal lock so their read boundaries cannot splice a
+        // fragmented readiness/error message. Long unterminated output is
+        // flushed at the read-buffer bound; pending storage stays below 8 KiB.
+        pending.extend_from_slice(bytes);
+        let boundary = pending
+            .iter()
+            .rposition(|byte| *byte == b'\n')
+            .map(|index| index + 1)
+            .unwrap_or_else(|| {
+                if pending.len() >= buffer.len() {
+                    pending.len()
+                } else {
+                    0
+                }
+            });
+        if boundary > 0 {
+            if let Some(log) = &log
+                && let Ok(mut log) = log.lock()
+            {
+                log.write(&pending[..boundary]);
+            }
+            pending.drain(..boundary);
         }
         if stderr {
             let _ = std::io::stderr().write_all(bytes);
@@ -551,6 +578,69 @@ mod tests {
         assert!(text.contains("running 1 test"));
         assert!(text.contains("simulated startup adapter failure"));
         assert!(text.contains(READY));
+        Ok(())
+    }
+    #[test]
+    fn journal_keeps_fragmented_readiness_intact_across_concurrent_streams() -> TestResult {
+        use std::sync::mpsc;
+        struct Fragments {
+            step: u8,
+            first_read: mpsc::SyncSender<()>,
+            resume: mpsc::Receiver<()>,
+        }
+        impl Read for Fragments {
+            fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+                let bytes: &[u8] = match self.step {
+                    0 => b"Hejjetrac desk",
+                    1 => {
+                        self.first_read.send(()).map_err(std::io::Error::other)?;
+                        self.resume.recv().map_err(std::io::Error::other)?;
+                        b"top ready\n"
+                    }
+                    2 => b"unterminated tail",
+                    _ => return Ok(0),
+                };
+                let target = buffer.get_mut(..bytes.len()).ok_or_else(|| {
+                    std::io::Error::other("diagnostic test read buffer is too small")
+                })?;
+                target.copy_from_slice(bytes);
+                self.step += 1;
+                Ok(bytes.len())
+            }
+        }
+        let temp = Temp::new()?;
+        let (path, journal) = open_log(&temp.0)?;
+        let (first_read, observed) = mpsc::sync_channel(1);
+        let (resume, gate) = mpsc::sync_channel(1);
+        let reader_log = journal.clone();
+        let observation = Observation::default();
+        let reader_observation = observation.clone();
+        let reader = thread::spawn(move || {
+            pump(
+                Fragments {
+                    step: 0,
+                    first_read,
+                    resume: gate,
+                },
+                reader_log,
+                reader_observation,
+                true,
+            );
+        });
+        observed.recv_timeout(Duration::from_secs(5))?;
+        pump(
+            std::io::Cursor::new(b"concurrent stdout\n"),
+            journal,
+            Observation::default(),
+            false,
+        );
+        resume.send(())?;
+        reader.join().map_err(|_| "diagnostic reader failed")?;
+        assert!(observation.ready.load(Ordering::Acquire));
+        assert_eq!(
+            fs::read_to_string(path)?,
+            format!("concurrent stdout\n{READY}\nunterminated tail")
+        );
         Ok(())
     }
     #[test]
