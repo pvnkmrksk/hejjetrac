@@ -53,9 +53,14 @@ def run(arguments, directory, label, *, env=None, timeout=60, allow_failure=Fals
 
 def config(cli, source, destination, sample, directory, label, *, camera=False):
     arguments = [cli, 'config', '--config', source, '--output', destination]
-    for key, value in {'src_fn': '9999' if camera else str(sample),
-                       'zmq_port': '-1', 'sock_port': '-1',
-                       'save_raw': 'n', 'save_debug': 'n', 'do_display': 'y'}.items():
+    fields = {'src_fn': '9999' if camera else str(sample),
+              'zmq_port': '-1', 'sock_port': '-1',
+              'save_raw': 'n', 'save_debug': 'n', 'do_display': 'y'}
+    if camera:
+        # This is the unbound no-camera preview case. A missing provisioned
+        # camera must stay an error; the separate bound-camera control checks it.
+        fields['rust_camera_id'] = ''
+    for key, value in fields.items():
         arguments.extend(['--set', key + '=' + value])
     return run(arguments, directory, label)
 
@@ -129,6 +134,8 @@ def preview_pattern(png):
 
 def graphics_environment(runtime, overrides=None):
     env = {**os.environ, 'XDG_RUNTIME_DIR': str(runtime),
+           'XDG_CONFIG_HOME': str(runtime / 'config'),
+           'HEJJETRAC_STATE_DIR': str(runtime / 'state'),
            'LIBGL_ALWAYS_SOFTWARE': '1', 'WINIT_UNIX_BACKEND': 'x11'}
     # Each baseline/automatic test exercises the actual implicit backend policy.
     # Explicit selection is enabled only for the isolated negative control.
@@ -271,6 +278,31 @@ def automatic_graphics_fallback(binary, directory, config_path):
             'forced_gl_negative_control': negative, 'automatic_vulkan_preview': automatic}
 
 
+def missing_bound_camera(binary, directory, binding):
+    label = 'native-missing-bound-camera'
+    state, screenshot = directory / (label + '.json'), directory / (label + '.png')
+    runtime = directory / (label + '-runtime')
+    runtime.mkdir(mode=0o700)
+    result = run(gui_arguments(binary, state, screenshot, None), directory, label,
+                 env=graphics_environment(runtime), timeout=45)
+    value = json.loads(state.read_text())
+    instances = value.get('instances', [])
+    if (len(instances) != 1 or instances[0]['frames'] != 0
+            or instances[0]['source'] != '9999'
+            or binding not in instances[0]['error']
+            or 'missing' not in instances[0]['error']
+            or 'explicitly unlink' not in instances[0]['error']):
+        raise RuntimeError(f'{label}: missing binding silently fell back or lacked guidance: {value}')
+    pixels = screenshot.read_bytes()
+    if len(pixels) < 1024 or pixels[:8] != b'\x89PNG\r\n\x1a\n':
+        raise RuntimeError(f'{label}: missing rendered error window')
+    result.update({'frames': instances[0]['frames'], 'source': instances[0]['source'],
+                   'expected_binding_error': instances[0]['error'],
+                   'screenshot_sha256': hashlib.sha256(pixels).hexdigest(),
+                   'no_sample_substitution': True})
+    return result
+
+
 def check_install(root, directory):
     directory.mkdir()
     build = json.loads((root / 'BUILD.json').read_text())
@@ -383,6 +415,13 @@ def main():
             new_config.replace(app / 'VR1.txt')
             report['no_camera_startup'] = gui(app / 'hejjetrac', fallback,
                                              'native-fallback', expect_fallback=True)
+            binding = 'usb:ffff:ffff:missing:video:0'
+            run([app / 'hejjetrac-cli', 'config', '--config', app / 'VR1.txt',
+                 '--output', new_config, '--set', 'rust_camera_id=' + binding],
+                fallback, 'configure-missing-binding')
+            new_config.replace(app / 'VR1.txt')
+            report['missing_bound_camera'] = missing_bound_camera(app / 'hejjetrac', fallback,
+                                                                 binding)
         else:
             report['no_camera_startup'] = {'skipped': 'Runner exposes V4L hardware'}
         report['status'] = 'passed'
