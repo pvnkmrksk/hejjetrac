@@ -94,7 +94,7 @@ hejjetrac-cli config --config config.txt --set thr_ratio=1.25 --set opt_do_globa
 hejjetrac-cli compare --reference reference.dat --candidate runs/experiment/tracking.dat
 ```
 
-The legacy positional config invocation maps to `track`; with no output flag it chooses a new timestamped directory using `output_fn` as its prefix (including any parent path), otherwise the input video stem, otherwise `hejjetrac`. Unlike upstream flat timestamped filenames, related artifacts are grouped inside this directory. `config` prints an edited document when `--output` is omitted. Arbitrary calibration editing and multi-session orchestration are exposed through the agent protocol rather than requiring GUI automation. CLI inspection, synthetic demo, rim calibration and benchmark comparison remain available; see each command's `--help`.
+The legacy positional config invocation maps to `track`; with no output flag it chooses a new timestamped directory using `output_fn` as its prefix (including any parent path), otherwise the input video stem, otherwise `hejjetrac-cli`. Unlike upstream flat timestamped filenames, related artifacts are grouped inside this directory. `config` prints an edited document when `--output` is omitted. Arbitrary calibration editing and multi-session orchestration are exposed through the agent protocol rather than requiring GUI automation. CLI inspection, synthetic demo, rim calibration and benchmark comparison remain available; see each command's `--help`.
 
 ## Native display and camera controls
 
