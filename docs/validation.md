@@ -29,7 +29,7 @@ These are Linux UI/transport and recorded-output checks; native MCP execution on
 macOS/Windows, sixteen-camera capacity, physical calibration ground truth and
 new performance claims remain outside this evidence.
 [Hashes, exact scope and artifact counts](benchmarks/desktop-mcp-20261105.json) ·
-[Reproduction client](../scripts/test_desktop_mcp.py) ·
+[Reproduction client](https://github.com/pvnkmrksk/hejjetrak/blob/main/scripts/test_desktop_mcp.py) ·
 [Connection and tool contracts](agent-control.md#automatic-desktop-mcp).
 
 ## Recorded-clock tracking and shared-surface rig grid — 2026-11-05
