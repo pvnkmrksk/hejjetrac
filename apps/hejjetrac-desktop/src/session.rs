@@ -74,6 +74,11 @@ pub struct Session {
     pub points: Vec<[f64; 2]>,
     pub square_slots: Option<[Option<[f64; 2]>; 4]>,
     pub tile_open_rect: Option<[f32; 4]>,
+    pub tile_settings_rect: Option<[f32; 4]>,
+    pub tile_reset_rect: Option<[f32; 4]>,
+    pub manager_settings_rect: Option<[f32; 4]>,
+    pub manager_reset_rect: Option<[f32; 4]>,
+    pub settings_position: Option<egui::Pos2>,
     pub tile_rect: Option<[f32; 4]>,
     pub window_rect: Option<[f32; 4]>,
     pub window_inner_size: Option<[f32; 2]>,
@@ -102,6 +107,7 @@ pub struct Session {
     pub pending_drag: Option<(usize, usize)>,
     pub recording_path: String,
     pub zmq_resume_port: Option<i32>,
+    pub udp_resume_port: Option<i32>,
 }
 impl Session {
     pub fn new(id: u64, doc: ConfigDocument, path: Option<PathBuf>) -> Self {
@@ -142,6 +148,7 @@ impl Session {
             camera_edit: None,
             camera_error: String::new(),
             zmq_resume_port: None,
+            udp_resume_port: None,
             record_raw: hejjetrac_control::RecordOptions::from_document(&doc)
                 .with_video()
                 .raw,
@@ -163,6 +170,11 @@ impl Session {
             points: vec![],
             square_slots: None,
             tile_open_rect: None,
+            tile_settings_rect: None,
+            tile_reset_rect: None,
+            manager_settings_rect: None,
+            manager_reset_rect: None,
+            settings_position: None,
             tile_rect: None,
             window_rect: None,
             window_inner_size: None,
@@ -878,6 +890,7 @@ impl Session {
         self.recording_encoding = hejjetrac_control::RecordingEncoding::Configured;
         self.history = DocumentHistory::new(doc.text().to_owned());
         self.zmq_resume_port = None;
+        self.udp_resume_port = None;
         self.saved = doc.text().to_owned();
         self.path = Some(path);
         self.disk_conflict = false;

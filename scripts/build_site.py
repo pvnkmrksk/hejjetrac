@@ -17,7 +17,7 @@ from urllib.parse import unquote, urlsplit
 ROOT = Path(__file__).resolve().parent.parent
 REPORTS = (
     "ui-rendering.md",
-    "release-v0.3.6.md", "release-v0.4.0.md", "release-v0.4.1.md",
+    "release-v0.3.6.md", "release-v0.4.0.md", "release-v0.4.1.md", "release-v0.4.2.md",
     "agent-control.md", "architecture.md", "camera-controls.md", "output.md",
     "parity.md", "performance.md", "tracking-performance.md", "ui-design.md",
     "validation.md", "resources.md", "recovery.md", "atlas-learning.md", "recorded-clock.md", "matrex-vr.md",

@@ -445,6 +445,10 @@ fn status(s: &mut Session) -> Value {
         "processing_ms":s.snapshot.processing_ms,"tracking_ms":s.snapshot.tracking_ms,"tracking_samples":s.snapshot.tracking_samples,"actual_fps":s.snapshot.actual_fps,"source_fps":s.snapshot.source_fps,"headroom_percent":s.snapshot.headroom_percent,
         "view":view,"source_label":s.snapshot.source_label,"resources":s.snapshot.resources});
     state["tile_open_rect"] = json!(s.tile_open_rect);
+    state["tile_settings_rect"] = json!(s.tile_settings_rect);
+    state["tile_reset_rect"] = json!(s.tile_reset_rect);
+    state["manager_settings_rect"] = json!(s.manager_settings_rect);
+    state["manager_reset_rect"] = json!(s.manager_reset_rect);
     state["host_window_title"] = json!(if s.native_window {
         s.window_title()
     } else {

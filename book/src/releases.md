@@ -4,6 +4,16 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
+## v0.4.2 — 6 November 2026
+
+[v0.4.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.4.2) offers ZeroMQ,
+UDP socket, or both, with both enabled in fresh rig defaults and no disabled
+selector choice. Custom ports survive transport switches. Each tile and manager
+row has direct reset/settings buttons. One image click expands a rig;
+double-clicking the expanded image returns to the grid, with distinct grid and
+bug/debug icons.
+[Release notes](release-v0.4.2.md).
+
 ## v0.4.1 — 6 November 2026
 
 [v0.4.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.4.1) adds automatic

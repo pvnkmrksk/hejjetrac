@@ -108,7 +108,7 @@ impl Desktop {
     }
     pub(crate) fn array_controls(&mut self, ui: &mut egui::Ui) {
         if crate::icons::toolbar_button(ui, crate::icons::Icon::Reset, false,
-            "Reset tracking · all rigs. Restart pose, atlas and path; keep the live sources and their clocks.").clicked()
+            "Reset tracking · all rigs\nRestart pose, heading and path; retain source time and integrated displacement.").clicked()
             && let Err(error) = self.reset_array()
         {
             self.startup_notice = error;
@@ -244,23 +244,17 @@ impl Desktop {
             session.native_window = false;
             session.tile_rect = None;
             session.tile_open_rect = None;
+            session.tile_settings_rect = None;
+            session.tile_reset_rect = None;
         }
         if self.dashboard_focus.is_none() {
             egui::TopBottomPanel::top("grid-actions").show(ctx, |ui| {
                 ui.spacing_mut().interact_size.y = 38.0;
                 ui.horizontal_wrapped(|ui| {
-                    let grid_settings = ui
-                        .button("Rig grid")
-                        .on_hover_text("Open Rig Manager settings")
-                        .clicked();
-                    if (crate::icons::toolbar_button(
-                        ui,
-                        crate::icons::Icon::Rigs,
-                        false,
-                        "Rig manager",
-                    )
-                    .clicked()
-                        || grid_settings)
+                    if crate::icons::toolbar_button(
+                        ui, crate::icons::Icon::Rigs, false,
+                        "Rig grid settings\nArrange rigs, manage configurations and shared controls.",
+                    ).clicked()
                         && let Some(session) = self.sessions.iter_mut().find(|s| !s.closed)
                     {
                         session.show_rigs = true;

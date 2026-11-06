@@ -154,19 +154,24 @@ apply to all open rigs. Recording uses each rig's folder, raw/debug selection an
 codec; stop waits for each worker to finalize its files. Each rig reports its own
 errors. Compact tiles show VR, camera serial/number, ZMQ port and actual device
 path when known, including whether the camera is bound. Rig Manager also shows
-the USB hardware port, output readiness and output failures. Click **Rig grid**
-or the manager icon to open Rig Manager. Click a tile or its settings button to
-configure that rig; double-click to expand it, then use **Back to rig grid** to return. View choices
+the USB hardware port, output readiness and output failures. The grid/settings
+icon opens Rig Manager. Click a rig image once to expand it; double-click the
+expanded image or use **Back to rig grid** to return. Each tile and manager row
+has its own reset and settings buttons. Settings toggles the inspector open/closed,
+and the inspector opens away from its launching controls. View choices
 made for that rig remain selected.
 
 **Reset tracking · all rigs** appears in both the grid toolbar and Rig Manager.
+Each tile, expanded rig and manager row also has its own one-click reset.
 It restarts pose, heading, path and tracking history while retaining source time,
 source counters and integrated displacement. It requires every rig to be running
 and outside calibration. Each rig reports its own queued completion or error.
 
-In **Settings → Outputs**, choose **ZeroMQ** or **UDP socket**. New rigs enable
-ZeroMQ by default; choosing a transport disables the other. Existing configs
-that explicitly use both remain intact until you select a transport. A UDP bridge
+In **Settings → Outputs**, choose **ZeroMQ + UDP**, **ZeroMQ**, or **UDP socket**.
+Fresh rig defaults enable both. Switching to a single transport remembers its
+custom ports for the next switch back to both. The selector has no disabled
+choice; turning off the last ZeroMQ publisher enables UDP. Legacy configuration
+files that intentionally disable outputs still load unchanged. A UDP bridge
 that already owns the ZeroMQ port needs UDP output from HejjéTrac, with direct
 ZeroMQ disabled, to avoid two publishers competing for the same port.
 

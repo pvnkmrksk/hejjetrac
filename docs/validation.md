@@ -1,5 +1,30 @@
 # HejjéTrac validation evidence
 
+## Individual rig controls and selectable simultaneous outputs — 2026-11-06
+
+Native sixteen-real-video checks pass single-click expansion, double-click return,
+individual tile resets, settings toggles in tiles and manager rows, and an
+individual manager reset that leaves the other tracker histories unchanged.
+Reset preserves source counters. The same run verifies sixteen three-image
+recordings through the Rust decoder and relocated portable workspace loading.
+The icon-only grid/settings action, bug/debug icon and per-rig controls are
+visually inspected. [Native control evidence](benchmarks/rig-controls-v042-20261106.json).
+
+A separate real-video native test connects actual UDP and ZeroMQ subscribers.
+Both → ZeroMQ-only → UDP-only → both each advances fifteen source frames.
+Simultaneous wire rows match byte for byte in value/order, inactive transports
+remain silent, and edits preserve the paused source position. This test client
+uses pyzmq only as a development dependency; the application remains Rust.
+Reproduce with `python3 scripts/test_desktop_outputs.py --output /new/check`.
+
+The local A01–A04 profiles enable UDP 1111–1114 and direct ZeroMQ 9881–9884.
+Existing Python bridges keep their 9871–9874 endpoints. The user confirmed the
+previously stored lab rotations; these remain unchanged, with no image-up refit.
+These are Linux UI/transport checks, not physical motion-ground-truth accuracy
+or native camera/GUI verification on macOS/Windows.
+
+![Direct reset/settings controls and distinct grid/debug icons](images/rig-controls-v042-20261106.png)
+
 ## Patch rig controls and portable workspaces — 2026-11-06
 
 The native sixteen-real-video regression passes shared tracking reset, single-click

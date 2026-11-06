@@ -162,28 +162,59 @@ def run(args):
         assert [s['frames'] for s in reset] == [s['frames'] for s in before_reset]
         assert all(s['paused'] and s['path_points'] == 0 for s in reset)
         report['array_reset_retains_source_frames'] = True
-        # A single click opens this rig's inspector without expanding its tile.
+        # Individual controls remain directly available without expanding a rig.
+        def click_rect(rect):
+            client.tool('hejjetrac_ui', action='click', x=rect[0]+rect[2]/2, y=rect[1]+rect[3]/2)
+        for sid in [2, 3]:
+            before = client.command('status', sid)['frames']
+            client.command('step', sid, frames=3)
+            client.wait(lambda states: states[sid-1]['frames'] >= before+3 and not states[sid-1]['advance_remaining'])
+        before = client.command('sessions')
+        click_rect(before[1]['tile_reset_rect'])
+        individual = client.wait(lambda s: s[1]['tracking_samples'] == 0)
+        assert individual[1]['frames'] == before[1]['frames']
+        assert individual[2]['tracking_samples'] == before[2]['tracking_samples']
+        assert individual[2]['frames'] == before[2]['frames']
+        report['tile_individual_reset'] = True
+        settings_rect = individual[1]['tile_settings_rect']
+        click_rect(settings_rect)
+        client.wait(lambda s: s[1]['view']['settings'])
+        click_rect(settings_rect)
+        client.wait(lambda s: not s[1]['view']['settings'])
+        report['tile_settings_toggle'] = True
+        client.command('view', 1, rig_manager=True)
+        manager = client.wait(lambda s: s[1]['manager_settings_rect'] is not None)
+        settings_rect = manager[1]['manager_settings_rect']
+        click_rect(settings_rect)
+        client.wait(lambda s: s[1]['view']['settings'])
+        click_rect(settings_rect)
+        client.wait(lambda s: not s[1]['view']['settings'])
+        # Manager reset targets the chosen rig, retaining its source clock.
+        before = client.command('status', 2)['frames']
+        client.command('step', 2, frames=3)
+        client.wait(lambda s: s[1]['frames'] >= before+3 and not s[1]['advance_remaining'])
+        before = client.command('sessions')
+        click_rect(before[1]['manager_reset_rect'])
+        individual = client.wait(lambda s: s[1]['tracking_samples'] == 0)
+        assert individual[1]['frames'] == before[1]['frames']
+        assert individual[2]['tracking_samples'] == before[2]['tracking_samples']
+        report['manager_individual_reset_and_settings_toggle'] = True
+        client.command('view', 1, rig_manager=False)
+        # One canvas click expands; two clicks made while focused return to all rigs.
         rect = client.command('status', 2)['tile_rect']
-        client.tool('hejjetrac_ui', action='click', x=rect[0]+rect[2]/2, y=rect[1]+rect[3]/2)
-        selected = client.wait(lambda s: s[1]['view']['settings'])
-        assert selected[1]['tile_rect'][2] == rect[2]
-        client.command('view', 2, settings=False)
-        time.sleep(.4)
-        report['single_click_settings'] = True
-        # Exercise actual pointer events on the second rig, rather than rig_focus.
-        rect = client.command('status', 2)['tile_rect']
-        x, y = rect[0] + rect[2] / 2, rect[1] + rect[3] / 2
-        for _ in range(2):
-            client.tool('hejjetrac_ui', action='click', x=x, y=y)
-            time.sleep(.07)
+        click_rect(rect)
         expanded = client.wait(lambda s: s[1]['tile_rect'] and s[1]['tile_rect'][2] > rect[2] * 2)
+        assert not expanded[1]['view']['settings']
         client.command('view', 2, full_image=True, diagnostics=True)
         client.screenshot(output / 'individual-debug.png')
-        back = client.command('status', 2)['tile_open_rect']
-        client.tool('hejjetrac_ui', action='click', x=back[0]+back[2]/2, y=back[1]+back[3]/2)
+        canvas = client.command('status', 2)['preview_canvas_rect']
+        for _ in range(2):
+            click_rect(canvas)
+            time.sleep(.07)
         grid = client.wait(lambda s: all(x['tile_rect'] and x['tile_rect'][2] < expanded[1]['tile_rect'][2] / 2 for x in s))
         assert grid[1]['view']['full_image'] and grid[1]['view']['diagnostics']
         assert not grid[0]['view']['diagnostics']
+        report['single_click_expand_double_click_return'] = True
         # A single recording command must create verified data/media for every rig.
         client.command('array_record', start=True, directory=str(output / 'record-all'))
         client.wait(lambda s: all(x['recording'] for x in s))

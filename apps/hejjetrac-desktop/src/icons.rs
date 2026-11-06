@@ -50,7 +50,7 @@ fn artwork(icon: Icon, active: bool) -> (&'static str, &'static [u8]) {
 fn native_button(ui: &egui::Ui, icon: Icon, active: bool) -> egui::Button<'static> {
     if matches!(
         icon,
-        Icon::Calibration | Icon::Link | Icon::Unlink | Icon::Grid | Icon::Rigs
+        Icon::Calibration | Icon::Link | Icon::Unlink | Icon::Grid | Icon::Rigs | Icon::Diagnostics
     ) {
         return egui::Button::new("")
             .min_size(Vec2::splat(30.0))
@@ -118,27 +118,65 @@ fn sized_button(
     if matches!(icon, Icon::Grid | Icon::Rigs) {
         let center = response.rect.center();
         let stroke = egui::Stroke::new(1.6_f32, ui.visuals().text_color());
-        if matches!(icon, Icon::Grid) {
-            for x in [-4.5, 4.5] {
-                for y in [-4.5, 4.5] {
-                    ui.painter().rect_stroke(
-                        egui::Rect::from_center_size(center + egui::vec2(x, y), Vec2::splat(6.0)),
-                        1.0,
-                        stroke,
-                        egui::StrokeKind::Inside,
-                    );
+        for x in [-5.0, 5.0] {
+            for y in [-5.0, 5.0] {
+                if matches!(icon, Icon::Rigs) && x > 0.0 && y > 0.0 {
+                    continue;
                 }
+                let cell =
+                    egui::Rect::from_center_size(center + egui::vec2(x, y), Vec2::splat(7.0));
+                ui.painter()
+                    .rect_filled(cell, 1.0, ui.visuals().text_color().gamma_multiply(0.15));
+                ui.painter()
+                    .rect_stroke(cell, 1.0, stroke, egui::StrokeKind::Inside);
             }
-        } else {
-            for y in [-6.0, 0.0, 6.0] {
-                ui.painter().rect_stroke(
-                    egui::Rect::from_center_size(center + egui::vec2(-6.0, y), Vec2::splat(3.0)),
-                    0.5,
-                    stroke,
-                    egui::StrokeKind::Inside,
-                );
+        }
+        if matches!(icon, Icon::Rigs) {
+            let gear = center + egui::vec2(5.0, 5.0);
+            ui.painter().circle_stroke(gear, 2.6, stroke);
+            for direction in [
+                egui::vec2(1.0, 0.0),
+                egui::vec2(0.0, 1.0),
+                egui::vec2(-1.0, 0.0),
+                egui::vec2(0.0, -1.0),
+            ] {
+                ui.painter()
+                    .line_segment([gear + direction * 2.6, gear + direction * 5.0], stroke);
+            }
+        }
+    }
+    if matches!(icon, Icon::Diagnostics) {
+        let center = response.rect.center();
+        let stroke = egui::Stroke::new(1.6_f32, ui.visuals().text_color());
+        ui.painter().rect_stroke(
+            egui::Rect::from_center_size(center + egui::vec2(0.0, 2.0), egui::vec2(9.0, 12.0)),
+            4.5,
+            stroke,
+            egui::StrokeKind::Inside,
+        );
+        ui.painter()
+            .circle_stroke(center + egui::vec2(0.0, -5.0), 2.5, stroke);
+        ui.painter().line_segment(
+            [
+                center + egui::vec2(0.0, -2.0),
+                center + egui::vec2(0.0, 7.0),
+            ],
+            stroke,
+        );
+        for side in [-1.0, 1.0] {
+            ui.painter().line_segment(
+                [
+                    center + egui::vec2(side * 1.5, -7.0),
+                    center + egui::vec2(side * 4.5, -10.0),
+                ],
+                stroke,
+            );
+            for y in [-2.0, 2.0, 6.0] {
                 ui.painter().line_segment(
-                    [center + egui::vec2(-1.0, y), center + egui::vec2(8.0, y)],
+                    [
+                        center + egui::vec2(side * 4.5, y),
+                        center + egui::vec2(side * 9.0, y + (y - 2.0) * 0.3),
+                    ],
                     stroke,
                 );
             }
@@ -196,7 +234,13 @@ fn sized_button(
     }
     response
         .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), help));
-    response.on_hover_text(help)
+    response.on_hover_ui(|ui| {
+        let (title, description) = help.split_once('\n').unwrap_or((help, ""));
+        ui.strong(title);
+        if !description.is_empty() {
+            ui.label(description);
+        }
+    })
 }
 pub fn menu<R>(
     ui: &mut egui::Ui,

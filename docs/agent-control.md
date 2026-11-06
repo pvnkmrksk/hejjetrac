@@ -112,9 +112,11 @@ Initialize the client, then use `tools/list`:
 | `hejjetrac_screenshot` | Actual rendered app content as an MCP PNG image, including tiles, controls and embedded inspectors. Optional `surface` defaults to `root`. |
 | `hejjetrac_ui` | `click`, `move`, `press`, `release`, `scroll`, `text`, or `key` on a surface. Pointer coordinates are logical pixels; divide screenshot pixels by `pixels_per_point`. |
 
-Clicks use separate press/release frames. A single click on a compact tile opens
-its settings after the normal double-click interval; two clicks expand the rig
-instead. The tile's settings button opens immediately.
+Clicks use separate press/release frames. One image click expands a compact tile;
+two clicks made while expanded return to all rigs. Each tile and manager row has
+individual reset and settings buttons, and settings toggles open/closed.
+Native status exposes `tile_reset_rect`, `tile_settings_rect`,
+`manager_reset_rect` and `manager_settings_rect` for visible controls.
 `press` → `move` → `release` drags calibration marks
 or sliders. Use `button: "secondary"` for right-click. Key names include `Enter`,
 `Escape`, `Tab`, `ArrowDown` and `Backspace`, with optional `ctrl`/`shift`. All app

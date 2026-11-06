@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "binary_sha256": "144c35dd59436a3e0b31bcd26cd19b77d85542266b43f97254ff63c3fd637de0",
+  "video_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+  "array_reset_retains_source_frames": true,
+  "tile_individual_reset": true,
+  "tile_settings_toggle": true,
+  "manager_individual_reset_and_settings_toggle": true,
+  "single_click_expand_double_click_return": true,
+  "portable_workspace_relocation": true,
+  "invalid_workspace_retains_sources": true,
+  "scope": "Native Linux sixteen-real-video test. Shared and individual controls, transport modes and physical cameras have separate evidence. A later hover-wording clarification does not change behavior."
+}

@@ -610,6 +610,10 @@ impl Desktop {
     }
 
     fn rig_manager(&mut self, ctx: &egui::Context) {
+        for session in &mut self.sessions {
+            session.manager_reset_rect = None;
+            session.manager_settings_rect = None;
+        }
         if self.dashboard && self.dashboard_focus.is_some() {
             return;
         }
@@ -732,15 +736,7 @@ impl Desktop {
                             ui.horizontal(|ui| {
                                 ui.strong(session.display_name());
                                 ui.label(session.launch_state());
-                                if icons::button(ui, icons::Icon::Settings, false, "Configure rig")
-                                    .clicked()
-                                {
-                                    session.show_settings = true;
-                                    ui.ctx().send_viewport_cmd_to(
-                                        egui::ViewportId::from_hash_of(("settings", session.id)),
-                                        egui::ViewportCommand::Focus,
-                                    );
-                                }
+                                session.rig_action_buttons(ui, true);
                             });
                             ui.small(session.compact_identity());
                             ui.small(session.hardware_port());
