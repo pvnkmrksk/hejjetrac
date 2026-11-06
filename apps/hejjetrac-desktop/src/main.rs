@@ -10,6 +10,7 @@ mod icons;
 #[cfg(target_os = "linux")]
 mod launch;
 mod mcp;
+mod profiles;
 mod runtime;
 mod session;
 mod startup;
@@ -625,6 +626,8 @@ impl Desktop {
         let mut add_rigs = false;
         let mut new_rig = false;
         let mut save_workspace = false;
+        let mut export_workspace = false;
+        let mut load_workspace = false;
         let mut tile = false;
         let framebuffer_limit = self
             .sessions
@@ -643,6 +646,8 @@ impl Desktop {
                 self.array_controls(ui);
                 icons::toolbar_menu(ui, "Rigs and workspace", |ui| {
                     open_four = ui.button("Open saved array").clicked();
+                    export_workspace = ui.button("Save workspace copy…").clicked();
+                    load_workspace = ui.button("Load workspace…").clicked();
                     add_rigs = ui.button("Add saved rigs…").clicked();
                     new_rig = ui
                         .add_enabled(
@@ -650,7 +655,7 @@ impl Desktop {
                             egui::Button::new("New rig"),
                         )
                         .clicked();
-                    if open_four || add_rigs || new_rig {
+                    if open_four || add_rigs || new_rig || export_workspace || load_workspace {
                         ui.close();
                     }
                 });
@@ -738,6 +743,34 @@ impl Desktop {
                                 }
                             });
                             ui.small(session.compact_identity());
+                            ui.small(session.hardware_port());
+                            if let Some(outputs) = &session.snapshot.outputs {
+                                if let Some(publisher) = &outputs.zmq {
+                                    ui.small(format!(
+                                        "ZMQ {} · {} · published {} · dropped {}",
+                                        publisher.endpoint,
+                                        if publisher.worker_alive && publisher.failures == 0 {
+                                            "ready"
+                                        } else {
+                                            "failed"
+                                        },
+                                        publisher.published,
+                                        publisher.dropped
+                                    ));
+                                }
+                                if outputs.udp_enabled {
+                                    ui.small(format!(
+                                        "UDP socket {}",
+                                        outputs
+                                            .udp_destination
+                                            .as_deref()
+                                            .unwrap_or("destination unavailable")
+                                    ));
+                                }
+                            }
+                            if let Some(error) = &session.snapshot.command_error {
+                                ui.colored_label(ui.visuals().error_fg_color, error);
+                            }
 
                             let actual_source = if session.snapshot.source_label.is_empty() {
                                 &session.running_source
@@ -869,6 +902,40 @@ impl Desktop {
         if save_workspace {
             match self.save_workspace() {
                 Ok(()) => self.startup_notice = "Workspace saved.".into(),
+                Err(error) => self.startup_notice = error,
+            }
+        }
+        if export_workspace
+            && let Some(path) = rfd::FileDialog::new()
+                .set_title("Choose a parent folder for the workspace copy")
+                .pick_folder()
+        {
+            let stamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|v| v.as_millis())
+                .unwrap_or(0);
+            match self.export_workspace(&path.join(format!("Hejjetrac-workspace-{stamp}"))) {
+                Ok(path) => {
+                    self.startup_notice = format!(
+                        "Workspace copy saved. Load {} from any build.",
+                        path.display()
+                    )
+                }
+                Err(error) => self.startup_notice = error,
+            }
+        }
+        if load_workspace
+            && let Some(path) = rfd::FileDialog::new()
+                .add_filter("HejjéTrac workspace", &["json"])
+                .pick_file()
+        {
+            match self.load_workspace(&path) {
+                Ok(()) => {
+                    self.startup_notice = format!(
+                        "Loaded {}. Save workspace to restore it on launch.",
+                        path.display()
+                    )
+                }
                 Err(error) => self.startup_notice = error,
             }
         }

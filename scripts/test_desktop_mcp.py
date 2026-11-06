@@ -156,6 +156,20 @@ def run(args):
         shared = client.command('sessions')
         assert all(s['view']['full_image'] and s['view']['diagnostics'] and s['view']['overlays'] for s in shared)
         client.command('array_view', full_image=False, diagnostics=False, overlays=False)
+        before_reset = client.command('sessions')
+        client.command('array_reset')
+        reset = client.wait(lambda s: all('Pose/path reset' in x['notice'] for x in s))
+        assert [s['frames'] for s in reset] == [s['frames'] for s in before_reset]
+        assert all(s['paused'] and s['path_points'] == 0 for s in reset)
+        report['array_reset_retains_source_frames'] = True
+        # A single click opens this rig's inspector without expanding its tile.
+        rect = client.command('status', 2)['tile_rect']
+        client.tool('hejjetrac_ui', action='click', x=rect[0]+rect[2]/2, y=rect[1]+rect[3]/2)
+        selected = client.wait(lambda s: s[1]['view']['settings'])
+        assert selected[1]['tile_rect'][2] == rect[2]
+        client.command('view', 2, settings=False)
+        time.sleep(.4)
+        report['single_click_settings'] = True
         # Exercise actual pointer events on the second rig, rather than rig_focus.
         rect = client.command('status', 2)['tile_rect']
         x, y = rect[0] + rect[2] / 2, rect[1] + rect[3] / 2
@@ -243,6 +257,29 @@ def run(args):
         report['saved_layout'] = json.loads((output / 'state/workspace.json').read_text())
         assert report['saved_layout']['columns'] == 4 and report['saved_layout']['rows'] == 4
         restored.screenshot(output / 'restored-workspace.png')
+        portable = output / 'portable-copy'
+        restored.command('workspace_export', directory=str(portable))
+        manifest = json.loads((portable / 'workspace.json').read_text())
+        assert len(manifest['rigs']) == 16 and all(not Path(p).is_absolute() for p in manifest['rigs'])
+        moved = output / 'relocated-workspace'
+        portable.rename(moved)
+        for s in restored.command('sessions'):
+            restored.command('pause', s['session'])
+        previous = restored.wait(lambda s: all(x['paused'] for x in s))
+        broken = dict(manifest, rigs=['absent.txt'])
+        (moved / 'broken.json').write_text(json.dumps(broken))
+        try:
+            restored.command('workspace_load', path=str(moved / 'broken.json'))
+            raise AssertionError('missing rig was accepted')
+        except RuntimeError as error:
+            assert 'Cannot load rig' in str(error)
+        assert [s['frames'] for s in restored.command('sessions')] == [s['frames'] for s in previous]
+        restored.command('workspace_load', path=str(moved / 'workspace.json'))
+        loaded = restored.wait(lambda s: len(s) == 16 and all(x['frames'] >= 3 for x in s), 60)
+        assert all(Path(s['config_path']).parent == moved for s in loaded)
+        assert all(not s['error'] and not s['command_error'] for s in loaded)
+        report['portable_workspace_relocation'] = True
+        report['invalid_workspace_retains_sources'] = True
     finally:
         restored.finish()
         (output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')

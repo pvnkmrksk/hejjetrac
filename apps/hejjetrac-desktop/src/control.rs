@@ -49,8 +49,11 @@ const COMMANDS: &[&str] = &[
     "map_refresh",
     "arrange_grid",
     "workspace_save",
+    "workspace_export",
+    "workspace_load",
     "array_view",
     "array_record",
+    "array_reset",
     "rig_focus",
     "rig_grid",
     "map_save",
@@ -218,6 +221,7 @@ pub(crate) fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
                     .map(Path::new),
             );
         }
+        "array_reset" => return app.reset_array(),
         "rig_focus" => {
             let id = r.session.ok_or("session is required")?;
             if !app.sessions.iter().any(|s| !s.closed && s.id == id) {
@@ -263,6 +267,16 @@ pub(crate) fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
             app.args.grid = None;
             app.tile_array_requested = true;
             return Ok(json!({"queued":true}));
+        }
+        "workspace_export" => {
+            let path = app.export_workspace(Path::new(string(&r.args, "directory")?))?;
+            return Ok(json!({"path":path}));
+        }
+        "workspace_load" => {
+            app.load_workspace(Path::new(string(&r.args, "path")?))?;
+            return Ok(
+                json!({"queued":true,"rigs":app.workspace.rigs,"completion":"Poll every session for camera/source startup errors and advancing frames."}),
+            );
         }
         "workspace_save" => {
             let previous = app.workspace.restore_on_launch;

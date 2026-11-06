@@ -404,6 +404,9 @@ impl Controller {
                 | "camera_status"
                 | "camera_set"
                 | "camera_format"
+                | "array_reset"
+                | "workspace_export"
+                | "workspace_load"
         ) {
             return Err(format!(
                 "{} requires a native desktop session; this headless controller processes recorded video and has no live camera or rendered view",

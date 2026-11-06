@@ -417,6 +417,7 @@ impl Session {
         self.refresh_textures(&ctx);
         self.ui_metrics.textures_ms = texture_started.elapsed().as_secs_f64() * 1000.;
         let mut focus = false;
+        let mut tile_canvas = rect;
         ui.scope_builder(
             egui::UiBuilder::new()
                 .id_salt(("rig-tile", self.id))
@@ -434,8 +435,8 @@ impl Session {
                     )
                     .size()
                     .y;
-                let header_height = (identity_height + if expanded { 40.0 } else { 4.0 })
-                    .max(if expanded { 64.0 } else { 32.0 });
+                let header_height =
+                    (identity_height + 36.0).max(if expanded { 64.0 } else { 32.0 });
                 let header = Rect::from_min_size(rect.min, egui::vec2(rect.width(), header_height));
                 ui.scope_builder(egui::UiBuilder::new().max_rect(header), |ui| {
                     ui.add(egui::Label::new(egui::RichText::new(identity).size(11.0)).wrap());
@@ -452,6 +453,16 @@ impl Session {
                             self.toolbar_row(ui);
                         });
                     } else {
+                        if icons::button(
+                            ui,
+                            Icon::Settings,
+                            self.show_settings,
+                            "Configure this rig",
+                        )
+                        .clicked()
+                        {
+                            self.set_settings_panel(true);
+                        }
                         self.tile_open_rect =
                             Some([rect.min.x, rect.min.y, rect.width(), rect.height()]);
                     }
@@ -474,6 +485,7 @@ impl Session {
                     ui.set_clip_rect(canvas);
                     self.paint_preview(ui, canvas, true);
                 });
+                tile_canvas = canvas;
                 let status =
                     Rect::from_min_max(egui::pos2(rect.min.x, rect.max.y - 22.0), rect.max);
                 ui.scope_builder(egui::UiBuilder::new().max_rect(status), |ui| {
@@ -483,14 +495,14 @@ impl Session {
         );
         if !expanded {
             let response = ui.interact(
-                rect,
+                tile_canvas,
                 egui::Id::new(("open-rig", self.id)),
                 egui::Sense::click(),
             );
             response
                 .clone()
                 .on_hover_cursor(egui::CursorIcon::PointingHand)
-                .on_hover_text("Double-click for rig controls");
+                .on_hover_text("Click for rig settings · double-click to expand");
             if response.hovered() {
                 ui.painter().rect_stroke(
                     rect.shrink(1.0),
@@ -500,6 +512,22 @@ impl Session {
                 );
             }
             focus |= response.double_clicked();
+            let pending = egui::Id::new(("rig-settings-click", self.id));
+            let now = ctx.input(|i| i.time);
+            let delay = ctx.options(|o| o.input_options.max_double_click_delay);
+            if response.double_clicked() {
+                ctx.data_mut(|data| data.remove::<f64>(pending));
+            } else if response.clicked() {
+                ctx.data_mut(|data| data.insert_temp(pending, now));
+                ctx.request_repaint_after(std::time::Duration::from_secs_f64(delay));
+            }
+            if ctx
+                .data(|data| data.get_temp::<f64>(pending))
+                .is_some_and(|at| now - at >= delay)
+            {
+                ctx.data_mut(|data| data.remove::<f64>(pending));
+                self.set_settings_panel(true);
+            }
         }
         self.show_dialogs(&ctx, true);
         self.ui_metrics.show_ms = started.elapsed().as_secs_f64() * 1000.;
@@ -1497,7 +1525,13 @@ impl Session {
             }
             SettingsSection::Outputs => {
                 ui.heading("Live outputs");
-                self.zmq_controls(ui);
+                self.output_transport_controls(ui);
+                if self
+                    .document()
+                    .is_ok_and(|doc| doc.number("zmq_port", 9871.0) > 0.0)
+                {
+                    self.zmq_controls(ui);
+                }
             }
             SettingsSection::Advanced => {
                 let fields = self.document().map(|d| settings_fields(&d));
@@ -1623,6 +1657,78 @@ impl Session {
             { self.send(Command::LoadMap(path)); }
             ui.small("Manual images have no saved camera identity or pose. Use them only with their matching calibration and localization settings.");
         });
+    }
+    fn output_transport_controls(&mut self, ui: &mut egui::Ui) {
+        let Ok(doc) = self.document() else {
+            return;
+        };
+        let zmq_port = doc.number("zmq_port", 9871.0);
+        let udp_port = doc.number("sock_port", -1.0);
+        let original = match (zmq_port > 0.0, udp_port > 0.0) {
+            (true, false) => 0,
+            (false, true) => 1,
+            (false, false) => 2,
+            (true, true) => 3,
+        };
+        let mut choice = original;
+        egui::ComboBox::from_id_salt("output-transport")
+            .selected_text(match choice {
+                0 => "ZeroMQ",
+                1 => "UDP socket",
+                2 => "Disabled",
+                _ => "ZeroMQ + UDP (saved configuration)",
+            })
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut choice, 0, "ZeroMQ");
+                ui.selectable_value(&mut choice, 1, "UDP socket");
+                ui.selectable_value(&mut choice, 2, "Disabled");
+            });
+        if choice != original {
+            let zmq = if zmq_port > 0.0 {
+                zmq_port as u16
+            } else {
+                9870 + (self.id.min(16) as u16)
+            };
+            let udp = if udp_port > 0.0 {
+                udp_port as u16
+            } else {
+                1110 + (self.id.min(16) as u16)
+            };
+            let result = self.fields(&[
+                (
+                    "zmq_port",
+                    if choice == 0 {
+                        zmq.to_string()
+                    } else {
+                        "-1".into()
+                    },
+                ),
+                (
+                    "sock_port",
+                    if choice == 1 {
+                        udp.to_string()
+                    } else {
+                        "-1".into()
+                    },
+                ),
+            ]);
+            self.report(result);
+        }
+        if choice == 1 {
+            ui.horizontal(|ui| {
+                ui.label("UDP host");
+                let mut host = doc.get("sock_host").unwrap_or("127.0.0.1").to_owned();
+                let mut port = doc.get("sock_port").unwrap_or("1111").to_owned();
+                let host_changed = ui.text_edit_singleline(&mut host).changed();
+                ui.label("Port");
+                let port_changed = ui.text_edit_singleline(&mut port).changed();
+                if host_changed || port_changed {
+                    let result = self.fields(&[("sock_host", host), ("sock_port", port)]);
+                    self.report(result);
+                }
+            });
+        }
+        ui.small("New rigs enable ZeroMQ by default. Selecting a transport disables the other; saved legacy configurations are preserved until you change the selection.");
     }
     fn zmq_controls(&mut self, ui: &mut egui::Ui) {
         let Ok(document) = self.document() else {

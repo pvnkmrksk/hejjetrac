@@ -112,8 +112,10 @@ Initialize the client, then use `tools/list`:
 | `hejjetrac_screenshot` | Actual rendered app content as an MCP PNG image, including tiles, controls and embedded inspectors. Optional `surface` defaults to `root`. |
 | `hejjetrac_ui` | `click`, `move`, `press`, `release`, `scroll`, `text`, or `key` on a surface. Pointer coordinates are logical pixels; divide screenshot pixels by `pixels_per_point`. |
 
-Clicks use separate press/release frames. Two clicks within the normal double-click
-interval open a compact tile. `press` → `move` → `release` drags calibration marks
+Clicks use separate press/release frames. A single click on a compact tile opens
+its settings after the normal double-click interval; two clicks expand the rig
+instead. The tile's settings button opens immediately.
+`press` → `move` → `release` drags calibration marks
 or sliders. Use `button: "secondary"` for right-click. Key names include `Enter`,
 `Escape`, `Tab`, `ArrowDown` and `Backspace`, with optional `ctrl`/`shift`. All app
 controls go through egui input; OS window decorations and native OS file dialogs
@@ -126,10 +128,27 @@ The shared Rig Manager controls have matching native commands:
 {"command":"array_view","args":{"full_image":true,"diagnostics":false,"overlays":true}}
 {"command":"array_record","args":{"start":true,"directory":"/new/array-take"}}
 {"command":"array_record","args":{"start":false}}
+{"command":"array_reset"}
+{"command":"workspace_export","args":{"directory":"/new/portable-rig-setup"}}
+{"command":"workspace_load","args":{"path":"/saved/portable-rig-setup/workspace.json"}}
 {"command":"rig_focus","session":2}
 {"command":"rig_grid"}
 {"command":"arrange_grid","args":{"columns":4,"rows":4}}
 ```
+
+`array_reset` queues the same shared-core tracking reset as each individual rig.
+It retains source counters, source time and integrated displacement while
+restarting pose, heading, path and tracking history. Every rig must be running and
+outside calibration. Poll each rig's reset notice; send failures remain visible
+per rig. The reset button appears in both the grid toolbar and Rig Manager.
+
+`workspace_export` writes configurations, view sidecars and a workspace JSON
+with relative rig paths into a new directory. Videos and learned atlases are not
+copied; video configurations retain absolute paths to their existing media.
+`workspace_load` resolves paths against the selected JSON and validates all rig
+documents before releasing current sources. Unsaved changes, active calibration
+and recording/finalization block replacement. Poll startup errors per rig and
+use `workspace_save` afterward to restore the loaded setup on ordinary launch.
 
 `array_record` checks all rigs before starting. An explicit new parent directory
 gets `rig-<session>` subfolders; omission uses each rig's configured recording

@@ -8,6 +8,31 @@ pub fn required(active: usize) -> bool {
 }
 
 impl Desktop {
+    pub(crate) fn reset_array(&mut self) -> Result<serde_json::Value, String> {
+        if self
+            .sessions
+            .iter()
+            .any(|s| !s.closed && (s.worker.is_none() || s.tool != Tool::Inspect))
+        {
+            return Err(
+                "Start every rig and finish or cancel calibration before resetting all tracking"
+                    .into(),
+            );
+        }
+        let mut results = vec![];
+        for s in self.sessions.iter_mut().filter(|s| !s.closed) {
+            let result = crate::control::execute_session(s, "reset", &serde_json::json!({}));
+            if let Err(error) = &result {
+                s.error = error.clone();
+            }
+            results.push(
+                serde_json::json!({"session":s.id,"queued":result.is_ok(),"error":result.err()}),
+            );
+        }
+        Ok(
+            serde_json::json!({"rigs":results,"completion":"Poll each rig's reset notice; source capture and its clock continue, tracking pose/path restart."}),
+        )
+    }
     pub(crate) fn set_array_view(&mut self, args: &serde_json::Value) -> Result<(), String> {
         if self
             .sessions
@@ -82,6 +107,12 @@ impl Desktop {
         )
     }
     pub(crate) fn array_controls(&mut self, ui: &mut egui::Ui) {
+        if crate::icons::toolbar_button(ui, crate::icons::Icon::Reset, false,
+            "Reset tracking · all rigs. Restart pose, atlas and path; keep the live sources and their clocks.").clicked()
+            && let Err(error) = self.reset_array()
+        {
+            self.startup_notice = error;
+        }
         let active = self.sessions.iter().filter(|s| !s.closed).count();
         let recording = self
             .sessions
@@ -218,14 +249,18 @@ impl Desktop {
             egui::TopBottomPanel::top("grid-actions").show(ctx, |ui| {
                 ui.spacing_mut().interact_size.y = 38.0;
                 ui.horizontal_wrapped(|ui| {
-                    ui.strong("Rig grid");
-                    if crate::icons::toolbar_button(
+                    let grid_settings = ui
+                        .button("Rig grid")
+                        .on_hover_text("Open Rig Manager settings")
+                        .clicked();
+                    if (crate::icons::toolbar_button(
                         ui,
                         crate::icons::Icon::Rigs,
                         false,
                         "Rig manager",
                     )
                     .clicked()
+                        || grid_settings)
                         && let Some(session) = self.sessions.iter_mut().find(|s| !s.closed)
                     {
                         session.show_rigs = true;

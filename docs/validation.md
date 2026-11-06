@@ -1,5 +1,31 @@
 # HejjéTrac validation evidence
 
+## Patch rig controls and portable workspaces — 2026-11-06
+
+The native sixteen-real-video regression passes shared tracking reset, single-click
+settings without tile expansion, double-click expansion, sixteen independently
+decoded three-image recordings, saved layout restoration and relocated portable
+workspace loading. A missing rig in a workspace is rejected before releasing the
+paused sources; their source counters remain unchanged.
+
+On this Linux device, a normal graphical launch restores four 320×240 rigs bound
+in order to A01–A04 at the user-supplied 17° FOV. Ball rims are fitted from the
+live images with the Rust CLI; no animal is visible, so old exclusion masks are
+removed. Prior lab rotations remain unchanged pending the physical forward-axis
+reference. This is not a complete physical lab-axis or motion-ground-truth check.
+The actual Rig Manager reset button resets all four paused rigs while retaining
+source counters. Clicking Rig grid opens the manager, and a single camera-tile
+click opens its settings without expansion. Serial/binding state, video node,
+USB port and UDP destination are visually verified. Existing Python bridges own
+9871–9874, so this device uses UDP 1111–1114 with direct app ZMQ disabled.
+
+The device defaults and portable backup are local state, not changes to the
+bundled M01–M04 calibration examples. Formatting, strict Clippy, packaging helper
+checks and the manual link build pass. Exact native checks and their limits are
+recorded in [the machine-readable report](benchmarks/rig-manager-v041-20261106.json).
+
+![Rig Manager with the four bound 17° cameras](images/rig-manager-v041-20261106.png)
+
 ## Automatic desktop MCP and shared rig controls — 2026-11-05
 
 Formatting, strict workspace/all-target Clippy and **359 workspace tests** pass.

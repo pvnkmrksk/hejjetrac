@@ -149,13 +149,43 @@ remembered; each separately opened rig also remembers its window size beside its
 configuration. Saving a config saves that view sidecar as well. Older sidecars
 without dimensions still use defaults. Display/framebuffer limits apply on restore.
 
-The full-frame/zoom, footage/debug, outline and recording icons
+The reset tracking, full-frame/zoom, footage/debug, outline and recording icons
 apply to all open rigs. Recording uses each rig's folder, raw/debug selection and
 codec; stop waits for each worker to finalize its files. Each rig reports its own
 errors. Compact tiles show VR, camera serial/number, ZMQ port and actual device
-path when known. They have no individual toolbar. Hover for a highlight and hint;
-double-click to expand a rig, then use the **Back to rig grid** icon to return. View choices
+path when known, including whether the camera is bound. Rig Manager also shows
+the USB hardware port, output readiness and output failures. Click **Rig grid**
+or the manager icon to open Rig Manager. Click a tile or its settings button to
+configure that rig; double-click to expand it, then use **Back to rig grid** to return. View choices
 made for that rig remain selected.
+
+**Reset tracking · all rigs** appears in both the grid toolbar and Rig Manager.
+It restarts pose, heading, path and tracking history while retaining source time,
+source counters and integrated displacement. It requires every rig to be running
+and outside calibration. Each rig reports its own queued completion or error.
+
+In **Settings → Outputs**, choose **ZeroMQ** or **UDP socket**. New rigs enable
+ZeroMQ by default; choosing a transport disables the other. Existing configs
+that explicitly use both remain intact until you select a transport. A UDP bridge
+that already owns the ZeroMQ port needs UDP output from HejjéTrac, with direct
+ZeroMQ disabled, to avoid two publishers competing for the same port.
+
+## Portable copies and other builds
+
+In Rig Manager, choose **Rigs and workspace → Save workspace copy…** and select
+a parent folder. The new folder contains every rig's configuration, view sidecars
+and `workspace.json` with relative rig paths. Move or back up that whole folder.
+Calibration, serial bindings and output choices travel with the configurations;
+source videos and learned atlases are not copied. Video configurations retain
+absolute paths to their existing source media.
+
+In any compatible build, choose **Rigs and workspace → Load workspace…** and
+select that copy's `workspace.json`. Save any current rig edits and finish
+calibration/recordings first. All documents are validated before current sources
+are released; unavailable cameras remain explicit errors on their own rigs.
+Select **Restore on launch → Save workspace** to make the loaded setup this
+device's startup default. The per-user configuration folder persists when the
+application binary is replaced by a different build.
 
 Finishing calibration closes the inspector and saves changes to an existing rig
 configuration. Unsaved/temporary configurations still need their ordinary first

@@ -197,7 +197,7 @@ impl Session {
         session.restore_view();
         session
     }
-    fn view_preferences(&self) -> crate::state::ViewPreferences {
+    pub(crate) fn view_preferences(&self) -> crate::state::ViewPreferences {
         let (full_image, overlays) = self
             .calibration_previous_view
             .unwrap_or((self.full_image, self.show_overlays));
@@ -490,12 +490,21 @@ impl Session {
     fn camera_identity(&self, input: &str) -> Option<(String, String)> {
         input.parse::<u32>().ok()?;
         let doc = self.document().ok();
-        let binding = self.running_camera_binding.as_deref().or_else(|| {
+        let binding = if self.worker.is_some() {
+            self.running_camera_binding.as_deref()
+        } else {
             doc.as_ref()
                 .and_then(|d| d.get("rust_camera_id"))
                 .filter(|s| !s.is_empty())
-        });
-        let hardware = binding
+        };
+        let actual = self
+            .snapshot
+            .actual_camera_id
+            .or_else(|| input.parse().ok())
+            .and_then(|id| self.cameras.iter().find(|camera| camera.id == id));
+        let hardware = actual
+            .and_then(|camera| camera.hardware_id.as_deref())
+            .or(binding)
             .map(|id| {
                 if id.starts_with("usb:") {
                     id.split(':').nth(3).unwrap_or(id)
@@ -503,7 +512,7 @@ impl Session {
                     id
                 }
             })
-            .unwrap_or("unbound");
+            .unwrap_or("serial unknown");
         let camera = self
             .snapshot
             .actual_camera_id
@@ -514,7 +523,22 @@ impl Session {
             .find("/dev/")
             .map(|start| label[start..].split([')', ' ']).next().unwrap_or("unknown"))
             .unwrap_or("device pending");
-        Some((format!("Cam {hardware} (#{camera})"), device.into()))
+        let link = if binding.is_some() {
+            "bound"
+        } else {
+            "unbound"
+        };
+        Some((
+            format!("Cam {hardware} · {link} (#{camera})"),
+            device.into(),
+        ))
+    }
+    pub fn hardware_port(&self) -> &str {
+        self.snapshot
+            .actual_camera_id
+            .and_then(|id| self.cameras.iter().find(|camera| camera.id == id))
+            .and_then(|camera| camera.port_id.as_deref())
+            .unwrap_or("Hardware port unavailable")
     }
     pub fn window_title(&self) -> String {
         self.window_title_for_width(self.window_rect.map(|r| r[2]).unwrap_or(520.0))
@@ -556,7 +580,23 @@ impl Session {
                         format!("{port} failed")
                     }
                 })
-                .unwrap_or_else(|| "off".into());
+                .unwrap_or_else(|| {
+                    if self
+                        .snapshot
+                        .command_error
+                        .as_deref()
+                        .is_some_and(|error| error.starts_with("Live outputs are disabled"))
+                    {
+                        self.document()
+                            .ok()
+                            .and_then(|doc| doc.get("zmq_port").map(str::to_owned))
+                            .filter(|port| port.parse::<u16>().is_ok_and(|p| p > 0))
+                            .map(|port| format!("{port} failed"))
+                            .unwrap_or_else(|| "off".into())
+                    } else {
+                        "off".into()
+                    }
+                });
             (udp, zmq)
         } else {
             self.document()
@@ -1381,9 +1421,10 @@ mod tests {
         let doc = ConfigDocument::parse("src_fn:4\nsock_port:1113\nzmq_port:-1\n".into())
             .map_err(|e| e.to_string())?;
         let mut session = Session::new(3, doc, None);
+        session.cameras.clear();
         assert_eq!(
             session.window_title(),
-            "VR3 · Cam unbound (#4) · ZMQ off · device pending · UDP 1113"
+            "VR3 · Cam serial unknown · unbound (#4) · ZMQ off · device pending · UDP 1113"
         );
         session.snapshot.outputs = Some(hejjetrac_io::OutputStatus {
             udp_enabled: true,
@@ -1394,15 +1435,27 @@ mod tests {
         });
         assert_eq!(
             session.window_title(),
-            "VR3 · Cam unbound (#4) · ZMQ off · device pending · UDP 1114"
+            "VR3 · Cam serial unknown · unbound (#4) · ZMQ off · device pending · UDP 1114"
         );
         if let Some(outputs) = &mut session.snapshot.outputs {
             outputs.udp_enabled = false;
         }
         assert_eq!(
             session.window_title(),
-            "VR3 · Cam unbound (#4) · ZMQ off · device pending"
+            "VR3 · Cam serial unknown · unbound (#4) · ZMQ off · device pending"
         );
+        session.snapshot.actual_camera_id = Some(4);
+        session.cameras.push(hejjetrac_camera::CameraInfo {
+            id: 4,
+            name: "Test camera".into(),
+            hardware_id: Some("usb:0c45:6366:A03:video:0".into()),
+            port_id: Some("usb-port:test-connector".into()),
+        });
+        assert!(session.compact_identity().contains("Cam A03 · unbound"));
+        assert_eq!(session.hardware_port(), "usb-port:test-connector");
+        session.fields(&[("zmq_port", "9873".into())])?;
+        session.snapshot.command_error = Some("Live outputs are disabled: port occupied".into());
+        assert!(session.compact_identity().contains("ZMQ 9873 failed"));
         Ok(())
     }
     #[test]

@@ -1,0 +1,59 @@
+{
+  "version": "0.4.1",
+  "date": "2026-11-06",
+  "binary_sha256": "0d365eefca508ff640e58b4fcb9b3aeec0918b35febaccb3fd12daebcb9d4825",
+  "native_platform": "Linux native Intel Vulkan",
+  "tracking_algorithm_changed": false,
+  "sixteen_real_video_rigs": {
+    "video_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "single_click_settings": true,
+    "array_reset_retains_source_frames": true,
+    "portable_workspace_relocation": true,
+    "invalid_workspace_retains_sources": true,
+    "workspace_restored_rigs": 16
+  },
+  "recording_rigs_verified": 16,
+  "recorded_images_per_rig": 3,
+  "physical_cameras": {
+    "normal_launch_without_rig_arguments": true,
+    "native_manager_reset_all_retains_source_counters": true,
+    "rig_grid_label_opens_manager": true,
+    "single_click_camera_settings_without_expansion": true
+  },
+  "camera_profile": {
+    "vr_slots": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "serials": [
+      "A01",
+      "A02",
+      "A03",
+      "A04"
+    ],
+    "vfov_degrees": 17,
+    "capture_dimensions": [
+      320,
+      240
+    ],
+    "requested_fps": 100,
+    "transport": "UDP 1111\u20131114 to existing Python bridges; direct app ZMQ disabled",
+    "exclusions": "Empty: no animal is visible in these setup images. Add a mask after mounting an animal."
+  },
+  "limits": [
+    "Lab rotations retained from prior configs; physical forward-direction reference remains required.",
+    "No physical motion-ground-truth accuracy claim.",
+    "Native UI/camera checks are Linux-only.",
+    "No new throughput or latency claim; checks overlapped workspace regressions.",
+    "Portable backups include configuration/view state, not source media or learned atlases."
+  ],
+  "visual_verification": [
+    "16-tile grid and Rig Manager",
+    "Four-camera manager with bound serials, video nodes, USB ports and UDP destinations",
+    "UDP transport settings",
+    "17-degree fitted ball rims"
+  ],
+  "source_scope": "Local release build; test-only assertion isolation and documentation edits followed the build. Native release packages are built from the immutable release tag."
+}

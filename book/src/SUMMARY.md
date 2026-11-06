@@ -4,6 +4,7 @@
 
 # Getting started
 
+- [v0.4.1 desktop MCP and rig controls](release-v0.4.1.md)
 - [v0.4.0 changes and captures](release-v0.4.0.md)
 - [Earlier v0.3.6 local validation](release-v0.3.6.md)
 - [Download and install](install.md)

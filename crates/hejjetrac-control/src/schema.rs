@@ -31,9 +31,12 @@ fn descriptor(command: &str, args: Value) -> Value {
             | "camera_list"
             | "array_view"
             | "array_record"
+            | "array_reset"
             | "rig_grid"
             | "arrange_grid"
             | "workspace_save"
+            | "workspace_export"
+            | "workspace_load"
     );
     if global && let Some(p) = properties.as_object_mut() {
         p.remove("session");
@@ -70,6 +73,7 @@ pub fn request_schema() -> Value {
         "record_stop",
         "rig_focus",
         "rig_grid",
+        "array_reset",
     ] {
         variants.push(descriptor(command, none()));
     }
@@ -100,6 +104,14 @@ pub fn request_schema() -> Value {
     }
     variants.push(descriptor("map_load", object(json!({"path":path(),"pose_camera":{"type":"array","minItems":3,"maxItems":3,"items":{"type":"number"}}}), &["path"])));
     variants.push(descriptor("map_refresh", none()));
+    variants.push(descriptor(
+        "workspace_export",
+        object(json!({"directory":path()}), &["directory"]),
+    ));
+    variants.push(descriptor(
+        "workspace_load",
+        object(json!({"path":path()}), &["path"]),
+    ));
     variants.push(descriptor(
         "arrange_grid",
         object(
@@ -159,7 +171,8 @@ pub fn request_schema() -> Value {
 pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<()> {
     let allowed: &[&str] = match command {
         "schema" | "discover" | "sessions" | "new_instance" | "status" | "config" | "undo"
-        | "redo" | "start" | "pause" | "reset" | "rewind" | "record_stop" | "map_refresh" => &[],
+        | "redo" | "start" | "pause" | "reset" | "rewind" | "record_stop" | "map_refresh"
+        | "array_reset" => &[],
         "close" => &["discard"],
         "realtime" => &["enabled"],
         "open" => &["config", "text", "input"],
@@ -170,6 +183,8 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "map_load" => &["path", "pose_camera"],
         "arrange_grid" => &["columns", "rows"],
         "workspace_save" => &["restore_on_launch"],
+        "workspace_export" => &["directory"],
+        "workspace_load" => &["path"],
         "record_start" => &["directory", "record_options", "recording_tuning"],
         "snapshot" | "export" => &["directory"],
         "view" => &[
@@ -430,10 +445,13 @@ pub fn headless_request_schema() -> Value {
                     "view"
                         | "array_view"
                         | "array_record"
+                        | "array_reset"
                         | "rig_focus"
                         | "rig_grid"
                         | "arrange_grid"
                         | "workspace_save"
+                        | "workspace_export"
+                        | "workspace_load"
                         | "start_array"
                         | "camera_list"
                         | "camera_status"
@@ -473,10 +491,13 @@ mod tuning_tests {
         for name in [
             "array_view",
             "array_record",
+            "array_reset",
             "rig_focus",
             "rig_grid",
             "arrange_grid",
             "workspace_save",
+            "workspace_export",
+            "workspace_load",
         ] {
             assert!(!schema["oneOf"].as_array().is_some_and(|items| {
                 items

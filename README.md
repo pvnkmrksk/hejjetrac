@@ -6,6 +6,9 @@
 
 **[Download now](https://pvnkmrksk.github.io/hejjetrak/?download=1)** · [User manual](https://pvnkmrksk.github.io/hejjetrak/manual/) · [Website](https://pvnkmrksk.github.io/hejjetrak/) · [GitHub](https://github.com/pvnkmrksk/hejjetrak)
 
+[v0.4.1 release notes](docs/release-v0.4.1.md): automatic desktop MCP, shared rig
+view and recording controls, and saved window/layout restoration.
+
 ![HejjéTrac tracking the supplied FicTrac sample](docs/images/tracking-demo.gif)
 
 *The native app processing the supplied FicTrac sample. [Watch the video](docs/images/tracking-demo.mp4).*

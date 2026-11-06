@@ -4,6 +4,22 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
+## v0.4.1 — 6 November 2026
+
+[v0.4.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.4.1) adds automatic
+local desktop MCP, shared grid view/recording controls, a calibration-overlay
+toggle and saved window/layout restoration. Expanded rigs retain individual
+controls. Linux package checks require default Vulkan rendering and independently
+exercise explicit OpenGL, isolated startup and missing bound-camera errors.
+[Release notes](release-v0.4.1.md) describe validation and platform limits.
+
+## v0.4.0 — 5 November 2026
+
+[v0.4.0](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.4.0) introduced
+capture-clock tracking improvements, saved workspaces, optional atlas reuse and
+a shared native grid for up to sixteen rigs. [Release notes](release-v0.4.0.md)
+retain the fixture-specific accuracy, recovery and hardware limits.
+
 ## v0.3.5 — 29 October 2026
 
 [v0.3.5](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.5) includes the
