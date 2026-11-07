@@ -4,9 +4,9 @@
 
 **HejjéTrac** (`hejjetrac`) is a modern Rust reworking of [FicTrac](https://github.com/rjdmoore/fictrac), with a compact desktop app, guided calibration and independent sessions for several rigs. Track a patterned ball, inspect its motion and record the data from the same window.
 
-**[Download now](https://pvnkmrksk.github.io/hejjetrak/?download=1)** · [User manual](https://pvnkmrksk.github.io/hejjetrak/manual/) · [Website](https://pvnkmrksk.github.io/hejjetrak/) · [GitHub](https://github.com/pvnkmrksk/hejjetrak)
+**[Download now](https://pvnkmrksk.github.io/hejjetrac/?download=1)** · [User manual](https://pvnkmrksk.github.io/hejjetrac/manual/) · [Website](https://pvnkmrksk.github.io/hejjetrac/) · [GitHub](https://github.com/pvnkmrksk/hejjetrac)
 
-[v0.4.2 release notes](docs/release-v0.4.2.md): direct per-rig reset/settings, click-to-expand navigation, and ZeroMQ, UDP, or both outputs.
+[v0.5.0 release notes](docs/release-v0.5.0.md): remote recording control, per-frame synchronization metadata, portable unbound defaults and clearer Ubuntu packaging.
 [v0.4.1](docs/release-v0.4.1.md) adds automatic desktop MCP, shared rig controls
 and saved window/layout restoration.
 
@@ -16,8 +16,7 @@ and saved window/layout restoration.
 
 [Updated real-camera calibration screenshots and native screen capture](docs/release-v0.4.0.md)
 show the saved 47° M01–M04 outlines. To adjust a saved outline, choose **Edit ball**
-and drag a numbered rim mark. The rig profiles bind M01–M04 by serial, independently
-of camera enumeration order.
+and drag a numbered rim mark. Those historical lab profiles used M01–M04 serials; current release defaults are unbound.
 
 The minimized-rig-manager UI freeze is fixed by the corrected hardware-GPU
 presentation path. [Reproduction and native-input checks](docs/ui-rendering.md)
@@ -37,15 +36,15 @@ Created by **[Pavan Kumar Kaushik](https://github.com/pvnkmrksk)**. The name com
 
 ## Open and start
 
-Download the package for your computer, extract it and open **HejjéTrac**. The app tries the first available camera and falls back to the bundled sample when a camera cannot open or deliver frames. Your own camera needs its own [calibration](https://pvnkmrksk.github.io/hejjetrak/manual/calibration.html).
+Download the package for your computer, extract it and open **HejjéTrac**. The app tries the first available camera and falls back to the bundled sample when a camera cannot open or deliver frames. Your own camera needs its own [calibration](https://pvnkmrksk.github.io/hejjetrac/manual/calibration.html).
 
 | Platform | First launch |
 |---|---|
 | macOS · Apple Silicon or Intel | Open `hejjetrac.app`. If blocked as an unidentified developer, attempt to open it, then use **System Settings → Privacy & Security → Open Anyway**. [Apple's instructions](https://support.apple.com/en-us/102445). |
-| Windows · x64 | Extract the ZIP and open `hejjetrac.exe`. If SmartScreen offers it, use **More info → Run anyway** for the downloaded release. [Windows details](https://pvnkmrksk.github.io/hejjetrak/manual/install.html#windows). |
-| Linux · x86_64 | On Ubuntu **22.04 or newer**, install the `.deb`, or extract the portable archive and launch `hejjetrac`. New Linux packages target **glibc 2.35+**. [Distribution requirements](https://pvnkmrksk.github.io/hejjetrak/manual/install.html#linux). |
+| Windows · x64 | Extract the ZIP and open `hejjetrac.exe`. If SmartScreen offers it, use **More info → Run anyway** for the downloaded release. [Windows details](https://pvnkmrksk.github.io/hejjetrac/manual/install.html#windows). |
+| Linux · x86_64 | On Ubuntu **22.04 or newer**, install the `.deb`, or extract the portable archive and launch `hejjetrac`. New Linux packages target **glibc 2.35+**. [Distribution requirements](https://pvnkmrksk.github.io/hejjetrac/manual/install.html#linux). |
 
-Current downloads are ad hoc signed on Mac and unsigned on Windows. Use the project's release files; managed computers may require administrator approval for a first-launch exception. [Installation and permissions](https://pvnkmrksk.github.io/hejjetrak/manual/install.html) covers the exact prompts. No Rust installation or compiler is needed. Older releases use `hejjetrak` filenames; existing commands remain available as aliases.
+Current downloads are ad hoc signed on Mac and unsigned on Windows. Use the project's release files; managed computers may require administrator approval for a first-launch exception. [Installation and permissions](https://pvnkmrksk.github.io/hejjetrac/manual/install.html) covers the exact prompts. No Rust installation or compiler is needed. New packages ship only `hejjetrac` and `hejjetrac-cli`.
 
 ## Built for the experiment
 
@@ -58,7 +57,7 @@ Current downloads are ad hoc signed on Mac and unsigned on Windows. Use the proj
 
 ![The native tracking window](docs/images/preview.png)
 
-[First session](https://pvnkmrksk.github.io/hejjetrak/manual/quick-start.html) · [Hardware and lighting](https://pvnkmrksk.github.io/hejjetrak/manual/hardware.html) · [Calibration](https://pvnkmrksk.github.io/hejjetrak/manual/calibration.html)
+[First session](https://pvnkmrksk.github.io/hejjetrac/manual/quick-start.html) · [Hardware and lighting](https://pvnkmrksk.github.io/hejjetrac/manual/hardware.html) · [Calibration](https://pvnkmrksk.github.io/hejjetrac/manual/calibration.html)
 
 ## Companion experiments and analysis
 
@@ -85,24 +84,34 @@ hejjetrac --config VR1.txt --window-size 480x360
 hejjetrac --config VR1.txt --array
 ```
 
-Keep a saved config for each physical rig, with distinct output ports. Bundled `VR1.txt`–`VR4.txt` are examples from the original setup; review camera IDs and calibration before collecting data. Actual camera capacity depends on capture bandwidth, recording and your computer. [Multi-rig setup](https://pvnkmrksk.github.io/hejjetrak/manual/rigs.html).
+A fresh installation opens **one unbound camera**. Release `VR1.txt`–`VR4.txt`
+come from [`examples/defaults`](examples/defaults), with no camera serial, USB
+socket, machine path or forced capture format. First-run seeding chooses actual
+enumerated camera IDs, including Linux device-number gaps. The centered ball
+outline and 45° FOV are preview placeholders: calibrate your own camera before
+collecting measurements. Existing saved rigs/workspaces remain authoritative.
 
-The current VR1–VR4 files retain the saved rig calibrations and
-explicit 320×240, 100 FPS capture. They link to provisioned serials M01–M04;
-the saved numeric IDs 0/2/4/6 are historical, and serial resolution overrides
-them when USB enumeration changes. UDP ports are 1111–1114 and direct ZMQ
-ports are 9871–9874. When using the existing Python republishers, launch
-`./scripts/run_four_bridged.sh`: it disables direct ZMQ in temporary calibrated
-copies, leaving your saved files unchanged. [Connection setup](docs/matrex-vr.md).
-The camera chooser preserves an active preview when a camera is already in use
-and identifies its owning rig.
-Optional hardware binding in **Source & camera** keeps a rig attached to its
-camera across Linux USB/device renumbering. Missing or duplicated IDs leave that
-rig stopped. Bindings and output ports are saved per rig; configurations are
-unbound by default apart from the explicitly linked example rig files.
+Open four rigs using **Rig Manager → Start saved array**, or `hejjetrac --windows 4 --grid 2x2`.
+Each starts unbound and has its own ZeroMQ port (9871–9874); UDP is disabled until
+configured. Use the camera chooser to assign each source, optionally link its
+unique hardware ID, then save its calibration. Missing, duplicated or already
+owned cameras leave that rig stopped. Unlink keeps the actually opened camera
+and its tracking epoch. [Multi-rig setup](book/src/rigs.md) ·
 [Binding and platform limits](book/src/configuration.md#optional-camera-binding).
+
+The repository-root VR files and `examples/rigs` retain historical lab settings
+for reproducibility; they are not the configurations installed as release defaults.
+[`scripts/run_four_bridged.sh`](scripts/run_four_bridged.sh) remains an explicit
+adapter for calibrated lab files and existing UDP-to-ZMQ republishers.
+
 **More → Start saved rig array** starts the saved numbered rig files and reports
 each failure independently. Array startup never substitutes a stock video.
+
+**Separate tracking and VR computers:** launch with
+`hejjetrac --control-bind 0.0.0.0:17871`, then send authenticated recording
+commands from the VR computer. Individual or all-rig takes accept common trial
+IDs/tags. Every take retains a wall-clock/monotonic frame ledger for manual
+alignment. [Remote trigger and synchronization guide](docs/remote-recording.md).
 
 Display FPS controls preview updates independently of processing. The recording
 speed/size control selects the configured codec, faster MJPEG, or fastest
@@ -117,7 +126,7 @@ For recorded video:
 hejjetrac-cli track --config examples/benchmark/config.txt --input examples/sample.mp4 --output runs/benchmark
 ```
 
-The companion CLI is in the extracted folder; on macOS it is inside `hejjetrac.app/Contents/MacOS`. [CLI reference](https://pvnkmrksk.github.io/hejjetrak/manual/cli.html) · [Agent control](docs/agent-control.md).
+The companion CLI is in the extracted folder; on macOS it is inside `hejjetrac.app/Contents/MacOS`. [CLI reference](https://pvnkmrksk.github.io/hejjetrac/manual/cli.html) · [Agent control](docs/agent-control.md).
 
 ## Tracking and validation
 
@@ -154,16 +163,16 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 ```
 
-Cargo builds `hejjetrac` (desktop) and `hejjetrac-cli` directly. The workspace uses `hejjetrac-core`, `hejjetrac-io`, `hejjetrac-camera`, `hejjetrac-control`, `hejjetrac-cli` and `hejjetrac-desktop`; the engine has no UI, filesystem, network or codec dependencies. [Architecture](docs/architecture.md) · [Contributor guide](AGENTS.md) · [Build instructions](https://pvnkmrksk.github.io/hejjetrak/manual/development.html).
+Cargo builds `hejjetrac` (desktop) and `hejjetrac-cli` directly. The workspace uses `hejjetrac-core`, `hejjetrac-io`, `hejjetrac-camera`, `hejjetrac-control`, `hejjetrac-cli` and `hejjetrac-desktop`; the engine has no UI, filesystem, network or codec dependencies. [Architecture](docs/architecture.md) · [Contributor guide](AGENTS.md) · [Build instructions](https://pvnkmrksk.github.io/hejjetrac/manual/development.html).
 
 ## Citation and license
 
 If you use HejjéTrac in research, cite the version you used and the original FicTrac method:
 
-> Pavan Kumar Kaushik. *HejjéTrac: native spherical-motion tracking.* [Software repository](https://github.com/pvnkmrksk/hejjetrak).
+> Pavan Kumar Kaushik. *HejjéTrac: native spherical-motion tracking.* [Software repository](https://github.com/pvnkmrksk/hejjetrac).
 >
 > R. J. D. Moore et al. (2014). *FicTrac: a visual method for tracking spherical motion and generating fictive animal paths.* Journal of Neuroscience Methods 225, 106–119. [doi:10.1016/j.jneumeth.2014.01.010](https://doi.org/10.1016/j.jneumeth.2014.01.010).
 
-[CITATION.cff](CITATION.cff) supplies machine-readable citation metadata. [Archiving instructions](https://pvnkmrksk.github.io/hejjetrak/manual/citing.html) describe connecting a release to Zenodo.
+[CITATION.cff](CITATION.cff) supplies machine-readable citation metadata. [Archiving instructions](https://pvnkmrksk.github.io/hejjetrac/manual/citing.html) describe connecting a release to Zenodo.
 
 FicTrac was developed by R. J. D. Moore, Saul Thurrowgood and collaborators. This project preserves its **CC BY-NC-SA 3.0** license and openly credits its algorithms, examples, illustrations and documentation. [Attribution](ATTRIBUTION.md) · [License](LICENSE) · [Dependency notices](THIRD_PARTY.md).

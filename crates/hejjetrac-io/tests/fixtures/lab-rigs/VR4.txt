@@ -1,0 +1,40 @@
+# VR4: 47-degree rim refit, 2026-11-04; reviewed against retained 2026-11-03 camera image.
+# Verify outline after moving the camera. Existing physical lab orientation is preserved.
+# Pixel marks were measured at 320x240; keep this capture size.
+# UDP 1114 and direct ZMQ 9874 are enabled; use only one publisher per port.
+# scripts/run_four_bridged.sh disables direct ZMQ in temporary copies for republishers.
+## FicTrac v2.1.1 config file (build date Aug 21 2023)
+c2a_cnrs_xy      : { 284, 38, 320, 36, 321, 96, 281, 94 }
+c2a_cnrs_yz      : { 190, 95, 123, 96, 125, 141, 189, 141 }
+c2a_r            : { 0.597435, -0.601450, -1.478908 }
+c2a_src          : c2a_cnrs_yz
+c2a_t            : { -0.049562, -0.016555, 12.275471 }
+do_display       : y
+max_bad_frames   : -1
+opt_bound        : 0.35
+opt_do_global    : n
+opt_max_err      : -1.000000
+opt_max_evals    : 50
+opt_tol          : 0.001
+q_factor         : 6
+roi_c            : {0.04691700932881289, 0.06533251205498315, 0.996759979686296}
+roi_circ         : {155.54180658221705, 56.470588235294116, 259.56657287470796, 146.37770897832817, 224.6439689559671, 208.79256965944273, 91.64087175218062, 117.39938080495357}
+roi_ignr         : { { 204.58204755583938,34.922600619195045,211.26935468921528,97.3374613003096,178.5758644860674,127.80185758513932,136.96595343395066,99.56656346749226,128.79257804871344,69.10216718266254,123.59133916719884,39.38080495356037 } }
+roi_r            : 0.298722241841861
+save_debug       : n
+save_raw         : n
+sock_host        : 127.0.0.1
+sock_port        : 1114
+src_fn           : 6
+src_fps          : 100
+thr_ratio        : 1.25
+thr_win_pc       : 0.25
+vfov             : 47
+
+rust_instance_name : VR4
+rust_resilient     : y
+rust_camera_width  : 320
+rust_camera_height : 240
+zmq_port           : 9874
+rust_camera_id     : usb:0c45:6366:M04:video:0
+zmq_output_mode      : legacy_matrex_vr

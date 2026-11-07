@@ -8,6 +8,66 @@ use std::{
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[test]
+fn tagged_recording_retains_every_real_frame_and_both_source_and_emitted_clocks() -> Result {
+    let mut c = Controller::new();
+    let id = open(&mut c)?;
+    request(&mut c, "set", Some(id), json!({"fields":{"src_fps":"60"}}))?;
+    let directory = std::env::temp_dir().join(format!(
+        "hejjetrac-sync-{}-{}",
+        std::process::id(),
+        hejjetrac_control::unix_ns()?
+    ));
+    let invalid = c.execute(Request {
+        id: json!(1),
+        command: "record_start".into(),
+        session: Some(id),
+        args: json!({"directory":directory,"recording_metadata":{"trigger_unix_ns":123}}),
+    });
+    assert!(!invalid.ok);
+    assert!(!directory.exists());
+    let metadata = json!({"experiment_id":"two-computer-vr","trial_id":"trial-7","trigger_id":"start-7","trigger_unix_ns":"1793970000123456789","tags":{"animal":"test","scene":"corridor"}});
+    request(
+        &mut c,
+        "record_start",
+        Some(id),
+        json!({"directory":directory,"record_options":{"raw":false,"debug":false},"recording_metadata":metadata}),
+    )?;
+    request(&mut c, "run", Some(id), json!({"frames":6}))?;
+    request(&mut c, "record_stop", Some(id), json!({}))?;
+    let manifest: Value = serde_json::from_slice(&fs::read(directory.join("recording.json"))?)?;
+    assert_eq!(manifest["recording_metadata"], metadata);
+    assert_eq!(manifest["source_kind"], "recorded_video");
+    let times = fs::read_to_string(directory.join("frame-times.csv"))?;
+    let numeric = fs::read_to_string(directory.join("all-frames.dat"))?;
+    let rows: Vec<Vec<&str>> = times
+        .lines()
+        .skip(1)
+        .map(|s| s.split(',').collect())
+        .collect();
+    assert_eq!(rows.len(), 6);
+    assert_eq!(numeric.lines().count(), 6);
+    for (i, row) in rows.iter().enumerate() {
+        assert_eq!(row[0].parse::<usize>()?, i);
+        assert_eq!(row[7], ""); // Replay cannot invent the original camera exposure UTC.
+        assert!(row[6].parse::<u64>()? > 1_000_000_000_000_000_000);
+        assert!(row[8].parse::<u64>()? > 1_000_000_000_000_000_000);
+    }
+    let source_delta = rows[5][4].parse::<f64>()? - rows[0][4].parse::<f64>()?;
+    let emitted_delta = rows[5][5].parse::<f64>()? - rows[0][5].parse::<f64>()?;
+    assert!((source_delta - 5000.0 / 30.0).abs() < 1e-6);
+    assert!((emitted_delta - 5000.0 / 60.0).abs() < 1e-6);
+    let events: Vec<Value> = fs::read_to_string(directory.join("recording-events.jsonl"))?
+        .lines()
+        .map(serde_json::from_str)
+        .collect::<std::result::Result<_, _>>()?;
+    assert_eq!(events[0]["event"], "start");
+    assert_eq!(events[1]["event"], "stop");
+    assert_eq!(events[1]["recording_rows"], 6);
+    fs::remove_dir_all(directory)?;
+    Ok(())
+}
+
+#[test]
 fn replacement_exclusions_are_atomic_undoable_and_keep_other_calibration_and_clock() -> Result {
     let mut controller = Controller::new();
     let id = open(&mut controller)?;

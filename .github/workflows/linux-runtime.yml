@@ -85,7 +85,7 @@ jobs:
           before = hashlib.sha256(package.read_bytes()).hexdigest()
           with tempfile.TemporaryDirectory() as directory:
               subprocess.run(['dpkg-deb', '--extract', str(package), directory], check=True)
-              root = Path(directory) / 'usr/lib/hejjetrak'
+              root = Path(directory) / 'usr/lib/hejjetrac'
               build = json.loads((root / 'BUILD.json').read_text())
               if build['source_commit'] != sys.argv[1] or build['version'] != sys.argv[2]:
                   raise RuntimeError('Debian package differs from the requested immutable source')

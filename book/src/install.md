@@ -1,8 +1,8 @@
 # Download and install
 
-[**Download the latest release**](../?download=1) or [choose a package on GitHub](https://github.com/pvnkmrksk/hejjetrak/releases/latest). The download page reads the latest published release and offers every available platform explicitly.
+[**Download the latest release**](../?download=1) or [choose a package on GitHub](https://github.com/pvnkmrksk/hejjetrac/releases/latest). The download page reads the latest published release and offers every available platform explicitly.
 
-Release packages include four portable archives and a Debian/Ubuntu `.deb`. The download page offers only assets present in the selected published release. The package names below use the current `hejjetrac` spelling; v0.1.3 and earlier use `hejjetrak` names. Old commands remain available as compatibility aliases in new packages. New Linux packages target **Ubuntu 22.04 or newer, with glibc 2.35+**; see the distribution requirements below.
+Release packages include four portable archives and a Debian/Ubuntu `.deb`. The download page offers only assets present in the selected published release. All new package, executable and resource names use `hejjetrac`. New Linux packages target **Ubuntu 22.04 or newer, with glibc 2.35+**; see the distribution requirements below.
 
 Choose a platform download, **not** GitHub's “Source code” ZIP. No compiler or Rust installation is needed. Portable archives need no system installation; the optional Debian/Ubuntu installer uses your package manager.
 
@@ -11,7 +11,7 @@ Choose a platform download, **not** GitHub's “Source code” ZIP. No compiler 
 | Mac with Apple Silicon (M-series) | `hejjetrac-macos-arm64.zip` | `hejjetrac.app` |
 | Mac with Intel processor | `hejjetrac-macos-x86_64.zip` | `hejjetrac.app` |
 | Windows x64 | `hejjetrac-windows-amd64.zip` | `hejjetrac.exe` |
-| Debian / Ubuntu amd64 | `hejjetrac-linux-amd64.deb` when present | App menu → HejjéTrac |
+| Debian / Ubuntu amd64 | `hejjetrac-linux-amd64.deb` when present | App menu → Hejjetrac |
 | Linux x86_64 portable | `hejjetrac-linux-x86_64.tar.gz` | `hejjetrac` |
 
 Keep the extracted folder together: it contains example videos, configuration and notices. On Mac, those resources live inside the app bundle. The companion command-line executable is `hejjetrac-cli` (`hejjetrac-cli.exe` on Windows), inside `hejjetrac.app/Contents/MacOS` on Mac. The GUI needs no terminal command.
@@ -42,7 +42,20 @@ Microsoft's [app publishing guide](https://learn.microsoft.com/en-us/windows/app
 
 ### Debian / Ubuntu installer
 
-Choose **Debian / Ubuntu · .deb** on the download page when that asset exists in the selected release. Open the downloaded package in your distribution's graphical package installer. It can request administrator authentication to install system files and declared dependencies. Then launch **HejjéTrac** from the app menu; the CLI is available as `hejjetrac-cli` on PATH.
+Choose **Debian / Ubuntu · .deb** on the download page when that asset exists in the selected release. Open the downloaded package in your distribution's graphical package installer. It can request administrator authentication to install system files and declared dependencies. Then launch **Hejjetrac** from the app menu; the CLI is available as `hejjetrac-cli` on PATH.
+
+The Ubuntu package uses ASCII **Hejjetrac** for its title, summary and description.
+It includes the application icon, detailed capabilities, author/license details,
+project/manual/issue links and AppStream screenshots for software centers.
+The same screenshots are included under `/usr/share/doc/hejjetrac/screenshots`.
+Whether a particular installer displays them depends on that software center's
+handling of locally downloaded packages; package contents do not establish a
+trusted publisher signature. Download from this project's GitHub releases.
+
+If you have an older package installed under a previous package identity, remove
+that application in the software center before installing this renamed package.
+Keep your saved experiment files. Updating the package never replaces existing
+per-user calibrations or saved workspace restoration.
 
 Alternatively, from the download directory:
 
@@ -50,7 +63,7 @@ Alternatively, from the download directory:
 sudo apt install ./hejjetrac-linux-amd64.deb
 ```
 
-That command installs the package; never run the tracking app with `sudo`. Use the portable archive below if you want no system installation. The package installs resources under `/usr/lib/hejjetrak`; copy rig/example configs into your own writable experiment folder before editing/saving them. Your recordings/configs stay separate from managed application files. Remove the installed application through the package manager (`sudo apt remove hejjetrak`); preserve your experiment files independently.
+That command installs the package; never run the tracking app with `sudo`. Use the portable archive below if you want no system installation. The package installs resources under `/usr/lib/hejjetrac`; copy rig/example configs into your own writable experiment folder before editing/saving them. Your recordings/configs stay separate from managed application files. Remove the installed application through the package manager (`sudo apt remove hejjetrac`); preserve your experiment files independently.
 
 New Linux releases are built in an **Ubuntu 22.04** environment, with an enforced **glibc 2.35** compatibility ceiling for both executables. The installer declares the actual linked library requirements, plus the desktop, graphics-loader and camera libraries loaded at runtime. It recommends a desktop portal for the file chooser. Graphics drivers, a running graphical session and device permissions still belong to your distribution.
 

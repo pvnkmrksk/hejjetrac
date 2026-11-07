@@ -201,6 +201,13 @@ fn track(
     let mut dat = new_file(output.join("tracking.dat.partial"))?;
     let mut all_frames = new_file(output.join("all-frames.dat.partial"))?;
     let mut quality = new_file(output.join("quality.csv.partial"))?;
+    let mut timing_document = document.clone();
+    timing_document.set("src_fn", &input.to_string_lossy())?;
+    let mut sync = hejjetrac_control::SyncLog::create(
+        output,
+        &timing_document,
+        &hejjetrac_control::RecordingMetadata::default(),
+    )?;
     let mut media =
         hejjetrac_control::MediaRecorders::create(output, &document, &loaded.config, fps)?;
     let mut diagnostics = if media.active() {
@@ -255,6 +262,10 @@ fn track(
     let mut points = vec![];
     let mut current = Some(first);
     while let Some(frame) = current {
+        let timing = hejjetrac_control::FrameTiming {
+            source_sequence: Some(u64::try_from(summary.frames)?),
+            ..hejjetrac_control::FrameTiming::replay(frame.timestamp_ms())
+        };
         let frame = if requested_fps > 0. {
             frame.with_timestamp(summary.frames as f64 * 1000. / requested_fps)?
         } else {
@@ -263,6 +274,7 @@ fn track(
         let debug_frame = media.active().then(|| frame.clone());
         let start = Instant::now();
         let row = tracker.process(frame)?;
+        sync.write(0, &row, timing)?;
         track_seconds += start.elapsed().as_secs_f64();
         if row.accepted || !summary.effective_config.legacy_roi_coordinates {
             write_dat(&mut dat, &row)?;
@@ -320,6 +332,7 @@ fn track(
         return Err("need at least two frames to estimate motion; partial output retained".into());
     }
     media.finish()?;
+    sync.stop(0)?;
     if let Some(template) = tracker.sphere_template() {
         hejjetrac_io::save_sphere_map(&output.join("sphere-map.png"), &template)?;
     }

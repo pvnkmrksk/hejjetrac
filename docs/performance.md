@@ -19,7 +19,7 @@ settings, coordinate conventions and quality gates:
 - The pinned MIT Rust decoder has lazy disabled diagnostics, cached trace
   flags, byte-fragment bit reads and tail-first RBSP stop-bit detection.
   There is no approximate decoding, removed deblocking, C/C++ backend or
-  subprocess. See [patch provenance](../vendor/oxideav-h264/HEJJETRAK_PATCHES.md).
+  subprocess. See [patch provenance](../vendor/oxideav-h264/HEJJETRAC_PATCHES.md).
 
 ## Same-machine comparison
 
@@ -84,8 +84,8 @@ run performance cases without concurrent builds or tests:
 ```sh
 cargo build --workspace --release --locked
 python3 scripts/benchmark.py --baseline /path/to/retained-v0.1.1-cli \
-  --candidate target/release/hejjetrac-cli --output /tmp/hejjetrak-benchmark-new
-cargo run -p hejjetrac-cli --release --locked -- demo --frames 120 --output /tmp/hejjetrak-known-motion-new
+  --candidate target/release/hejjetrac-cli --output /tmp/hejjetrac-benchmark-new
+cargo run -p hejjetrac-cli --release --locked -- demo --frames 120 --output /tmp/hejjetrac-known-motion-new
 cargo run -p hejjetrac-io --example profile_video --release --locked -- examples/sample.mp4 rgb 10
 cargo test --manifest-path vendor/oxideav-h264/Cargo.toml --lib --locked
 ```

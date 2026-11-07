@@ -59,6 +59,27 @@ impl Desktop {
         start: bool,
         directory: Option<&std::path::Path>,
     ) -> Result<serde_json::Value, String> {
+        self.record_array_tagged(
+            start,
+            directory,
+            &hejjetrac_control::RecordingMetadata::default(),
+        )
+    }
+    pub(crate) fn record_array_tagged(
+        &mut self,
+        start: bool,
+        directory: Option<&std::path::Path>,
+        metadata: &hejjetrac_control::RecordingMetadata,
+    ) -> Result<serde_json::Value, String> {
+        metadata.validate()?;
+        if start
+            && directory.is_none()
+            && *metadata != hejjetrac_control::RecordingMetadata::default()
+        {
+            return Err(
+                "Provide a new directory when recording all rigs with trial metadata".into(),
+            );
+        }
         if start
             && self.sessions.iter().any(|s| {
                 !s.closed
@@ -82,7 +103,7 @@ impl Desktop {
         for s in self.sessions.iter_mut().filter(|s| !s.closed) {
             let result = if start {
                 if let Some(path) = directory {
-                    let args = serde_json::json!({"directory":path.join(format!("rig-{}",s.id)),"record_options":{"raw":s.record_raw,"debug":s.record_debug},"recording_tuning":{"encoding":s.recording_encoding}});
+                    let args = serde_json::json!({"directory":path.join(format!("rig-{}",s.id)),"record_options":{"raw":s.record_raw,"debug":s.record_debug},"recording_tuning":{"encoding":s.recording_encoding},"recording_metadata":metadata});
                     crate::control::execute_session(s, "record_start", &args).map(|_| ())
                 } else {
                     s.queue_recording()

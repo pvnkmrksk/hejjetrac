@@ -15,8 +15,8 @@ follow-up.
 
 The patch also includes the corrected UTF-8 packaging environment, complete
 dependency/font notices and Debian GNU long-path headers already used for the
-verified v0.3.1 installer. [Installation](https://pvnkmrksk.github.io/hejjetrak/manual/install.html)
-and [graphics troubleshooting](https://pvnkmrksk.github.io/hejjetrak/manual/troubleshooting.html)
+verified v0.3.1 installer. [Installation](https://pvnkmrksk.github.io/hejjetrac/manual/install.html)
+and [graphics troubleshooting](https://pvnkmrksk.github.io/hejjetrac/manual/troubleshooting.html)
 cover first launch and explicit overrides.
 
 Created by [Pavan Kumar Kaushik](https://github.com/pvnkmrksk).

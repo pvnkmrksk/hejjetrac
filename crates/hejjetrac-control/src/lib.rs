@@ -2,6 +2,7 @@
 //! Commands never evaluate shell text. Each response preserves its caller supplied ID.
 mod recording;
 mod schema;
+mod sync;
 use hejjetrac_core::{Config, DebugViews, Diagnostics, GrayFrame, TrackRow, Tracker};
 use hejjetrac_io::{ConfigDocument, DocumentHistory, SourceSpec, VideoSource, load_config_text};
 pub use recording::{
@@ -9,6 +10,7 @@ pub use recording::{
     MediaStreamStatus, RecordOptions, RecordingEncoding, RecordingOverflow, gray_rgb,
 };
 pub use schema::{headless_request_schema, request_schema};
+pub use sync::{FrameTiming, RecordingMetadata, SyncLog, recording_metadata, unix_ns};
 pub fn validate_request_arguments(command: &str, args: &Value) -> Result<()> {
     schema::validate_arguments(command, args)
 }
@@ -252,6 +254,10 @@ impl Session {
                 }
                 break;
             };
+            let timing = FrameTiming {
+                source_sequence: Some(self.total_frames),
+                ..FrameTiming::replay(raw.timestamp_ms())
+            };
             let rgb = self.source.take_rgb().unwrap_or_else(|| gray_rgb(&raw));
             let frame = if let Some(settings) = self.config.spherical_map.as_ref() {
                 hejjetrac_io::rgb_tracking_frame(raw.clone(), &rgb, settings.channel)
@@ -301,6 +307,7 @@ impl Session {
                     &rgb,
                     self.views.as_ref().ok_or("diagnostics unavailable")?,
                     self.config.legacy_roi_coordinates,
+                    timing,
                 )
             } else {
                 Ok(())
@@ -732,7 +739,16 @@ impl Controller {
                 };
                 // No encoder is created for data-only recording, so its rate is unused.
                 let directory = Path::new(string(a, "directory")?);
-                s.recording = Some(if tuning == MediaRecordingTuning::default() {
+                s.recording = Some(if a.get("recording_metadata").is_some() {
+                    recording::Recording::create_tagged(
+                        directory,
+                        &doc,
+                        &s.config,
+                        fps,
+                        tuning,
+                        &recording_metadata(a)?,
+                    )?
+                } else if tuning == MediaRecordingTuning::default() {
                     recording::Recording::create(directory, &doc, &s.config, fps)?
                 } else {
                     recording::Recording::create_with_tuning(

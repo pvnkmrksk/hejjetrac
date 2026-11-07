@@ -46,7 +46,7 @@ The fitted lab axes appear automatically after the fourth corner. Right-click a 
 
 ![FicTrac camera, animal and world coordinate frames](images/upstream/coordinate-frames.png)
 
-*Original FicTrac illustration by R. J. D. Moore and contributors, CC BY-NC-SA 3.0. [Coordinate guide](upstream-coordinates.md) · [Source and unchanged-image checksums](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/images/upstream/README.md).*
+*Original FicTrac illustration by R. J. D. Moore and contributors, CC BY-NC-SA 3.0. [Coordinate guide](upstream-coordinates.md) · [Source and unchanged-image checksums](https://github.com/pvnkmrksk/hejjetrac/blob/main/docs/images/upstream/README.md).*
 
 Before collecting data, rotate the ball in known forward, sideways and turning directions and confirm the result. A smooth-looking path alone does not establish the axis orientation.
 

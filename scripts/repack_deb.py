@@ -21,7 +21,7 @@ MAX_MEMBERS = 32768
 MAX_PATH_BYTES = 4096
 AR_NAMES = ("debian-binary", "control.tar.gz", "data.tar.gz")
 PAX_FIELDS = {"path", "linkpath", "mtime", "uid", "gid", "uname", "gname", "size"}
-BUILD_PATH = "usr/lib/hejjetrak/BUILD.json"
+BUILD_PATH = "usr/lib/hejjetrac/BUILD.json"
 
 
 def digest(data):
@@ -213,7 +213,7 @@ def convert(data, source_commit, version, tool_revision="uncommitted"):
         name = binary["name"]
         if "/" in name or "\\" in name:
             raise ValueError("Invalid BUILD.json binary name")
-        path = "usr/lib/hejjetrak/" + name
+        path = "usr/lib/hejjetrac/" + name
         if path not in records or records[path]["content_sha256"] != binary["compiled_sha256"]:
             raise ValueError("Packaged binary does not match BUILD.json")
         checked_binaries.append(name)

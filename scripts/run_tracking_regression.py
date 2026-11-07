@@ -114,7 +114,7 @@ def main():
     parser.add_argument("--vr3-replay-dat", type=Path,
                         help="Existing same-AVI original FicTrac replay; omitted means create a fresh replay")
     parser.add_argument("--raw47-take", type=Path,
-                        default=Path.home() / "Videos/hejjetrak/VR1/take-1793134575426458881")
+                        default=Path.home() / "Videos/hejjetrac/VR1/take-1793134575426458881")
     parser.add_argument("--fast47-directory", type=Path,
                         default=ROOT / "runs/live47-fast-20261028")
     parser.add_argument("--output", type=Path, required=True)

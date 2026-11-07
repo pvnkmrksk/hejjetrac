@@ -1,4 +1,4 @@
-//! Auto-started loopback MCP for the running native sessions (2025-11-25).
+//! Authenticated desktop MCP; loopback by default, explicit IP binding for LAN control.
 //! Transport workers never mutate a session; the UI thread executes commands.
 use crate::{Desktop, control};
 use eframe::egui::{self, Event, ViewportId};
@@ -144,15 +144,31 @@ impl Drop for Server {
     }
 }
 impl Server {
-    pub fn start(ctx: egui::Context) -> Result<Self> {
-        let listener = (17871..17935).find_map(|p| TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, p)).ok())
-            .ok_or("Cannot start agent MCP: localhost ports 17871–17934 are occupied. Close an unused HejjéTrac instance and restart.")?;
+    pub fn start(ctx: egui::Context, bind: Option<std::net::SocketAddr>) -> Result<Self> {
+        let listener = match bind {
+            Some(address) => TcpListener::bind(address)
+                .map_err(|e| format!("Cannot listen for remote control on {address}: {e}. Choose a free port on an interface belonging to this computer."))?,
+            None => (17871..17935).find_map(|p| TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, p)).ok())
+                .ok_or("Cannot start agent MCP: localhost ports 17871–17934 are occupied. Close an unused HejjéTrac instance and restart.")?,
+        };
         listener.set_nonblocking(true).map_err(|e| e.to_string())?;
         let address = listener.local_addr().map_err(|e| e.to_string())?;
         let mut random = [0u8; 32];
         getrandom::fill(&mut random).map_err(|e| format!("Cannot create MCP access token: {e}"))?;
         let token: String = random.iter().map(|b| format!("{b:02x}")).collect();
-        let url = format!("http://{address}/mcp");
+        let connect_address = if address.ip().is_unspecified() {
+            std::net::SocketAddr::new(
+                if address.is_ipv4() {
+                    std::net::Ipv4Addr::LOCALHOST.into()
+                } else {
+                    std::net::Ipv6Addr::LOCALHOST.into()
+                },
+                address.port(),
+            )
+        } else {
+            address
+        };
+        let url = format!("http://{connect_address}/mcp");
         let connection = json!({"url":url,"headers":{"Authorization":format!("Bearer {token}")}});
         let directory = crate::state::workspace_path()?.with_file_name("mcp");
         fs::create_dir_all(&directory).map_err(|e| {
@@ -170,7 +186,7 @@ impl Server {
             options.mode(0o600);
         }
         let mut file = options.open(&descriptor).map_err(|e| e.to_string())?;
-        serde_json::to_writer_pretty(&mut file, &json!({"pid":std::process::id(),"connection":connection,"protocolVersion":"2025-11-25"})).map_err(|e| e.to_string())?;
+        serde_json::to_writer_pretty(&mut file, &json!({"pid":std::process::id(),"connection":connection,"listen_address":address,"remote_control":!address.ip().is_loopback(),"protocolVersion":"2025-11-25"})).map_err(|e| e.to_string())?;
         let (tx, calls) = mpsc::sync_channel(16);
         let stop = Arc::new(AtomicBool::new(false));
         let ui = Arc::new(Mutex::new(UiState::default()));
@@ -195,7 +211,7 @@ impl Server {
                     while !stop.load(Ordering::Relaxed) {
                         match listener.accept() {
                             Ok((mut stream, _)) => {
-                                let _ = handle_http(&mut stream, &token, address.port(), &tx, &ctx);
+                                let _ = handle_http(&mut stream, &token, &tx, &ctx);
                             }
                             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                                 thread::sleep(Duration::from_millis(20))
@@ -227,7 +243,9 @@ impl Server {
             let method = call.rpc["method"].as_str().unwrap_or("");
             let result = match method {
                 "initialize" => initialize(&call.rpc["params"]),
-                "ping" => Ok(json!({})),
+                "ping" => {
+                    hejjetrac_control::unix_ns().map(|ns| json!({"server_unix_ns":ns.to_string()}))
+                }
                 "tools/list" => Ok(tool_list(app)),
                 "tools/call" => {
                     let params = &call.rpc["params"];
@@ -530,10 +548,10 @@ fn base64(bytes: &[u8]) -> String {
 fn handle_http(
     stream: &mut TcpStream,
     token: &str,
-    port: u16,
     tx: &SyncSender<Call>,
     ctx: &egui::Context,
 ) -> Result<()> {
+    let local = stream.local_addr().map_err(|e| e.to_string())?;
     stream
         .set_read_timeout(Some(Duration::from_secs(2)))
         .map_err(|e| e.to_string())?;
@@ -576,14 +594,18 @@ fn handle_http(
         return respond(
             stream,
             403,
-            "Browser origins are not allowed; connect through a local MCP client",
+            "Browser origins are not allowed; use an authenticated experiment or MCP client",
         );
     }
-    if !fields
-        .get("host")
-        .is_some_and(|s| s == &format!("127.0.0.1:{port}") || s == &format!("localhost:{port}"))
-    {
-        return respond(stream, 403, "Host must be this loopback endpoint");
+    if !fields.get("host").is_some_and(|s| {
+        s == &local.to_string()
+            || (local.ip().is_loopback() && s == &format!("localhost:{}", local.port()))
+    }) {
+        return respond(
+            stream,
+            403,
+            "Host must match the listener's numeric IP:port",
+        );
     }
     if fields.get("authorization") != Some(&format!("Bearer {token}")) {
         return respond(
@@ -626,7 +648,25 @@ fn handle_http(
         return respond(stream, 413, "Content-Length must be within 1 MiB");
     };
     let mut bytes = vec![0; length];
-    reader.read_exact(&mut bytes).map_err(|e| e.to_string())?;
+    let body_deadline = Instant::now() + Duration::from_secs(2);
+    let mut received = 0;
+    while received < length {
+        let remaining = body_deadline
+            .checked_duration_since(Instant::now())
+            .filter(|d| !d.is_zero())
+            .ok_or("Body read deadline exceeded")?;
+        reader
+            .get_ref()
+            .set_read_timeout(Some(remaining))
+            .map_err(|e| e.to_string())?;
+        let count = reader
+            .read(&mut bytes[received..])
+            .map_err(|e| e.to_string())?;
+        if count == 0 {
+            return Err("Request body ended before Content-Length".into());
+        }
+        received += count;
+    }
     let rpc: Value = match serde_json::from_slice(&bytes) {
         Ok(v) => v,
         Err(e) => {

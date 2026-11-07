@@ -1,12 +1,12 @@
 # HejjéTrac v0.1.4 release notes
 
 Published on 25 October 2026 from `eed74b17dd29ed551140eab0d90c28c570308fcf`.
-[Download v0.1.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.4).
+[Download v0.1.4](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.1.4).
 
 The display name is **HejjéTrac**; executable and download names use
 `hejjetrac`. The repository and website remain at
-[pvnkmrksk/hejjetrak](https://github.com/pvnkmrksk/hejjetrak) and
-[pvnkmrksk.github.io/hejjetrak](https://pvnkmrksk.github.io/hejjetrak/).
+[pvnkmrksk/hejjetrac](https://github.com/pvnkmrksk/hejjetrac) and
+[pvnkmrksk.github.io/hejjetrac](https://pvnkmrksk.github.io/hejjetrac/).
 
 The previous public v0.1.3 release was built from
 `fe56dab81677ae44959c0460ea878eceb3c7cbff`. The subsequent local polish build
@@ -23,9 +23,9 @@ was also labeled 0.1.3 and had not replaced those public downloads. Version
 | Linux x86_64 portable | `hejjetrac-linux-x86_64.tar.gz` | `hejjetrac` |
 | Debian/Ubuntu x64 | `hejjetrac-linux-amd64.deb` | `hejjetrac` |
 
-The companion command is `hejjetrac-cli`. Existing `hejjetrak` and
-`hejjetrak-cli` commands remain available as compatibility aliases. The Debian
-package ID remains `hejjetrak`, with its files in `/usr/lib/hejjetrak`, so an
+The companion command is `hejjetrac-cli`. Existing `hejjetrac` and
+`hejjetrac-cli` commands remain available as compatibility aliases. The Debian
+package ID remains `hejjetrac`, with its files in `/usr/lib/hejjetrac`, so an
 existing installation can upgrade normally. The macOS bundle identifier is
 unchanged to preserve its existing OS identity and camera permissions.
 
@@ -47,7 +47,7 @@ release, even if both use the same version number.
 The four native jobs retain formatting, strict Clippy, workspace and decoder
 tests, the known-motion demo, Windows static-runtime inspection, dependency
 notices, ad hoc macOS signature verification, and Linux installer validation.
-All four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739)
+All four [native release jobs](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40198640739)
 passed: 188 workspace tests on Linux and both Macs, 185 applicable tests on
 Windows, and 1,353 decoder tests per platform. All five platform assets are
 published. The official Mac archive passes signature, version, source provenance

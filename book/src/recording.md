@@ -23,7 +23,7 @@ Each take has a new directory and retains numerical data, quality decisions and 
 | `summary.json` | Headless summary, settings and timing boundaries |
 | Raw/debug media | Present when requested; epoch/take naming depends on frontend |
 
-Native recording may use epoch-numbered filenames. A numerical config edit closes the current recording instead of silently combining incompatible calibrations. Start another take for the new epoch. Default native recording directories are in the user's Movies/Videos `hejjetrak` folder; the inspector permits another destination.
+Native recording may use epoch-numbered filenames. A numerical config edit closes the current recording instead of silently combining incompatible calibrations. Start another take for the new epoch. Default native recording directories are in the user's Movies/Videos `hejjetrac` folder; the inspector permits another destination.
 
 ## Video codecs
 
@@ -45,3 +45,11 @@ Recording adds conversion, encoding and disk costs beyond `ms track`. Raw and di
 Files begin with `.partial` and are promoted only after normal finalization. Closing normally joins the worker and finalizes encoders. An interrupted process, power loss or failed disk write can leave partial artifacts; keep them for diagnosis rather than assuming a complete take. Outputs never overwrite an existing experiment directory. Completion is not an atomic directory transaction, so an I/O failure during final renaming can leave a mix of promoted and partial files.
 
 Keep quality data alongside legacy `.dat`. A zero delta in rejected all-frame evidence denotes missing measurement; it does not establish that the animal or ball stopped. See the complete [measurement contract](output.md).
+
+## Remote triggers and manual alignment
+
+Use the [remote recording guide](remote-recording.md) to start/stop individual or
+all-rig takes from the VR computer. Takes accept experiment/trial IDs and tags
+and retain one wall-clock/monotonic timing row for every numerical row. Capture
+UTC is an estimate for live cameras and unknown for replayed video; the guide
+explains clock synchronization, polling and media finalization.

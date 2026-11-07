@@ -122,7 +122,7 @@ impl ZmqOutput {
         let worker_counters = counters.clone();
         let endpoint = settings.endpoint.clone();
         let (ready_tx, ready_rx) = mpsc::sync_channel(1);
-        let worker=thread::Builder::new().name("hejjetrak-zmq-pub".into()).spawn(move||{
+        let worker=thread::Builder::new().name("hejjetrac-zmq-pub".into()).spawn(move||{
             let outcome=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||{
                 let runtime=match tokio::runtime::Builder::new_current_thread().enable_all().build(){Ok(runtime)=>runtime,Err(error)=>{let message=format!("ZMQ runtime could not start: {error}");worker_counters.fail(message.clone());let _=ready_tx.send(Err(message));return;}};
                 runtime.block_on(protocol::publish_loop(endpoint,receiver,worker_counters.clone(),ready_tx));

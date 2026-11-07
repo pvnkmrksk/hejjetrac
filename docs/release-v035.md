@@ -45,7 +45,7 @@ Local validation: formatting, strict locked all-target Clippy and 314 workspace
 tests pass. Native Ubuntu 22.04 windows and extracted Debian software rendering
 are visually checked. Published platform build/runtime results are reported
 separately by GitHub Actions; local execution does not establish every platform
-or GPU. See [validation](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/validation.md)
+or GPU. See [validation](https://github.com/pvnkmrksk/hejjetrac/blob/main/docs/validation.md)
 for exact inputs, tolerances and remaining limitations.
 
 Created by [Pavan Kumar Kaushik](https://github.com/pvnkmrksk).

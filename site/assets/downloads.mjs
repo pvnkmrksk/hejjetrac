@@ -1,12 +1,12 @@
 // Static website only; the native application never loads this code.
-export const RELEASES = 'https://github.com/pvnkmrksk/hejjetrak/releases/latest';
-export const RELEASE_API = 'https://api.github.com/repos/pvnkmrksk/hejjetrak/releases/latest';
+export const RELEASES = 'https://github.com/pvnkmrksk/hejjetrac/releases/latest';
+export const RELEASE_API = 'https://api.github.com/repos/pvnkmrksk/hejjetrac/releases/latest';
 export const PLATFORMS = Object.freeze({
-  'mac-arm': {label:'Mac · Apple Silicon',file:'hejjetrac-macos-arm64.zip',legacyFile:'hejjetrak-macos-arm64.zip',instructions:'mac'},
-  'mac-intel': {label:'Mac · Intel',file:'hejjetrac-macos-x86_64.zip',legacyFile:'hejjetrak-macos-x86_64.zip',instructions:'mac'},
-  windows: {label:'Windows · x64',file:'hejjetrac-windows-amd64.zip',legacyFile:'hejjetrak-windows-amd64.zip',instructions:'windows'},
-  linux: {label:'Linux · portable x86_64',file:'hejjetrac-linux-x86_64.tar.gz',legacyFile:'hejjetrak-linux-x86_64.tar.gz',instructions:'linux'},
-  'linux-deb': {label:'Debian / Ubuntu · amd64',file:'hejjetrac-linux-amd64.deb',legacyFile:'hejjetrak-linux-amd64.deb',instructions:'linux-deb'},
+  'mac-arm': {label:'Mac · Apple Silicon',file:'hejjetrac-macos-arm64.zip',instructions:'mac'},
+  'mac-intel': {label:'Mac · Intel',file:'hejjetrac-macos-x86_64.zip',instructions:'mac'},
+  windows: {label:'Windows · x64',file:'hejjetrac-windows-amd64.zip',instructions:'windows'},
+  linux: {label:'Linux · portable x86_64',file:'hejjetrac-linux-x86_64.tar.gz',instructions:'linux'},
+  'linux-deb': {label:'Debian / Ubuntu · amd64',file:'hejjetrac-linux-amd64.deb',instructions:'linux-deb'},
 });
 export function detectPlatform({platform='',userAgent='',architecture='',mobile=false,maxTouchPoints=0}={}) {
   const text=`${platform} ${userAgent}`;
@@ -33,11 +33,11 @@ export function downloadIntent(url) {
 export function selectAsset(release,platform) {
   const spec=PLATFORMS[platform];
   if (!spec || !Array.isArray(release?.assets)) return null;
-  const asset=[spec.file,spec.legacyFile].map(name=>release.assets.find(value=>value?.name===name)).find(Boolean);
+  const asset=release.assets.find(value=>value?.name===spec.file);
   if (typeof asset?.browser_download_url!=='string') return null;
   let url;
   try {url=new URL(asset.browser_download_url);} catch {return null;}
-  if (url.origin!=='https://github.com' || url.username || url.password || !url.pathname.startsWith('/pvnkmrksk/hejjetrak/releases/download/')) return null;
+  if (url.origin!=='https://github.com' || url.username || url.password || !url.pathname.startsWith('/pvnkmrksk/hejjetrac/releases/download/')) return null;
   return {...asset,browser_download_url:url.href};
 }
 export function digestText(asset) {
@@ -115,13 +115,6 @@ export function initializeDownloads(doc=document,{resolvePlatform=browserPlatfor
         status.textContent='The selected archive is not available.';return;
       }
       link.href=asset.browser_download_url;link.textContent='Download again';
-      if (asset.name===spec.legacyFile) {
-        for (const launcher of doc.querySelectorAll('[data-launcher]')) launcher.textContent=launcher.dataset.launcher==='mac'?'hejjetrak.app':'hejjetrak.exe';
-        if (legacyNote) {
-          legacyNote.textContent=`${value.tag_name} uses the earlier hejjetrak name and calibration interface. The redesigned calibration is available from v0.1.4.`;
-          legacyNote.hidden=false;
-        }
-      }
       meta.textContent=`${value.tag_name} · ${asset.name}${Number.isFinite(asset.size)?` · ${(asset.size/1_000_000).toFixed(1)} MB`:''}`;
       const hash=digestText(asset);
       if (hash) {digest.textContent=hash;digest.hidden=false;}

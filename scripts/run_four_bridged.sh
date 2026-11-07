@@ -20,7 +20,6 @@ if [ -z "$hejjetrac_cli" ]; then
     hejjetrac_binary_dir=$(CDPATH= cd -- "$(dirname -- "$hejjetrac_binary")" && pwd)
     for hejjetrac_candidate in \
         "$hejjetrac_binary_dir/hejjetrac-cli" \
-        "$hejjetrac_binary_dir/hejjetrak-cli" \
         "$hejjetrac_repo/target/release/hejjetrac-cli"; do
         if [ -x "$hejjetrac_candidate" ]; then
             hejjetrac_cli=$hejjetrac_candidate

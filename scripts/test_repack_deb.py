@@ -43,15 +43,15 @@ def fixture(source=SOURCE, version=VERSION, control_version=VERSION):
     binary = b"original compiled executable bytes\x00\xff"
     build = {"source_commit": source, "version": version, "platform": "linux",
              "binaries": [{"name": "hejjetrac", "compiled_sha256": hashlib.sha256(binary).hexdigest()}]}
-    long_name = "usr/lib/hejjetrak/DependencyLicenses/" + "long-dependency-name-" * 12 + "/LICENSE-original.txt"
+    long_name = "usr/lib/hejjetrac/DependencyLicenses/" + "long-dependency-name-" * 12 + "/LICENSE-original.txt"
     members = {"debian-binary": b"2.0\n",
-               "control.tar.gz": archive([("control", f"Package: hejjetrak\nVersion: {control_version}\n".encode(), "file")]),
+               "control.tar.gz": archive([("control", f"Package: hejjetrac\nVersion: {control_version}\n".encode(), "file")]),
                "data.tar.gz": archive([
                    ("usr", b"", "directory"),
-                   ("usr/lib/hejjetrak/BUILD.json", json.dumps(build).encode(), "file"),
-                   ("usr/lib/hejjetrak/hejjetrac", binary, "file"),
+                   ("usr/lib/hejjetrac/BUILD.json", json.dumps(build).encode(), "file"),
+                   ("usr/lib/hejjetrac/hejjetrac", binary, "file"),
                    (long_name, b"full original notice\nCopyright original author\n", "file"),
-                   ("usr/bin/hejjetrac", "../lib/hejjetrak/hejjetrac", "symlink"),
+                   ("usr/bin/hejjetrac", "../lib/hejjetrac/hejjetrac", "symlink"),
                ])}
     return repack.write_ar(members), long_name
 
@@ -72,7 +72,7 @@ class RepackTests(unittest.TestCase):
             self.assertEqual(members[name][4:8], b"\0\0\0\0")
         records, contents, _, pax, fractions = repack.inspect_tar(members["data.tar.gz"], repack.MAX_DATA_TAR_BYTES)
         self.assertIn(long_name, contents)
-        self.assertEqual(records["usr/bin/hejjetrac"]["linkname"], "../lib/hejjetrak/hejjetrac")
+        self.assertEqual(records["usr/bin/hejjetrac"]["linkname"], "../lib/hejjetrac/hejjetrac")
         self.assertEqual(records[long_name]["mode"], 0o751)
         self.assertEqual(records[long_name]["uid"], 123)
         self.assertEqual(records[long_name]["gid"], 456)

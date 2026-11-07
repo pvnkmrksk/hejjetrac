@@ -26,7 +26,7 @@ Keep as much patterned surface visible as practical. Mask the animal, tether and
 
 ![Upstream example of an irregular ball pattern and calibrated lab axes](images/upstream/lab-axes.png)
 
-*FicTrac configuration example, R. J. D. Moore and contributors, CC BY-NC-SA 3.0. [Source and provenance](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/images/upstream/README.md). This is an upstream illustration.*
+*FicTrac configuration example, R. J. D. Moore and contributors, CC BY-NC-SA 3.0. [Source and provenance](https://github.com/pvnkmrksk/hejjetrac/blob/main/docs/images/upstream/README.md). This is an upstream illustration.*
 
 ## Give tracking its own light
 

@@ -1,21 +1,39 @@
 # Several rigs
 
-Each native window owns an independent source, calibration, tracker, output state and recording. The bundled `VR1.txt`–`VR4.txt` derive from the original BR rig configurations.
+Each session owns an independent source, calibration, tracker, output state and
+recording. Several sessions share one native grid window.
 
-| Instance | Serial link | Historical numeric ID | UDP destination port | Local ZeroMQ PUB bind |
-|---|---|---:|---:|---:|
-| VR1 | M01 | 0 | 1111 | 9871 |
-| VR2 | M02 | 2 | 1112 | 9872 |
-| VR3 | M03 | 4 | 1113 | 9873 |
-| VR4 | M04 | 6 | 1114 | 9874 |
+A fresh installation opens **one camera, without a hardware binding**. Bundled
+`VR1.txt`–`VR4.txt` come from `examples/defaults`; they do not contain lab serials,
+USB socket IDs, user paths or required capture dimensions/rates. On first copy,
+actual enumerated IDs are assigned in order, including Linux's gapped capture
+nodes. The default outline, lab rotation and 45-degree FOV are preview values;
+calibrate each rig before using its measurements. Existing saved files and
+explicit workspace restoration are preserved across upgrades.
 
-These are examples for their original physical setup, not calibration for arbitrary cameras. Check every device and source geometry before using its data.
+| Rig | Hardware binding | Default source slot | UDP | ZeroMQ port |
+|---|---|---:|---|---:|
+| VR1 | None | First available camera | Disabled | 9871 |
+| VR2 | None | Second available camera | Disabled | 9872 |
+| VR3 | None | Third available camera | Disabled | 9873 |
+| VR4 | None | Fourth available camera | Disabled | 9874 |
 
-The serial link resolves the current device number. Our observed M01/M02/M03/M04
-nodes were 6/2/4/0, illustrating why saved numeric order is unreliable. In
-**Source & camera**, identify the serial, use the link/unlink icon and save the
-rig. [The camera appendix](appendix-cameras.md) gives the optional one-time
-Arducam serial procedure. Other suitable cameras work without programming.
+Open Rig Manager and start the saved array to open four unbound rigs. Choose
+cameras under **Source & camera**. Only choose a hardware binding after verifying
+which physical camera belongs to each rig, then save the rig. Exact unique
+serials follow camera renumbering; USB socket binding explicitly follows the
+connector. Missing, duplicated or occupied devices produce a per-rig error.
+Unlinking retains the opened camera and source clock. No binding is inferred
+from a camera model name or slot number.
+
+Repository-root VR files and `examples/rigs` are historical lab fixtures and can
+contain hardware-specific calibration. They are not installed as fresh defaults.
+[Optional bindings](configuration.md#optional-camera-binding) explains platform
+limits; [camera hardware](appendix-cameras.md) records the optional Arducam
+serial procedure. Ordinary webcams do not need serial programming.
+
+[Remote recording](remote-recording.md) covers triggering individual/all-rig
+takes from a separate VR computer and joining frame timestamps by trial ID.
 
 ## Creating windows
 

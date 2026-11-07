@@ -14,7 +14,7 @@ import unittest
 from unittest import mock
 import zipfile
 
-SPEC = importlib.util.spec_from_file_location('hejjetrak_package', Path(__file__).with_name('package.py'))
+SPEC = importlib.util.spec_from_file_location('hejjetrac_package', Path(__file__).with_name('package.py'))
 PACKAGE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PACKAGE)
 
@@ -59,14 +59,12 @@ def tar_typeflags(compressed):
 
 class DebianPackageTests(unittest.TestCase):
     def test_complete_root_owned_payload_and_independent_ar_reader(self):
-        with tempfile.TemporaryDirectory(prefix='hejjetrak-deb-test-') as directory:
+        with tempfile.TemporaryDirectory(prefix='hejjetrac-deb-test-') as directory:
             directory = Path(directory)
             stage = directory / 'stage'
             stage.mkdir()
             for name in ('hejjetrac', 'hejjetrac-cli', 'LICENSE'):
                 (stage / name).write_text('test fixture ' + name)
-            for name in ('hejjetrak', 'hejjetrak-cli'):
-                (stage / name).symlink_to(name.replace('hejjetrak', 'hejjetrac'))
             (stage / 'examples').mkdir()
             (stage / 'examples/sample.mp4').write_bytes(b'video fixture')
             assets = Path(__file__).resolve().parent.parent / 'assets'
@@ -76,7 +74,7 @@ class DebianPackageTests(unittest.TestCase):
             self.assertEqual(archive['debian-binary'], b'2.0\n')
             with tarfile.open(fileobj=io.BytesIO(archive['control.tar.gz'])) as control:
                 text = control.extractfile('control').read().decode()
-                for line in ('Package: hejjetrak', 'Version: 0.1.4', 'Architecture: amd64',
+                for line in ('Package: hejjetrac', 'Version: 0.1.4', 'Architecture: amd64',
                              'Depends: libc6 (>= 2.35), libudev1'):
                     self.assertIn(line + '\n', text)
             with tarfile.open(fileobj=io.BytesIO(archive['data.tar.gz'])) as data:
@@ -84,25 +82,28 @@ class DebianPackageTests(unittest.TestCase):
                     self.assertEqual((entry.uid, entry.gid), (0, 0))
                     self.assertFalse(Path(entry.name).is_absolute())
                     self.assertNotIn('..', Path(entry.name).parts)
-                self.assertEqual(data.getmember('usr/lib/hejjetrak/hejjetrac').mode, 0o755)
-                self.assertEqual(data.getmember('usr/lib/hejjetrak/hejjetrak').linkname, 'hejjetrac')
-                self.assertEqual(data.getmember('usr/bin/hejjetrak-cli').linkname, '../lib/hejjetrak/hejjetrak-cli')
-                self.assertEqual(data.extractfile('usr/lib/hejjetrak/examples/sample.mp4').read(), b'video fixture')
-                self.assertIn(b'Exec=hejjetrac\n', data.extractfile('usr/share/applications/hejjetrak.desktop').read())
-                self.assertTrue(data.getmember('usr/share/icons/hicolor/scalable/apps/hejjetrak.svg').isfile())
-                self.assertTrue(data.getmember('usr/share/doc/hejjetrak/copyright').isfile())
+                self.assertEqual(data.getmember('usr/lib/hejjetrac/hejjetrac').mode, 0o755)
+                self.assertTrue(data.getmember('usr/lib/hejjetrac/hejjetrac').isfile())
+                self.assertIn('Description: Hejjetrac -', text)
+                self.assertTrue(text.isascii())
+                self.assertTrue(data.getmember('usr/share/metainfo/io.github.pvnkmrksk.hejjetrac.metainfo.xml').isfile())
+                self.assertEqual(data.getmember('usr/bin/hejjetrac-cli').linkname, '../lib/hejjetrac/hejjetrac-cli')
+                self.assertEqual(data.extractfile('usr/lib/hejjetrac/examples/sample.mp4').read(), b'video fixture')
+                self.assertIn(b'Exec=hejjetrac\n', data.extractfile('usr/share/applications/hejjetrac.desktop').read())
+                self.assertTrue(data.getmember('usr/share/icons/hicolor/scalable/apps/hejjetrac.svg').isfile())
+                self.assertTrue(data.getmember('usr/share/doc/hejjetrac/copyright').isfile())
                 # Explicit extraction verifies real symlink targets without installing.
                 extracted = directory / 'extracted'
                 for entry in data.getmembers():
                     if entry.issym():
-                        self.assertTrue(entry.linkname.startswith('../lib/hejjetrak/')
+                        self.assertTrue(entry.linkname.startswith('../lib/hejjetrac/')
                                         or entry.linkname in ('hejjetrac', 'hejjetrac-cli'))
                 # Debian's POSIX installation links are validated above on all
                 # hosts. Dereference them on their supported filesystem; the
                 # Windows application archive ships regular executable copies.
                 if os.name == 'posix':
                     data.extractall(extracted)
-                    for name in ('hejjetrac-cli', 'hejjetrak-cli'):
+                    for name in ('hejjetrac-cli',):
                         self.assertEqual((extracted / 'usr/bin' / name).read_text(),
                                          'test fixture hejjetrac-cli')
             # A different ar implementation must understand the actual package too.
@@ -116,20 +117,18 @@ class DebianPackageTests(unittest.TestCase):
                 PACKAGE.build_deb(stage, output, '0.1.4', 'libc6', assets)
 
     def test_long_dependency_notice_paths_use_dpkg_supported_headers(self):
-        with tempfile.TemporaryDirectory(prefix='hejjetrak-deb-long-name-') as directory:
+        with tempfile.TemporaryDirectory(prefix='hejjetrac-deb-long-name-') as directory:
             directory = Path(directory)
             stage = directory / 'stage'
             stage.mkdir()
             for name in ('hejjetrac', 'hejjetrac-cli', 'LICENSE'):
                 (stage / name).write_bytes(b'package fixture')
-            for name in ('hejjetrak', 'hejjetrak-cli'):
-                (stage / name).symlink_to(name.replace('hejjetrak', 'hejjetrac'))
             relative = ('DependencyLicenses/epaint_default_fonts-0.33.3/'
                         'LICENSE-FONT-emoji-icon-font-mit-license.txt')
             notice = stage / relative
             notice.parent.mkdir(parents=True)
             notice.write_bytes(b'font license test fixture\n')
-            installed_name = 'usr/lib/hejjetrak/' + relative
+            installed_name = 'usr/lib/hejjetrac/' + relative
             self.assertGreater(len(installed_name.encode()), 100)
             assets = Path(__file__).resolve().parent.parent / 'assets'
             output = PACKAGE.build_deb(stage, directory / 'long-name.deb', '0.3.1',
@@ -158,6 +157,38 @@ class DebianPackageTests(unittest.TestCase):
 
 
 class ReleaseIdentityTests(unittest.TestCase):
+    def test_portable_defaults_are_unbound_and_never_copy_developer_rig_files(self):
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory)
+            PACKAGE.install_default_configs(root, destination)
+            self.assertEqual(sorted(p.name for p in destination.iterdir()),
+                             [f'VR{i}.txt' for i in range(1, 5)])
+            for rig in range(1, 5):
+                text = (destination / f'VR{rig}.txt').read_text()
+                fields = dict(line.split(':', 1) for line in text.splitlines()
+                              if ':' in line and not line.startswith('#'))
+                fields = {key.strip(): value.strip() for key, value in fields.items()}
+                self.assertEqual(fields['rust_camera_id'], '')
+                self.assertEqual(fields['src_fn'], str(rig - 1))
+                self.assertEqual(fields['src_fps'], '-1')
+                self.assertEqual(fields['zmq_port'], str(9870 + rig))
+                self.assertNotIn('rust_camera_width', fields)
+                self.assertNotIn('rust_camera_height', fields)
+
+    def test_ubuntu_identity_and_software_center_details_are_ascii(self):
+        from xml.etree import ElementTree as ET
+        root = Path(__file__).resolve().parents[1]
+        self.assertTrue(PACKAGE.DESKTOP_ENTRY.isascii())
+        self.assertIn('Name=Hejjetrac\n', PACKAGE.DESKTOP_ENTRY)
+        text = (root / 'assets/io.github.pvnkmrksk.hejjetrac.metainfo.xml').read_text()
+        self.assertTrue(text.isascii())
+        metadata = ET.fromstring(text)
+        self.assertEqual(metadata.findtext('name'), 'Hejjetrac')
+        self.assertEqual(metadata.findtext('launchable'), 'hejjetrac.desktop')
+        self.assertGreaterEqual(len(metadata.findall('screenshots/screenshot')), 3)
+        self.assertGreater(len(metadata.findall('description/p')), 2)
+
     def test_old_binary_and_mismatched_release_tag_fail_before_copy(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -165,7 +196,7 @@ class ReleaseIdentityTests(unittest.TestCase):
             (root / 'target/release/hejjetrac').write_bytes(b'old executable')
             destination = root / 'package'
             destination.mkdir()
-            old_version = subprocess.CompletedProcess([], 0, stdout='hejjetrak 0.1.3\n')
+            old_version = subprocess.CompletedProcess([], 0, stdout='hejjetrac 0.1.3\n')
             with mock.patch.object(PACKAGE.subprocess, 'run', return_value=old_version):
                 with self.assertRaisesRegex(ValueError, 'expected version 0.1.4'):
                     PACKAGE.install_binaries(root, destination, '', 'Darwin', '0.1.4')
@@ -176,19 +207,16 @@ class ReleaseIdentityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'does not match source version'):
                 PACKAGE.verify_release_tag(manifest, 'v0.1.3')
 
-    def test_zip_retains_small_unix_compatibility_aliases(self):
+    def test_zip_preserves_product_executables(self):
         with tempfile.TemporaryDirectory() as directory:
             directory = Path(directory)
             stage = directory / 'hejjetrac-macos-arm64'
             stage.mkdir()
             (stage / 'hejjetrac').write_bytes(b'executable payload')
-            (stage / 'hejjetrak').symlink_to('hejjetrac')
             archive = directory / 'package.zip'
             PACKAGE.write_zip_tree(stage, archive)
             with zipfile.ZipFile(archive) as packaged:
-                alias = packaged.getinfo(stage.name + '/hejjetrak')
-                self.assertEqual(alias.external_attr >> 16, 0o120777)
-                self.assertEqual(packaged.read(alias), b'hejjetrac')
+                self.assertEqual(packaged.namelist(), [stage.name + '/hejjetrac'])
                 self.assertEqual(packaged.read(stage.name + '/hejjetrac'), b'executable payload')
 
 

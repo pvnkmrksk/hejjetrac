@@ -2,7 +2,7 @@
 
 Reproduced from [FicTrac `doc/coordinate_frames.md`](https://github.com/pvnkmrksk/fictrac/blob/10fc4472af1fc9062b9bf5a92738e835b98cc3ec/doc/coordinate_frames.md), by R. J. D. Moore, Saul Thurrowgood and collaborators, under **CC BY-NC-SA 3.0**. The original material below is unchanged except for link targets and image descriptions. It describes upstream defaults and implementation; HejjéTrac-specific behavior, supported hardware and limits are documented in [configuration](configuration.md), [outputs](output.md) and [parity](parity.md).
 
-The figures are preserved locally, unchanged, with [asset provenance and checksums](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/images/upstream/README.md). For the exact recentered legacy camera-delta convention used by HejjéTrac exports, see [output semantics](output.md); the physical frame diagram below is the upstream reference.
+The figures are preserved locally, unchanged, with [asset provenance and checksums](https://github.com/pvnkmrksk/hejjetrac/blob/main/docs/images/upstream/README.md). For the exact recentered legacy camera-delta convention used by HejjéTrac exports, see [output semantics](output.md); the physical frame diagram below is the upstream reference.
 
 ---
 

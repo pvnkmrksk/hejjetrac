@@ -503,8 +503,8 @@ fn zmq_parameters_validate_losslessly_without_entering_the_core() -> TestResult 
     Ok(())
 }
 #[test]
-fn root_vr_configs_and_fallback_use_independent_ports_labels_and_sources() -> TestResult {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+fn frozen_lab_rigs_and_fallback_use_independent_ports_labels_and_sources() -> TestResult {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/lab-rigs");
     let mut document = ConfigDocument::parse(std::fs::read_to_string(root.join("VR1.txt"))?)?;
     let mut path = Some(root.join("VR1.txt"));
     for index in 1..=4 {

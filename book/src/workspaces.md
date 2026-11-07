@@ -13,12 +13,15 @@ Alternatively, install that downloaded file from its folder:
 sudo apt install ./hejjetrac-linux-amd64.deb
 ```
 
-Launch **HejjéTrac** from the applications menu as your normal user. Application
-resources under `/usr/lib/hejjetrak` belong to the package manager. On an ordinary
+Launch **Hejjetrac** from the Ubuntu applications menu as your normal user. Application
+resources under `/usr/lib/hejjetrac` belong to the package manager. On an ordinary
 first launch, writable default rig files are created in `~/.config/hejjetrac`
 on Linux, `%APPDATA%\Hejjetrac` on Windows, or
 `~/Library/Application Support/Hejjetrac` on macOS. Updates preserve existing
-user configurations. You can keep experiment configs in another writable folder.
+user configurations. Fresh defaults open one unbound camera and include four
+unbound rig templates, without lab serials or fixed capture formats. First-run
+seeding uses the actual enumerated camera indices; calibrate each camera.
+You can keep experiment configs in another writable folder.
 
 ## Set up the rigs graphically
 

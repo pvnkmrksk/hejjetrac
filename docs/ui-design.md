@@ -28,7 +28,7 @@ the intersection of exported work areas remains reserved. View state is saved
 per rig; an opt-in startup manifest restores a configured workspace on ordinary
 graphical launch. [Graphical setup and atlas startup](../book/src/workspaces.md).
 
-The hierarchy follows [Apple toolbar guidance](https://developer.apple.com/design/human-interface-guidelines/toolbars) and [Microsoft command-bar guidance](https://learn.microsoft.com/en-ca/windows/apps/design/controls/command-bar): prioritize frequent commands, group related actions, move less frequent controls into secondary surfaces, and explain compact controls with tooltips. Toolbar artwork is bundled from Lucide, with pinned source SVGs, embedded rendered assets and ISC/Feather MIT notices. No icon network request, custom icon font or render-tool runtime is required. See [third-party notices](https://github.com/pvnkmrksk/hejjetrak/blob/main/THIRD_PARTY.md). The application icon retains its editable SVG source.
+The hierarchy follows [Apple toolbar guidance](https://developer.apple.com/design/human-interface-guidelines/toolbars) and [Microsoft command-bar guidance](https://learn.microsoft.com/en-ca/windows/apps/design/controls/command-bar): prioritize frequent commands, group related actions, move less frequent controls into secondary surfaces, and explain compact controls with tooltips. Toolbar artwork is bundled from Lucide, with pinned source SVGs, embedded rendered assets and ISC/Feather MIT notices. No icon network request, custom icon font or render-tool runtime is required. See [third-party notices](https://github.com/pvnkmrksk/hejjetrac/blob/main/THIRD_PARTY.md). The application icon retains its editable SVG source.
 
 Appearance follows the operating system by default. **More → Appearance** also
 offers Light and Dark. The preview keeps a dark surround in either theme, with
@@ -127,7 +127,7 @@ is retained. **Open four rigs** opens missing sessions through the existing
 VR/BR successor rules, then arranges the active previews in a grid. **Arrange
 in a grid** also handles closed sessions without reserving an empty cell for
 the hidden application event host. The terminal equivalent is
-`hejjetrak --config VR1.txt --windows 4 --grid 2x2`.
+`hejjetrac --config VR1.txt --windows 4 --grid 2x2`.
 
 The **Precision magnifier** is a 240-pixel nearest-pixel lens at four times the
 current view scale, including crop/high-DPI scale. It shows fitted geometry,

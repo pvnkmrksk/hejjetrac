@@ -95,4 +95,4 @@ Keep the data and error report. Normal stop/close finalizes the take; interrupti
 
 ## Reporting an issue
 
-Open an [issue](https://github.com/pvnkmrksk/hejjetrak/issues) with the release/source revision, OS/CPU, source format/rate, config stripped of private paths, exact error and a minimal non-sensitive sample if possible. Include all-frame quality evidence when tracking fails. Do not publicly upload animal/lab footage, camera images or private paths unintentionally.
+Open an [issue](https://github.com/pvnkmrksk/hejjetrac/issues) with the release/source revision, OS/CPU, source format/rate, config stripped of private paths, exact error and a minimal non-sensitive sample if possible. Include all-frame quality evidence when tracking fails. Do not publicly upload animal/lab footage, camera images or private paths unintentionally.

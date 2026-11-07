@@ -1,0 +1,352 @@
+{
+  "application_version": "0.5.0",
+  "report_date": "2026-11-07",
+  "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+  "toolchain": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "build": "cargo build --release --workspace --locked; thin LTO, codegen-units=1",
+  "desktop_sha256": "94e63de82d83c900fa09d7d71cc36c691a3cf228c575045300d9db1f0d0ad129",
+  "cli_sha256": "098614813fd0f7c48aa28cb87aafdca9baa66f74605c458a3f668e6497387d19",
+  "sample": {
+    "path": "examples/sample.mp4",
+    "sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "frames": 300
+  },
+  "remote_recording": {
+    "passed": true,
+    "scope": "one Linux computer, non-loopback interface, real-video native four-rig recording",
+    "cycles": 20,
+    "rigs": 4,
+    "takes": 80,
+    "decoded_frames": 240,
+    "frame_clock_numeric_quality_alignment": true,
+    "wrong_auth_origin_host_rejected": [
+      401,
+      403,
+      403
+    ],
+    "missing_binding_atomic_edits": 80,
+    "duplicate_start_and_idempotent_stop": true,
+    "exit_code": 0,
+    "report_path": "runs/remote-recording-v050-20261106/report.json",
+    "report_sha256": "e9af4f46a8803c72a72f5f3709888ed453b877a2dfd9086a040482d49c8316a8"
+  },
+  "sixteen_rig_native": {
+    "passed": true,
+    "independently_decoded_recordings": 16,
+    "retained_rows": 48,
+    "workspace_restored_rigs": 16,
+    "restored_single_size": [
+      432.0,
+      321.0
+    ],
+    "portable_workspace_relocation": true,
+    "invalid_workspace_retains_sources": true,
+    "report_path": "runs/desktop-mcp-v050-20261106/report.json",
+    "report_sha256": "1311a87f1a25b81fec6947da8b87576c59b1b0c74534e8f9722a584747870805"
+  },
+  "fresh_install": {
+    "passed": true,
+    "fresh_sessions": 1,
+    "unbound_configs": {
+      "VR1": {
+        "src_fn": "0",
+        "rust_camera_id": "",
+        "src_fps": "-1",
+        "zmq_port": "9871"
+      },
+      "VR2": {
+        "src_fn": "1",
+        "rust_camera_id": "",
+        "src_fps": "-1",
+        "zmq_port": "9872"
+      },
+      "VR3": {
+        "src_fn": "2",
+        "rust_camera_id": "",
+        "src_fps": "-1",
+        "zmq_port": "9873"
+      },
+      "VR4": {
+        "src_fn": "3",
+        "rust_camera_id": "",
+        "src_fps": "-1",
+        "zmq_port": "9874"
+      }
+    },
+    "no_camera_single_fallback": true,
+    "array_never_substitutes_sample": true,
+    "exit_code": 0
+  },
+  "binding_inventory_stress": {
+    "generations": 512,
+    "cameras_per_generation": 16,
+    "exact_id_resolutions": 8192,
+    "missing_and_duplicate_serials_rejected": true,
+    "explicit_socket_identity_verified": true,
+    "gapped_startup_indices": [
+      6,
+      0,
+      10,
+      4
+    ],
+    "failed_queue_preserves_config_revision_draft": true
+  },
+  "historical_lab_fixtures": {
+    "source_commit": "ab6b564",
+    "files": {
+      "crates/hejjetrac-io/tests/fixtures/lab-rigs/VR2.txt": "79236a88c698b90c4949857884b5cc9ed17c8475956ce0a53bc9baf35085bdde",
+      "crates/hejjetrac-io/tests/fixtures/lab-rigs/VR4.txt": "964a8cd82c1e64b4f5b05deb33e22c326dbc1caed108af7a3a01dedaa3e87bdb",
+      "crates/hejjetrac-io/tests/fixtures/lab-rigs/VR3.txt": "4d38e3e14c7b63d455a82a86a1a8bbcad7bdac6c2f7bedb7ca63af672febb229",
+      "crates/hejjetrac-io/tests/fixtures/lab-rigs/VR1.txt": "2a1960487b202dd800ef10c252e1ffa0e05c34c003afdff573c7f0f745a38f21"
+    },
+    "identical_to_original_committed_root_rigs": true,
+    "user_VR1_untouched": true,
+    "rim_tolerances_unchanged": true
+  },
+  "package_and_website": {
+    "python_helper_tests": 50,
+    "node_download_tests_pass": true,
+    "appstream_validation_pass": true,
+    "ubuntu_desktop_and_metadata_titles_ascii": true,
+    "new_packages_have_only_canonical_commands": true,
+    "software_center_screenshots": 3,
+    "internal_links_checked": 3068
+  },
+  "historical_release_naming": {
+    "updates": 32,
+    "archive_bytes_and_immutable_source_tags_unchanged": true
+  },
+  "limitations": [
+    "No physical cameras connected; inventory permutations are not physical USB hotplug tests.",
+    "Remote-interface test uses one computer, not a measured two-computer network or clock-offset experiment.",
+    "Linux native hardware Vulkan UI tested; no new macOS/Windows camera or GUI execution claim.",
+    "Capture UTC is host-normalized and includes unmeasured fixed sensor/USB latency; replay exposure UTC remains unknown.",
+    "Tracking algorithms, quality decisions, oracle constants and declared numerical gates are unchanged."
+  ],
+  "required_checks": {
+    "cargo_fmt_all_check": "passed",
+    "cargo_clippy_workspace_all_targets_locked_deny_warnings": "passed",
+    "cargo_test_workspace_locked": {
+      "passed": true,
+      "tests": 367,
+      "log_sha256": "77df55abd1ab41e85e25326c15f07a3a4b0dca76217714fe3726925bd616781b"
+    }
+  },
+  "cpu_model": "Intel(R) Core(TM) i7-6700K CPU @ 4.00GHz",
+  "serial_release_gates": {
+    "cases": [
+      {
+        "case": "demo",
+        "command": [
+          "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/hejjetrac-cli",
+          "demo",
+          "--output",
+          "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/release-v050-serial-20261107/demo",
+          "--frames",
+          "120"
+        ],
+        "process_wall_seconds": 0.7091403000522405
+      },
+      {
+        "case": "sample",
+        "command": [
+          "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/hejjetrac-cli",
+          "track",
+          "--config",
+          "examples/benchmark/config.txt",
+          "--input",
+          "examples/sample.mp4",
+          "--output",
+          "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/release-v050-serial-20261107/sample",
+          "--no-zmq"
+        ],
+        "process_wall_seconds": 1.696712136035785
+      },
+      {
+        "case": "comparison",
+        "command": [
+          "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/hejjetrac-cli",
+          "compare",
+          "--reference",
+          "examples/benchmark/upstream.dat",
+          "--candidate",
+          "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/release-v050-serial-20261107/sample/tracking.dat",
+          "--report",
+          "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/release-v050-serial-20261107/comparison.json"
+        ],
+        "process_wall_seconds": 0.002676791977137327
+      }
+    ],
+    "demo_oracle": {
+      "expected_delta": [
+        0.006,
+        -0.009,
+        0.004
+      ],
+      "passed": true,
+      "rotation_component_rmse_rad": 0.0003040496948914138,
+      "tolerance_rad": 0.003
+    },
+    "sample_comparison": {
+      "comparison": {
+        "candidate_final_position": [
+          3.620053461636,
+          -2.627296315711
+        ],
+        "endpoint_error_sphere_rad": 0.054525318251027806,
+        "frames": 300,
+        "heading_rmse_rad": 0.01318481079068964,
+        "path_point_rmse_sphere_rad": 0.04480675139755788,
+        "reference_final_position": [
+          3.674266189723,
+          -2.6214661833162
+        ],
+        "rotation_component_rmse_rad": [
+          0.008760804755303081,
+          0.008292135984256042,
+          0.014210731643506284
+        ],
+        "timestamp_max_error_ms": 3.456079866737127e-11
+      },
+      "limits": {
+        "heading_rmse_rad": 0.025,
+        "path_rmse_sphere_rad": 0.075,
+        "rotation_component_rmse_rad": 0.02
+      },
+      "passed": true
+    },
+    "sample_summary": {
+      "version": "0.5.0",
+      "input": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/sample.mp4",
+      "video": {
+        "width": 384,
+        "height": 288,
+        "fps": null,
+        "codec": "h264 (pure Rust)",
+        "duration_ms": 10000.0
+      },
+      "effective_config": {
+        "spherical_map": {
+          "resilient": true,
+          "resilient_error_floor": 10000.0,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 6,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 50,
+          "tolerance": 0.001,
+          "max_error": -1.0
+        },
+        "width": 384,
+        "height": 288,
+        "vfov_deg": 45.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            -0.22938965658632302,
+            0.09996809470952124,
+            0.9681873607372475
+          ],
+          "angular_radius": 0.12481674439688094
+        },
+        "camera_to_lab": [
+          0.722445,
+          -0.131314,
+          -0.460878
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [
+          [
+            [
+              96.0,
+              156.0
+            ],
+            [
+              113.0,
+              147.0
+            ],
+            [
+              106.0,
+              128.0
+            ],
+            [
+              82.0,
+              130.0
+            ],
+            [
+              81.0,
+              150.0
+            ]
+          ],
+          [
+            [
+              71.0,
+              213.0
+            ],
+            [
+              90.0,
+              219.0
+            ],
+            [
+              114.0,
+              218.0
+            ],
+            [
+              135.0,
+              211.0
+            ],
+            [
+              154.0,
+              196.0
+            ],
+            [
+              150.0,
+              217.0
+            ],
+            [
+              121.0,
+              228.0
+            ],
+            [
+              99.0,
+              234.0
+            ],
+            [
+              75.0,
+              225.0
+            ]
+          ]
+        ],
+        "max_rotation": 0.35,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "sample.mp4"
+      },
+      "frames": 300,
+      "tracked": 299,
+      "relocalized": 0,
+      "rejected": 0,
+      "initializing": 1,
+      "mean_error": 6424.500252392103,
+      "max_error": 8268.539271610356,
+      "wall_seconds": 1.694644789,
+      "end_to_end_fps": 177.0282491925805,
+      "tracking_fps": 346.0187438007501,
+      "input_duration_ms": 9966.666666666666,
+      "final_position": [
+        3.620053461636342,
+        -2.6272963157111424
+      ],
+      "final_heading": 6.177704995564479,
+      "estimator": "accumulated spherical map / pure Rust BOBYQA",
+      "error_metric": "mean squared binary intensity (0..65025)",
+      "warnings": []
+    },
+    "frame_clock_rows_verified": 420,
+    "scope": "Serial runs with no concurrent performance workloads; numeric and synchronization files enabled, media and wire outputs disabled. CLI summary wall time includes source open/decode, tracking, numeric/quality/timing output and finalization. tracking_fps measures Tracker::process only."
+  }
+}

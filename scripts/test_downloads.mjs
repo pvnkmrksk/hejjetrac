@@ -26,13 +26,10 @@ assert.equal(detectPlatform({platform:'MacIntel',maxTouchPoints:5}),null);
 assert.equal(detectPlatform({platform:'Android',mobile:true}),null);
 assert.equal(detectPlatform({}),null);
 for (const [platform,spec] of Object.entries(PLATFORMS)) {
- const asset={name:spec.file,browser_download_url:`https://github.com/pvnkmrksk/hejjetrak/releases/download/v999/${spec.file}`,size:123};
+ const asset={name:spec.file,browser_download_url:`https://github.com/pvnkmrksk/hejjetrac/releases/download/v999/${spec.file}`,size:123};
  assert.equal(selectAsset({assets:[asset]},platform)?.name,spec.file);
- const legacy={...asset,name:spec.legacyFile,browser_download_url:asset.browser_download_url.replace(spec.file,spec.legacyFile)};
- assert.equal(selectAsset({assets:[legacy]},platform)?.name,spec.legacyFile);
- assert.equal(selectAsset({assets:[legacy,asset]},platform)?.name,spec.file);
  assert.equal(selectAsset({assets:[]},platform),null);
- for (const bad of ['https://evil.test/pvnkmrksk/hejjetrak/releases/download/v1/file.zip','javascript:alert(1)','https://github.com:8443/pvnkmrksk/hejjetrak/releases/download/v1/file.zip','https://github.com/another/repo/releases/download/v1/file.zip','http://github.com/pvnkmrksk/hejjetrak/releases/download/v1/file.zip']) {
+ for (const bad of ['https://evil.test/pvnkmrksk/hejjetrac/releases/download/v1/file.zip','javascript:alert(1)','https://github.com:8443/pvnkmrksk/hejjetrac/releases/download/v1/file.zip','https://github.com/another/repo/releases/download/v1/file.zip','http://github.com/pvnkmrksk/hejjetrac/releases/download/v1/file.zip']) {
   assert.equal(selectAsset({assets:[{...asset,browser_download_url:bad}]},platform),null);
  }
 }
@@ -45,7 +42,7 @@ console.log('Download platform, asset URL and digest checks passed.');
 assert.equal(PLATFORMS['mac-arm'].file, 'hejjetrac-macos-arm64.zip');
 assert.match(PLATFORMS['mac-arm'].label, /Apple Silicon/);
 assert.match(PLATFORMS['mac-intel'].label, /Mac · Intel/);
-assert.equal(selectAsset({assets:[{name:PLATFORMS.linux.file,browser_download_url:'https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.1.2/'+PLATFORMS.linux.file}]},'linux-deb'),null);
+assert.equal(selectAsset({assets:[{name:PLATFORMS.linux.file,browser_download_url:'https://github.com/pvnkmrksk/hejjetrac/releases/download/v0.1.2/'+PLATFORMS.linux.file}]},'linux-deb'),null);
 assert.equal(defaultPlatform('mac-choice'),'mac-arm');
 assert.equal(defaultPlatform('linux-choice'),'linux');
 assert.equal(defaultPlatform('mac-intel'),'mac-intel');
@@ -69,12 +66,12 @@ const fakeDocument = {getElementById:id=>nodes[id], querySelectorAll:selector=>
  selector==='[data-platform]'?buttons:selector==='[data-launcher]'?launchers:[]};
 const originalFetch=globalThis.fetch;
 const assetFor=(platform,tag='v0.1.4')=>({name:PLATFORMS[platform].file,
- browser_download_url:`https://github.com/pvnkmrksk/hejjetrak/releases/download/${tag}/${PLATFORMS[platform].file}`});
+ browser_download_url:`https://github.com/pvnkmrksk/hejjetrac/releases/download/${tag}/${PLATFORMS[platform].file}`});
 const responseFor=(assets)=>({ok:true,json:async()=>({tag_name:'v0.1.4',assets})});
 try {
  globalThis.fetch=async()=>({ok:true,json:async()=>({tag_name:'v0.1.3',assets:[{
    name:PLATFORMS['linux-deb'].file,
-   browser_download_url:'https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.1.3/'+PLATFORMS['linux-deb'].file,
+   browser_download_url:'https://github.com/pvnkmrksk/hejjetrac/releases/download/v0.1.3/'+PLATFORMS['linux-deb'].file,
  }]})});
  initializeDownloads(fakeDocument);
  await buttons[0].click();
@@ -96,33 +93,6 @@ try {
 } finally {globalThis.fetch=originalFetch;}
 console.log('Linux format chooser, installer URL and missing-asset dialog checks passed.');
 
-// A legacy fallback needs matching opening instructions. Switching to a current
-// package clears that note and restores both modern launcher names.
-for (const [legacyPlatform,currentPlatform,launcherKind,legacyName] of [
- ['mac-arm','windows','mac','hejjetrak.app'],
- ['windows','mac-arm','windows','hejjetrak.exe'],
-]) {
- try {
-  const spec=PLATFORMS[legacyPlatform];
-  const legacy={name:spec.legacyFile,
-   browser_download_url:`https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.1.3/${spec.legacyFile}`};
-  globalThis.fetch=async()=>({ok:true,json:async()=>({tag_name:'v0.1.3',assets:[legacy,assetFor(currentPlatform)]})});
-  const before=nodes['asset-download'].clicks;
-  await initializeDownloads(fakeDocument,{pageUrl:'https://example.com/?download=1',
-   resolvePlatform:async()=>legacyPlatform,consumeIntent:()=>{}}).automatic;
-  assert.equal(nodes['asset-download'].href,legacy.browser_download_url);
-  assert.equal(nodes['asset-download'].clicks,before+1);
-  assert.equal(nodes['download-version-note'].hidden,false);
-  assert.match(nodes['download-version-note'].textContent,/v0\.1\.3.*earlier hejjetrak name and calibration interface/);
-  assert.equal(launchers.find(node=>node.dataset.launcher===launcherKind).textContent,legacyName);
-  await buttons.find(node=>node.dataset.platform===currentPlatform).click();
-  assert.equal(nodes['download-version-note'].hidden,true);
-  assert.equal(nodes['asset-download'].href,assetFor(currentPlatform).browser_download_url);
-  assert.equal(nodes['asset-download'].clicks,before+2);
-  assert.deepEqual(launchers.map(node=>node.textContent),['hejjetrac.app','hejjetrac.exe']);
- } finally {globalThis.fetch=originalFetch;}
-}
-console.log('Legacy launcher names and calibration note clear when switching to current packages.');
 
 // Closing an in-flight chooser must not start a late attachment download.
 let completeRelease;
@@ -133,7 +103,7 @@ try {
  nodes['download-dialog'].open = false;
  completeRelease({ok:true,json:async()=>({tag_name:'v1',assets:[{
   name:PLATFORMS['linux-deb'].file,
-  browser_download_url:'https://github.com/pvnkmrksk/hejjetrak/releases/download/v1/'+PLATFORMS['linux-deb'].file,
+  browser_download_url:'https://github.com/pvnkmrksk/hejjetrac/releases/download/v1/'+PLATFORMS['linux-deb'].file,
  }]})});
  const previous = nodes['asset-download'].clicks;
  await pending;

@@ -381,8 +381,8 @@ impl Session {
                 ui.add_space(8.0);
                 ui.label("Spherical motion tracking for the modern lab.");
                 ui.label("Created by Pavan Kumar Kaushik.");
-                ui.hyperlink_to("GitHub · source and releases", "https://github.com/pvnkmrksk/hejjetrak");
-                ui.hyperlink_to("User guide", "https://pvnkmrksk.github.io/hejjetrak/manual/");
+                ui.hyperlink_to("GitHub · source and releases", "https://github.com/pvnkmrksk/hejjetrac");
+                ui.hyperlink_to("User guide", "https://pvnkmrksk.github.io/hejjetrac/manual/");
                 ui.separator();
                 ui.label("Inspired by FicTrac, developed by R. J. D. Moore and collaborators. Rebuilt in Rust with native windows, guided calibration and multiple independent rigs.");
                 ui.hyperlink_to("FicTrac · Moore et al. (2014)", "https://doi.org/10.1016/j.jneumeth.2014.01.010");
@@ -1942,6 +1942,11 @@ impl Session {
         let selected_hardware_id = selected_id
             .and_then(|id| self.cameras.iter().find(|camera| camera.id == id))
             .and_then(|camera| camera.hardware_id.clone());
+        let selected_hardware_id = if self.worker.is_some() && !self.snapshot.ended {
+            self.snapshot.actual_camera_hardware_id.clone()
+        } else {
+            selected_hardware_id
+        };
         ui.horizontal(|ui| {
             let linked = binding.is_some();
             let help = if linked {

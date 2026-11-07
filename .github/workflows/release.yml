@@ -35,7 +35,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get update
-          apt-get install -y tzdata ca-certificates curl git gh build-essential binutils pkg-config python3 python-is-python3 libudev-dev libxkbcommon-dev libwayland-dev libclang-dev dpkg-dev desktop-file-utils libxkbcommon-x11-0 libwayland-cursor0 libwayland-egl1 libx11-6 libx11-xcb1 libxcursor1 libxi6 libxrandr2 libegl1 libgles2 libvulkan1 libegl-mesa0 libgl1-mesa-dri
+          apt-get install -y tzdata ca-certificates curl git gh build-essential binutils pkg-config python3 python-is-python3 libudev-dev libxkbcommon-dev libwayland-dev libclang-dev dpkg-dev desktop-file-utils appstream libxkbcommon-x11-0 libwayland-cursor0 libwayland-egl1 libx11-6 libx11-xcb1 libxcursor1 libxi6 libxrandr2 libegl1 libgles2 libvulkan1 libegl-mesa0 libgl1-mesa-dri
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_ref || github.ref }}
@@ -152,11 +152,12 @@ jobs:
           python3 scripts/test_package.py
           dpkg-deb --info dist/hejjetrac-linux-amd64.deb
           dpkg-deb --contents dist/hejjetrac-linux-amd64.deb
-          dpkg-deb --extract dist/hejjetrac-linux-amd64.deb /tmp/hejjetrak-deb-check
-          desktop-file-validate /tmp/hejjetrak-deb-check/usr/share/applications/hejjetrak.desktop
-          /tmp/hejjetrak-deb-check/usr/bin/hejjetrac-cli schema > /tmp/hejjetrak-deb-schema.json
-          test -s /tmp/hejjetrak-deb-schema.json
-          test -f /tmp/hejjetrak-deb-check/usr/lib/hejjetrak/examples/sample.mp4
+          dpkg-deb --extract dist/hejjetrac-linux-amd64.deb /tmp/hejjetrac-deb-check
+          desktop-file-validate /tmp/hejjetrac-deb-check/usr/share/applications/hejjetrac.desktop
+          appstreamcli validate --no-net /tmp/hejjetrac-deb-check/usr/share/metainfo/io.github.pvnkmrksk.hejjetrac.metainfo.xml
+          /tmp/hejjetrac-deb-check/usr/bin/hejjetrac-cli schema > /tmp/hejjetrac-deb-schema.json
+          test -s /tmp/hejjetrac-deb-schema.json
+          test -f /tmp/hejjetrac-deb-check/usr/lib/hejjetrac/examples/sample.mp4
           apt-get --simulate install ./dist/hejjetrac-linux-amd64.deb
       - uses: actions/upload-artifact@v4
         with:

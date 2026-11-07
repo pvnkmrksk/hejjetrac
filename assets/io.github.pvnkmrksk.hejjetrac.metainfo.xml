@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.pvnkmrksk.hejjetrac</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>CC-BY-NC-SA-3.0</project_license>
+  <name>Hejjetrac</name>
+  <summary>Track spherical treadmills and record laboratory experiments</summary>
+  <developer_name>Pavan Kumar Kaushik</developer_name>
+  <description>
+    <p>Hejjetrac measures the rotation of a patterned ball for animal locomotion
+    experiments. Its native desktop provides live camera previews, guided ball
+    and laboratory-axis calibration, trajectory inspection and independent rigs.</p>
+    <ul>
+      <li>Record source video, diagnostic video and complete numerical and quality data.</li>
+      <li>Align tracking and virtual reality using per-frame wall-clock metadata and trial tags.</li>
+      <li>Start and stop recordings from another computer through authenticated remote control.</li>
+      <li>Send motion to experiment software over UDP or ZeroMQ.</li>
+      <li>Use one unbound camera on first launch; configure and optionally bind multi-camera rigs.</li>
+    </ul>
+    <p>This package includes the desktop, command-line tools, an illustrated
+    manual, sample video and dependency notices. No compiler or Python runtime
+    is required. Calibrate your own camera before collecting measurements.</p>
+    <p>Based on FicTrac by R. J. D. Moore and collaborators. Scientific validation,
+    supported codecs and platform limitations are documented in the manual.</p>
+  </description>
+  <pkgname>hejjetrac</pkgname>
+  <icon type="stock">hejjetrac</icon>
+  <launchable type="desktop-id">hejjetrac.desktop</launchable>
+  <provides><binary>hejjetrac</binary><binary>hejjetrac-cli</binary></provides>
+  <url type="homepage">https://pvnkmrksk.github.io/hejjetrac/</url>
+  <url type="help">https://pvnkmrksk.github.io/hejjetrac/manual/</url>
+  <url type="bugtracker">https://github.com/pvnkmrksk/hejjetrac/issues</url>
+  <categories><category>Science</category><category>Education</category></categories>
+  <keywords><keyword>locomotion</keyword><keyword>camera</keyword><keyword>FicTrac</keyword><keyword>virtual reality</keyword></keywords>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Live ball tracking, trajectory and recording controls</caption>
+      <image>https://pvnkmrksk.github.io/hejjetrac/manual/images/preview.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Guided ball and laboratory-axis calibration</caption>
+      <image>https://pvnkmrksk.github.io/hejjetrac/manual/images/calibration.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Independent rigs with shared recording and per-rig settings</caption>
+      <image>https://pvnkmrksk.github.io/hejjetrac/manual/images/rig-grid-v050-20261107.png</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+  <releases><release version="0.5.0" date="2026-11-07"/></releases>
+</component>

@@ -21,7 +21,7 @@ more resilient fast-motion tracking and a simpler daily workflow.
 
 Choose the ZIP for your Mac or Windows PC. Ubuntu 22.04 or newer can use the
 Debian installer or portable Linux archive. Mac builds are ad hoc signed; Windows
-builds are unsigned. [Installation and permissions](https://pvnkmrksk.github.io/hejjetrak/manual/install.html).
+builds are unsigned. [Installation and permissions](https://pvnkmrksk.github.io/hejjetrac/manual/install.html).
 
 Save existing calibration files outside the application folder before updating.
 The bundled VR1–VR4 files contain the supplied rig's calibration, camera IDs
@@ -39,15 +39,15 @@ and calibration views were visually checked.
 
 
 The user's native Ubuntu four-camera campaign and completed overnight run are
-recorded in the [validation evidence](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/validation.md).
+recorded in the [validation evidence](https://github.com/pvnkmrksk/hejjetrac/blob/main/docs/validation.md).
 That historical run retained 8,998,214 aligned numeric/quality rows with exact
 accepted wire data. It completed with warnings: four debug movies stayed
 partial, and two capacity-protection intervals kept data without video.
 
 Recording throughput depends on format, storage and camera bandwidth. Check
 completion markers and media status before treating a video as complete.
-[Recording behavior](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/recording-performance.md)
-and [tracking limits](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/parity.md)
+[Recording behavior](https://github.com/pvnkmrksk/hejjetrac/blob/main/docs/recording-performance.md)
+and [tracking limits](https://github.com/pvnkmrksk/hejjetrac/blob/main/docs/parity.md)
 retain the scope of each measurement.
 
 Created by [Pavan Kumar Kaushik](https://github.com/pvnkmrksk).

@@ -31,6 +31,6 @@ The supplied rig configs contain example calibration; an outline that includes
 the stationary holder can prevent reliable tracking even when the preview is
 clear.
 
-[Downloads](https://pvnkmrksk.github.io/hejjetrak/?download=1) ·
-[Calibration](https://pvnkmrksk.github.io/hejjetrak/manual/calibration.html) ·
-[Recording and timing](https://pvnkmrksk.github.io/hejjetrak/manual/output.html)
+[Downloads](https://pvnkmrksk.github.io/hejjetrac/?download=1) ·
+[Calibration](https://pvnkmrksk.github.io/hejjetrac/manual/calibration.html) ·
+[Recording and timing](https://pvnkmrksk.github.io/hejjetrac/manual/output.html)

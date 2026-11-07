@@ -1,0 +1,40 @@
+# VR2: 47-degree rim refit, 2026-11-04; reviewed against retained 2026-11-03 camera image.
+# Verify outline after moving the camera. Existing physical lab orientation is preserved.
+# Pixel marks were measured at 320x240; keep this capture size.
+# UDP 1112 and direct ZMQ 9872 are enabled; use only one publisher per port.
+# scripts/run_four_bridged.sh disables direct ZMQ in temporary copies for republishers.
+## FicTrac v2.1.1 config file (build date Aug 21 2023)
+c2a_cnrs_xy      : { 284, 38, 320, 36, 321, 96, 281, 94 }
+c2a_cnrs_yz      : { 195, 88, 123, 88, 124, 135, 193, 136 }
+c2a_r            : { 0.577885, -0.567261, -1.499009 }
+c2a_src          : c2a_cnrs_yz
+c2a_t            : { -0.017782, -0.106250, 11.412769 }
+do_display       : y
+max_bad_frames   : -1
+opt_bound        : 0.35
+opt_do_global    : n
+opt_max_err      : -1.000000
+opt_max_evals    : 50
+opt_tol          : 0.001
+q_factor         : 6
+roi_c            : {0.05721411098188449, 0.11497806150269287, 0.9917190080247709}
+roi_circ         : {116.16099790789227, 92.13622291021672, 252.87926574133203, 109.96904024767802, 89.41176937438864, 154.55108359133126, 242.47678797830284, 214.73684210526315}
+roi_ignr         : { { 145.13932881918788,47.55417956656347,212.01238881514595,46.811145510835914,214.2414911929379,114.42724458204334,200.12384280025543,140.43343653250773,167.43035259710754,138.94736842105263,132.5077486783667,109.96904024767802,130.27864630057474,82.47678018575851,121.36223678940686,65.38699690402477 } }
+roi_r            : 0.3048312210213906
+save_debug       : n
+save_raw         : n
+sock_host        : 127.0.0.1
+sock_port        : 1112
+src_fn           : 2
+src_fps          : 100
+thr_ratio        : 1.25
+thr_win_pc       : 0.25
+vfov             : 47
+
+rust_instance_name : VR2
+rust_resilient     : y
+rust_camera_width  : 320
+rust_camera_height : 240
+zmq_port           : 9872
+rust_camera_id     : usb:0c45:6366:M02:video:0
+zmq_output_mode      : legacy_matrex_vr

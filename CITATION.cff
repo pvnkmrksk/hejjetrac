@@ -4,8 +4,8 @@ message: >-
   the original FicTrac method listed in references. Use a version-specific
   Zenodo DOI when one is available for your release.
 type: software
-version: "0.4.2"
-date-released: "2026-11-06"
+version: "0.5.0"
+date-released: "2026-11-07"
 title: "HejjéTrac: native spherical-motion tracking"
 abstract: >-
   A native Rust reworking of FicTrac for tracking patterned spherical
@@ -15,8 +15,8 @@ abstract: >-
 authors:
   - family-names: Kaushik
     given-names: Pavan Kumar
-repository-code: "https://github.com/pvnkmrksk/hejjetrak"
-url: "https://pvnkmrksk.github.io/hejjetrak/"
+repository-code: "https://github.com/pvnkmrksk/hejjetrac"
+url: "https://pvnkmrksk.github.io/hejjetrac/"
 license: CC-BY-NC-SA-3.0
 keywords:
   - hejjetrac

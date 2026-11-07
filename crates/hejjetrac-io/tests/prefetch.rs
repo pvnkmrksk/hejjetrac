@@ -44,7 +44,7 @@ fn fixture(
         .duration_since(std::time::UNIX_EPOCH)?
         .as_nanos();
     let path = std::env::temp_dir().join(format!(
-        "hejjetrak-prefetch-{label}-{}-{stamp}.y4m",
+        "hejjetrac-prefetch-{label}-{}-{stamp}.y4m",
         std::process::id()
     ));
     let mut bytes = b"YUV4MPEG2 W16 H16 F30:1 Ip Cmono\n".to_vec();

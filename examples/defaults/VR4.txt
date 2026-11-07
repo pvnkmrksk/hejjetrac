@@ -1,0 +1,26 @@
+# Hejjetrac portable rig 4. Camera assignment is an unbound enumeration ordinal.
+# Calibrate Ball, Exclusions and Lab for your camera before collecting measurements.
+# The centered outline and 45-degree lens angle below are preview placeholders.
+# No serial, USB socket, machine path or exact capture format is required.
+src_fn : 3
+rust_camera_id :
+rust_instance_name : VR4
+src_fps : -1
+vfov : 45
+roi_c : { 0, 0, 1 }
+roi_r : 0.2
+c2a_r : { 0, 0, 0 }
+rust_resilient : y
+q_factor : 6
+opt_bound : 0.35
+opt_max_evals : 100
+opt_max_err : -1
+max_bad_frames : -1
+save_raw : n
+save_debug : n
+vid_codec : h264
+sock_host : 127.0.0.1
+sock_port : 0
+zmq_host : 0.0.0.0
+zmq_port : 9874
+zmq_output_mode : native_ft

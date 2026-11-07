@@ -32,6 +32,50 @@ pub fn resolve_camera(cameras: &[CameraInfo], hardware_id: &str) -> Result<u32> 
 mod tests {
     use super::*;
     #[test]
+    fn stress_sixteen_rig_reenumeration_missing_and_duplicate_identities() -> Result<()> {
+        for generation in 0..512u32 {
+            let mut cameras: Vec<_> = (0..16u32)
+                .map(|rig| CameraInfo {
+                    id: ((rig * 7 + generation) % 16) * 2 + (generation % 3) * 40,
+                    name: "identical camera model".into(),
+                    hardware_id: Some(format!("usb:0c45:6366:rig-{rig}:video:0")),
+                    port_id: Some(format!(
+                        "usb-port:controller:{}.{}:video:0",
+                        generation % 5,
+                        rig
+                    )),
+                })
+                .collect();
+            cameras.rotate_left(generation as usize % 16);
+            if generation % 2 == 0 {
+                cameras.reverse();
+            }
+            for rig in 0..16 {
+                let binding = format!("usb:0c45:6366:rig-{rig}:video:0");
+                assert_eq!(
+                    resolve_camera(&cameras, &binding)?,
+                    ((rig * 7 + generation) % 16) * 2 + (generation % 3) * 40
+                );
+            }
+            let missing = cameras.remove(generation as usize % 16);
+            let id = missing
+                .hardware_id
+                .clone()
+                .ok_or_else(|| Error("missing fixture identity".into()))?;
+            // The old ordinal is now occupied by a different physical camera.
+            cameras[0].id = missing.id;
+            assert!(resolve_camera(&cameras, &id).is_err());
+            cameras.push(missing.clone());
+            let mut duplicate = missing;
+            duplicate.id = 9999;
+            duplicate.port_id = Some("usb-port:other:1:video:0".into());
+            cameras.push(duplicate);
+            assert!(resolve_camera(&cameras, &id).is_err());
+            assert_eq!(resolve_camera(&cameras, "usb-port:other:1:video:0")?, 9999);
+        }
+        Ok(())
+    }
+    #[test]
     fn four_burned_serials_follow_devices_and_never_fall_back_to_rig_order() -> Result<()> {
         let mut cameras = [(0, "M04"), (2, "M02"), (4, "M03"), (6, "M01")]
             .into_iter()

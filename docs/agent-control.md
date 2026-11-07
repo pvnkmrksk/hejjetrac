@@ -85,6 +85,10 @@ that running desktop, including normal app-launcher, config-file, array and
 with stateless JSON responses; GET returns 405 because no SSE stream is offered.
 The separate CLI stdio server below still owns headless sessions.
 
+For a separate VR computer, use `--control-bind IP:PORT` to opt into LAN control.
+[Remote recording and synchronization](remote-recording.md) gives exact start/stop
+requests, trial metadata, per-frame wall times and clock limitations.
+
 The first desktop binds `http://127.0.0.1:17871/mcp`; other processes use the next
 free port through 17934. The endpoint lasts for the app process. Rig Manager
 shows its address and **Copy connection JSON** copies a client connection object:
@@ -99,7 +103,7 @@ protocol version and `connection`. On Unix it is created with mode 0600; clean
 shutdown removes it. A crash can leave a stale descriptor: verify the PID and
 endpoint rather than treating the file as proof the app is running. Tokens change
 on every launch. No credentials are printed in logs. The listener rejects browser
-Origin headers, non-loopback Host values and missing/wrong bearer tokens. Queue,
+Origin headers, Host values that do not match the listener and missing/wrong bearer tokens. Queue,
 message, socket-worker and request-time bounds keep network clients off the render
 thread. A startup failure is visible in Rig Manager and stderr.
 

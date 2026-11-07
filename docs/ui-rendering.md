@@ -53,8 +53,8 @@ UI loop to about one update per second. Real pointer-to-painted-button response
 took **2.58–2.62 seconds** after minimizing the manager, even after file decoding
 had finished. Tracking throughput was not the source of that stall.
 
-The X11/OpenGL default was introduced in [`b2054de`](https://github.com/pvnkmrksk/hejjetrak/commit/b2054def79c6c051b2c3b342aafef12f15752afd)
-on October 26; [`93f973b`](https://github.com/pvnkmrksk/hejjetrak/commit/93f973b1b1dc6c582f52f076dede0e272ebc9784)
+The X11/OpenGL default was introduced in [`b2054de`](https://github.com/pvnkmrksk/hejjetrac/commit/b2054def79c6c051b2c3b342aafef12f15752afd)
+on October 26; [`93f973b`](https://github.com/pvnkmrksk/hejjetrac/commit/93f973b1b1dc6c582f52f076dede0e272ebc9784)
 retained OpenGL preference while adding Vulkan fallback. Those changes addressed
 earlier startup problems but did not test minimized-window presentation.
 

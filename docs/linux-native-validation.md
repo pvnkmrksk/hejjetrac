@@ -59,7 +59,7 @@ harness checks baseline GL rendering, then disables EGL vendor discovery and
 restricts Vulkan to Mesa Lavapipe. Forced GL must fail cleanly in that environment;
 automatic startup must select Vulkan and render the patterned sample. The same
 full-video, quality, numeric, frame-count and screenshot-texture checks apply.
-The [corrected runtime run](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40535209814)
+The [corrected runtime run](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40535209814)
 passes on Ubuntu 22.04/24.04 with the original installer and portable bytes:
 four forced-GL controls fail cleanly, all four automatic cases select Vulkan
 with no backend/adapter overrides, and all ten normal/fallback previews render

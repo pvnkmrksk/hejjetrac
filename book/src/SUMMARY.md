@@ -4,6 +4,7 @@
 
 # Getting started
 
+- [v0.5.0 remote recording and portable defaults](release-v0.5.0.md)
 - [v0.4.2 direct rig controls and outputs](release-v0.4.2.md)
 - [v0.4.1 desktop MCP and rig controls](release-v0.4.1.md)
 - [v0.4.0 changes and captures](release-v0.4.0.md)
@@ -28,6 +29,7 @@
 - [Camera capabilities](camera-controls.md)
 - [Video and offline tracking](video.md)
 - [Recording and files](recording.md)
+- [Remote recording and synchronization](remote-recording.md)
 - [Several rigs](rigs.md)
 - [Saved workspaces and atlas startup](workspaces.md)
 - [Legacy MATREX VR output](matrex-vr.md)

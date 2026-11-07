@@ -18,9 +18,14 @@ FFmpeg was used only as an offline documentation encoder; the application
 continues to use Rust codecs.
 
 The current application icon is editable vector artwork in
-`assets/hejjetrak.svg`. `vfov-measurement.svg` is an original project diagram
+`assets/hejjetrac.svg`. `vfov-measurement.svg` is an original project diagram
 for a rectilinear lens. Both follow the project license.
 
 Unchanged upstream coordinate-frame and lab-axis images have their own
 [provenance, license and checksums](upstream/README.md). Older screenshots in
 this directory belong to the historical validation records that reference them.
+
+`rig-grid-v050-20261107.png` is a native Linux Vulkan capture from the v0.5.0
+sixteen-real-video regression. Each tile processes the attributed upstream
+sample; paused FPS snapshots are not performance measurements. It is also the
+current Ubuntu AppStream multi-rig screenshot.

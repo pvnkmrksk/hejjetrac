@@ -4,7 +4,7 @@
 
 `hejjetrac-cli` — headless spherical-motion tracking, calibration and local machine control.
 
-Release packages use `hejjetrac-cli` (with the earlier `hejjetrak-cli` name retained as an alias); Cargo's compatibility binary is named `hejjetrac-cli`. The desktop executable is `hejjetrac` (Cargo: `hejjetrac-desktop`).
+Release and Cargo builds use `hejjetrac-cli` and the desktop executable `hejjetrac`. New packages include no alternate command aliases.
 
 ## Synopsis
 

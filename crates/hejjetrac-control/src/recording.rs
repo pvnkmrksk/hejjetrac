@@ -883,6 +883,7 @@ pub(crate) struct Recording {
     quality: std::fs::File,
     media: MediaRecorders,
     path: Vec<[f64; 2]>,
+    sync: crate::SyncLog,
 }
 impl Recording {
     pub(crate) fn create(
@@ -900,7 +901,25 @@ impl Recording {
         fps: f64,
         tuning: MediaRecordingTuning,
     ) -> Result<Self> {
+        Self::create_tagged(
+            directory,
+            doc,
+            config,
+            fps,
+            tuning,
+            &crate::RecordingMetadata::default(),
+        )
+    }
+    pub(crate) fn create_tagged(
+        directory: &Path,
+        doc: &ConfigDocument,
+        config: &Config,
+        fps: f64,
+        tuning: MediaRecordingTuning,
+        metadata: &crate::RecordingMetadata,
+    ) -> Result<Self> {
         use std::io::Write;
+        metadata.validate()?;
         crate::create_directory(directory)?;
         let dat = crate::create(&directory.join("tracking.dat"))?;
         let all = crate::create(&directory.join("all-frames.dat"))?;
@@ -913,6 +932,7 @@ impl Recording {
         let mut file = crate::create(&directory.join("config.txt"))?;
         file.write_all(doc.text().as_bytes()).map_err(display)?;
         let media = MediaRecorders::create_with_tuning(directory, doc, config, fps, tuning)?;
+        let sync = crate::SyncLog::create(directory, doc, metadata)?;
         Ok(Self {
             options: RecordOptions::from_document(doc),
             dat,
@@ -920,6 +940,7 @@ impl Recording {
             quality,
             media,
             path: vec![],
+            sync,
         })
     }
     pub(crate) fn options(&self) -> RecordOptions {
@@ -935,12 +956,14 @@ impl Recording {
         rgb: &[u8],
         views: &DebugViews,
         legacy: bool,
+        timing: crate::FrameTiming,
     ) -> Result<()> {
         use std::io::Write;
         if row.accepted || !legacy {
             hejjetrac_io::write_dat(&mut self.dat, row).map_err(display)?;
         }
         hejjetrac_io::write_dat(&mut self.all, row).map_err(display)?;
+        self.sync.write(0, row, timing)?;
         writeln!(
             self.quality,
             "{},{:.9},{},{},{:.12},{}",
@@ -953,8 +976,8 @@ impl Recording {
         self.path.push(row.position);
         self.media.write_row(rgb, frame, views, &self.path, row)
     }
-    pub(crate) fn finish(self) -> Result<()> {
-        let mut first_error = None;
+    pub(crate) fn finish(mut self) -> Result<()> {
+        let mut first_error = self.sync.stop(0).err();
         for (name, result) in [
             ("accepted data", self.dat.sync_all()),
             ("all-frame data", self.all.sync_all()),

@@ -61,6 +61,10 @@ struct Args {
     /// Accept agent JSONL commands on stdin and return structured responses on stdout.
     #[arg(long)]
     control_stdio: bool,
+    /// Listen for authenticated desktop control on this IP:PORT (e.g. 0.0.0.0:17871 for LAN).
+    /// Without this option, control accepts loopback connections only.
+    #[arg(long, value_name = "IP:PORT")]
+    control_bind: Option<std::net::SocketAddr>,
     /// Use Mesa software graphics on Linux when a native GPU driver cannot start.
     #[arg(long)]
     safe_mode: bool,
@@ -87,7 +91,7 @@ fn resource(relative: &str) -> Result<PathBuf, String> {
         .ok_or_else(|| format!("Cannot find bundled {relative}; provide --config PATH"))
 }
 fn default_config() -> Result<PathBuf, String> {
-    resource("VR1.txt").or_else(|_| resource("examples/upstream-config.txt"))
+    resource("examples/defaults/VR1.txt").or_else(|_| resource("VR1.txt"))
 }
 fn fallback_document(source: &ConfigDocument) -> Result<ConfigDocument, String> {
     let path = resource("examples/upstream-config.txt")?;
@@ -178,14 +182,14 @@ impl Desktop {
         self.sessions
             .iter()
             .filter(|session| {
-                !session.closed
-                    && Some(session.id) != except
-                    && session.worker.is_some()
-                    && !session.snapshot.ended
+                !session.closed && Some(session.id) != except && session.worker.is_some()
             })
             .filter_map(|session| {
-                session
-                    .snapshot
+                let snapshot = session.worker.as_ref()?.latest();
+                if snapshot.ended {
+                    return None;
+                }
+                snapshot
                     .actual_camera_id
                     .or_else(|| {
                         session.running_source.parse::<u32>().ok().and_then(|id| {
@@ -428,7 +432,7 @@ impl Desktop {
                 app.spawn_saved(path);
             }
         }
-        match mcp::Server::start(cc.egui_ctx.clone()) {
+        match mcp::Server::start(cc.egui_ctx.clone(), app.args.control_bind) {
             Ok(server) => app.mcp = Some(server),
             Err(e) => {
                 eprintln!("{e}");
@@ -1277,7 +1281,7 @@ impl eframe::App for Desktop {
     }
 }
 fn app_icon() -> Result<egui::IconData, String> {
-    let icon = image::load_from_memory(include_bytes!("../../../assets/hejjetrak.png"))
+    let icon = image::load_from_memory(include_bytes!("../../../assets/hejjetrac.png"))
         .map_err(|e| format!("Bundled application icon: {e}"))?
         .into_rgba8();
     Ok(egui::IconData {
@@ -1450,6 +1454,7 @@ fn run() -> Result<(), String> {
     bootstrap_linux_display()?;
     let options = configure_graphics(eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
+            .with_app_id("hejjetrac")
             .with_title("HejjéTrac · VR1")
             .with_icon(app_icon()?)
             .with_inner_size([520.0, 480.0])

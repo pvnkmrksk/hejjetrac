@@ -188,7 +188,8 @@ queued actions before treating them as complete.
 ## Provisioned serials and live calibration
 
 After provisioning, the four cameras inspected on 2026-11-03 expose distinct
-`M01`–`M04` serials. The saved VR1–VR4 files use those exact serial bindings.
+`M01`–`M04` serials. The historical repository-root VR1–VR4 lab fixtures used those exact serial bindings;
+release defaults from `examples/defaults` are unbound.
 Their current capture-node order is M04, M02, M03, M01; that order is not a rig
 assignment and may change again. Unlinking keeps the camera currently open,
 updating its numeric selection if USB enumeration changed. Relinking that same

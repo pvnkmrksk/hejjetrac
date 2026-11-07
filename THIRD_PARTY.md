@@ -42,7 +42,7 @@ required at runtime. Source: https://github.com/lucide-icons/lucide.
 `oxideav-h264` 0.1.9 is retained under `vendor/oxideav-h264` with its MIT
 license and original tests. A documented local performance patch is selected
 by Cargo's registry patch table; provenance and changed files are listed in
-`vendor/oxideav-h264/HEJJETRAK_PATCHES.md`. Packaging collects local-path notices
+`vendor/oxideav-h264/HEJJETRAC_PATCHES.md`. Packaging collects local-path notices
 alongside registry-vendored licenses. CI runs the decoder's library suite
 separately because this third-party package is excluded from our workspace.
 
@@ -50,5 +50,5 @@ separately because this third-party package is excluded from our workspace.
 `vendor/nokhwa-bindings-linux` with the original copyright and Apache-2.0
 license. Its small documented patch recognizes V4L2 `GREY` mono cameras and
 bounds a stalled MMAP frame read. Provenance and the Linux regression command
-are in `vendor/nokhwa-bindings-linux/HEJJETRAK_PATCHES.md`; package notices include
+are in `vendor/nokhwa-bindings-linux/HEJJETRAC_PATCHES.md`; package notices include
 this local dependency as well. No native JPEG/media library is enabled.

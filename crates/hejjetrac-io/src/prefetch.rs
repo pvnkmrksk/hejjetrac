@@ -33,7 +33,7 @@ impl PrefetchedVideoSource {
         let last_rgb = source.take_rgb();
         let (sender, receiver) = sync_channel(1);
         let worker = thread::Builder::new()
-            .name("hejjetrak-decode".into())
+            .name("hejjetrac-decode".into())
             .spawn(move || {
                 loop {
                     let next = source.next_frame().map(|frame| {

@@ -4,7 +4,7 @@
 
 **HejjéTrac** (`hejjetrac`) brings FicTrac spherical-motion tracking to a native Rust application. It measures the rotation of a patterned ball and reconstructs a fictive animal path. A compact native app, command-line program and local agent interfaces share one Rust engine. Created by [Pavan Kumar Kaushik](https://github.com/pvnkmrksk).
 
-[Download](../?download=1) · [Website](../) · [GitHub](https://github.com/pvnkmrksk/hejjetrak) · [First session](quick-start.md)
+[Download](../?download=1) · [Website](../) · [GitHub](https://github.com/pvnkmrksk/hejjetrac) · [First session](quick-start.md)
 
 ![HejjéTrac processing the supplied FicTrac sample](images/tracking-demo.gif)
 

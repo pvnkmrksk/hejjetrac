@@ -79,5 +79,5 @@ transforms. They do not cover Windows/Linux legacy players, physical camera
 accuracy or unlimited scene reloads.
 
 [MATREX VR setup and complete evidence](matrex-vr.md) ·
-[Online manual](https://pvnkmrksk.github.io/hejjetrak/manual/matrex-vr.html) ·
+[Online manual](https://pvnkmrksk.github.io/hejjetrac/manual/matrex-vr.html) ·
 [Output reference](output.md) · [Validation](validation.md)

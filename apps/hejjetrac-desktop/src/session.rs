@@ -756,6 +756,11 @@ impl Session {
         Ok(())
     }
     pub fn ensure_source_available(&self, doc: &ConfigDocument) -> Result<(), String> {
+        let actual_camera = self
+            .worker
+            .as_ref()
+            .map(|w| w.latest().actual_camera_id)
+            .unwrap_or(self.snapshot.actual_camera_id);
         let id = doc
             .get("src_fn")
             .and_then(|source| source.parse::<u32>().ok());
@@ -776,9 +781,24 @@ impl Session {
                 "Camera {id} is already used by {owner}. Close that rig or choose a free camera."
             ));
         }
+        if let Some(id) = id
+            && self.worker.is_some()
+            && actual_camera.or_else(|| self.running_source.parse::<u32>().ok()) != Some(id)
+            && !hejjetrac_camera::list_cameras()
+                .map_err(|e| e.to_string())?
+                .iter()
+                .any(|camera| camera.id == id)
+        {
+            return Err(format!(
+                "Camera {id} is unavailable. Refresh the camera list and choose a connected device; the active source was preserved."
+            ));
+        }
         Ok(())
     }
     pub fn select_camera(&mut self, id: u32) -> Result<(), String> {
+        if let Some(worker) = &self.worker {
+            self.snapshot = worker.latest();
+        }
         let mut doc = self.document()?;
         if let Some(binding) = doc.camera_binding().map_err(|e| e.to_string())? {
             let selected = self.cameras.iter().find(|c| c.id == id);
@@ -798,7 +818,14 @@ impl Session {
         doc.set("src_fn", &id.to_string())
             .map_err(|e| e.to_string())?;
         self.ensure_source_available(&doc)?;
-        if self.running_source == id.to_string() && self.worker.is_some() && !self.snapshot.ended {
+        if self
+            .snapshot
+            .actual_camera_id
+            .or_else(|| self.running_source.parse::<u32>().ok())
+            == Some(id)
+            && self.worker.is_some()
+            && !self.snapshot.ended
+        {
             if doc.text() != self.history.text {
                 // Selecting the running camera can also repair a rejected
                 // source draft without needlessly closing that capture stream.
@@ -813,6 +840,9 @@ impl Session {
         self.start()
     }
     pub fn bind_camera(&mut self, hardware_id: Option<&str>) -> Result<(), String> {
+        if let Some(worker) = &self.worker {
+            self.snapshot = worker.latest();
+        }
         let mut doc = self.document()?;
         if let Some(value) = hardware_id {
             hejjetrac_camera::validate_hardware_id(value).map_err(|e| e.to_string())?;
@@ -830,12 +860,28 @@ impl Session {
         doc.set("rust_camera_id", hardware_id.unwrap_or(""))
             .map_err(|e| e.to_string())?;
         self.ensure_source_available(&doc)?;
+        if let Some(image) = &self.snapshot.image {
+            hejjetrac_io::load_config_text(doc.text(), image.width, image.height)
+                .map_err(|e| e.to_string())?;
+        }
+        let history = self.history.clone();
+        let changed = self.changed;
         self.edit(doc.text().to_owned());
+        if let Err(error) = self.apply() {
+            self.history = history;
+            self.changed = changed;
+            return Err(error);
+        }
         self.camera_binding_draft = None;
-        self.apply()
+        Ok(())
     }
     pub fn apply(&mut self) -> Result<(), String> {
-        let doc = self.document()?;
+        if let Some(worker) = &self.worker {
+            self.snapshot = worker.latest();
+        }
+        let mut doc = self.document()?;
+        self.keep_unlinked_camera(&mut doc)?;
+        self.ensure_source_available(&doc)?;
         if let Some(image) = &self.snapshot.image {
             hejjetrac_io::load_config_text(doc.text(), image.width, image.height)
                 .map_err(|e| format!("Configuration was not applied: {e}"))?;
@@ -866,14 +912,37 @@ impl Session {
         }
         let next_source = source.to_owned();
         let next_binding = binding.map(str::to_owned);
-        self.revision += 1;
+        let revision = self
+            .revision
+            .checked_add(1)
+            .ok_or("Configuration revision counter overflow")?;
         if let Some(worker) = &self.worker {
-            worker.send(Command::Configure(doc, self.revision))?;
+            worker.send(Command::Configure(doc.clone(), revision))?;
+        }
+        self.revision = revision;
+        if doc.text() != self.history.text {
+            self.edit(doc.text().to_owned());
         }
         self.running_source = next_source;
         self.running_camera_binding = next_binding;
         self.source_edit = self.running_source.clone();
         self.changed = None;
+        Ok(())
+    }
+    pub(crate) fn keep_unlinked_camera(&self, doc: &mut ConfigDocument) -> Result<(), String> {
+        let actual = self
+            .worker
+            .as_ref()
+            .map(|w| w.latest().actual_camera_id)
+            .unwrap_or(self.snapshot.actual_camera_id);
+        if self.running_camera_binding.is_some()
+            && doc.camera_binding().map_err(|e| e.to_string())?.is_none()
+            && doc.get("src_fn") == Some(self.running_source.as_str())
+            && let Some(id) = actual
+        {
+            doc.set("src_fn", &id.to_string())
+                .map_err(|e| e.to_string())?;
+        }
         Ok(())
     }
     pub fn load(&mut self, path: PathBuf) -> Result<(), String> {
@@ -1074,6 +1143,39 @@ pub(crate) struct CalibrationCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unlink_queue_failure_preserves_config_revision_and_camera_draft() -> Result<(), String> {
+        let binding = "usb:0c45:6366:M01:video:0";
+        let text =
+            format!("src_fn:0\nrust_camera_id:{binding}\nvfov:45\nroi_c:{{0,0,1}}\nroi_r:0.2\n");
+        let mut s = Session::new(
+            1,
+            ConfigDocument::parse(text.clone()).map_err(|e| e.to_string())?,
+            None,
+        );
+        s.running_source = "0".into();
+        s.running_camera_binding = Some(binding.into());
+        s.camera_binding_draft = Some("retained draft".into());
+        s.worker = Some(Worker::disconnected_for_test(Snapshot {
+            actual_camera_id: Some(6),
+            ..Snapshot::default()
+        }));
+        assert!(s.bind_camera(None).is_err());
+        assert_eq!(s.history.text, text);
+        assert_eq!(s.revision, 0);
+        assert_eq!(s.camera_binding_draft.as_deref(), Some("retained draft"));
+        assert_eq!(s.running_source, "0");
+        let mut unlinked = s.document()?;
+        unlinked
+            .set("rust_camera_id", "")
+            .map_err(|e| e.to_string())?;
+        s.occupied_cameras
+            .insert(0, "different rig using the old ordinal".into());
+        s.keep_unlinked_camera(&mut unlinked)?;
+        assert_eq!(unlinked.get("src_fn"), Some("6"));
+        s.ensure_source_available(&unlinked)?;
+        Ok(())
+    }
     #[test]
     fn unlink_keeps_the_open_camera_after_device_numbers_change() -> Result<(), String> {
         let doc = ConfigDocument::parse("src_fn:0\nrust_camera_id:usb:0c45:6366:M01:video:0\nsock_port:1111\nzmq_port:9871\nroi_r:0.11\n".into()).map_err(|e| e.to_string())?;

@@ -1,5 +1,75 @@
 # HejjéTrac validation evidence
 
+## Remote recording, portable defaults and binding stress — 2026-11-07
+
+The native Linux release passes **20 start/stop cycles on four independent
+real-video rigs**, using the host's non-loopback IPv4 interface. All **80 saved
+movies** decode through the Rust CLI with exactly three images each. Their 240
+numeric, quality and frame-clock rows align, and every take retains its trial
+metadata. Incorrect bearer tokens, browser origins and mismatched Host headers
+are rejected. Duplicate Start and repeated Stop preserve the active take and
+completion state. Eighty missing-binding edits preserve the source position and
+configuration. This is an actual LAN-interface test on one computer, not a
+physical two-computer firewall, network-latency or clock-offset measurement.
+Reproduce with `python3 scripts/test_remote_recording.py --output /new/check`.
+
+The separate native sixteen-rig regression passes real grid input, independent
+and shared resets, settings toggles, single-click expansion/double-click return,
+sixteen independently decoded recordings, calibration completion, saved window
+size, 4×4 restoration and relocated portable workspaces. Actual grid and source
+settings pixels were inspected. A fresh isolated graphical launch opens one
+unbound source and falls back to the sample with no camera connected. Starting
+the saved array exposes four unbound camera failures without substituting sample
+video. Existing per-user configurations are preserved.
+
+The binding resolver passes **512 reordered sixteen-camera inventories**,
+including device-number reassignment, missing identities, duplicated serials
+and distinct explicit USB sockets. Fresh-default tests cover gapped native IDs
+and preservation of later user edits. Queue-failure tests preserve the config,
+revision and camera draft; unlink adopts the opened camera before checking the
+old ordinal's new owner. These deterministic inventories are not physical USB
+hotplug tests. No `/dev/video*` devices were connected for this release's checks.
+
+An existing configuration regression read the user's edited root `VR1.txt` and
+failed its historical 47° expectations. It now reads byte-identical frozen lab
+files from commit `ab6b564`; the user's calibration is untouched. The original
+rim tolerances and source/port constants are unchanged. Release defaults are
+separate unbound files under `examples/defaults`, tested independently.
+
+Ubuntu desktop/AppStream names, summaries and descriptions are ASCII
+**Hejjetrac**. The package helper checks canonical executable/resource names,
+unbound defaults, detailed metadata, icon/screenshot declarations, archive
+ownership/links, dependency notices and the retained glibc ABI guard. AppStream
+validation and website download selection pass. Historical benchmark evidence
+and original archive bytes/source tags retain their exact provenance; published
+release labels and current links use the corrected spelling.
+
+The final source passes formatting, strict locked workspace/all-target Clippy,
+**367 Rust tests**, **50 Python helper tests**, download-selector tests and all
+**3,068** generated manual/site references. The serial release demo processes
+120 known-motion images at component RMSE **0.00030405 rad** against its unchanged
+0.003 gate. The complete 300-image sample passes the unchanged 0.075 sphere-rad
+path, 0.025-rad heading and 0.020-rad/component gates: path RMS **0.044807**,
+heading RMS **0.013185**, components **0.008761 / 0.008292 / 0.014211 rad**.
+All 420 demo/sample timing rows retain their exact decoded source indices.
+The sample takes **1.694645 s** end to end (**177.03 FPS**), including open/decode,
+tracking, numeric/quality/clock output and finalization; tracker-only throughput
+is **346.02 FPS**. These are one serial fixture run on the recorded Linux/Rust
+1.99.1 machine, with media/wire output disabled, not a comparative speed claim.
+Exact commands, CPU/build, input/binary hashes and timing boundaries are in the
+machine-readable report below.
+
+The numerical engine, error metrics, reference tolerances and decoder oracle
+constants are unchanged. These results do not establish physical-motion ground
+truth, shutter synchronization, arbitrary camera hotplug reliability, sustained
+sixteen-camera bandwidth, or native macOS/Windows camera/GUI execution.
+[Remote commands and timing semantics](remote-recording.md) ·
+[Release notes](release-v0.5.0.md) ·
+[Machine-readable release evidence](benchmarks/remote-recording-v050-20261107.json).
+
+![Native sixteen-rig view](images/rig-grid-v050-20261107.png)
+
+
 ## Individual rig controls and selectable simultaneous outputs — 2026-11-06
 
 Native sixteen-real-video checks pass single-click expansion, double-click return,
@@ -80,7 +150,7 @@ These are Linux UI/transport and recorded-output checks; native MCP execution on
 macOS/Windows, sixteen-camera capacity, physical calibration ground truth and
 new performance claims remain outside this evidence.
 [Hashes, exact scope and artifact counts](benchmarks/desktop-mcp-20261105.json) ·
-[Reproduction client](https://github.com/pvnkmrksk/hejjetrak/blob/main/scripts/test_desktop_mcp.py) ·
+[Reproduction client](https://github.com/pvnkmrksk/hejjetrac/blob/main/scripts/test_desktop_mcp.py) ·
 [Connection and tool contracts](agent-control.md#automatic-desktop-mcp).
 
 ## Recorded-clock tracking and shared-surface rig grid — 2026-11-05
@@ -605,14 +675,14 @@ retains complete timing boundaries and remaining trajectory limits.
 
 ## v0.3.2 published release — 2026-10-27
 
-Published [v0.3.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.2)
+Published [v0.3.2](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.3.2)
 contains five platform downloads from exact application source
 `93f973b1b1dc6c582f52f076dede0e272ebc9784`. Implicit X11/XWayland startup
 prefers surface-compatible OpenGL and selects Vulkan when OpenGL is unavailable.
 Explicit backend and adapter choices remain respected. Tracking, camera controls,
 calibration and recording behavior are unchanged.
 
-All four [native package jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40530185839)
+All four [native package jobs](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40530185839)
 pass formatting, strict locked all-target Clippy, release builds and known-motion
 demos: **277 workspace tests per Mac, 282 on Linux and 276 on Windows**, plus
 **1,353 decoder tests per platform** and three Linux camera-adapter tests. There
@@ -623,7 +693,7 @@ hashes**, including original bundled font terms.
 The first Ubuntu runtime run stopped after successful preview rendering because
 the new harness read adapter diagnostics only from stderr; Linux writes them to
 stdout. QA-only commit `60b0aedd0d679177ee722f4b1c383646bd422933` corrects stream
-parsing with six regressions. The [corrected runtime run](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40535209814)
+parsing with six regressions. The [corrected runtime run](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40535209814)
 passes on **Ubuntu 22.04.5 and 24.04.5**, using the original packages without
 rebuilding or normalizing them. The release tag remains at the tested application
 source; main also contains the QA correction.
@@ -661,7 +731,7 @@ commands, results and execution scope.
 
 ## v0.3.1 published release — 2026-10-27
 
-Published [v0.3.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.1)
+Published [v0.3.1](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.3.1)
 contains all five platform downloads, from application source
 `99d4f5711584dd211f8b8c16e52bbbd357119a2f`. The user's `cf567ba` improvements
 are preserved on main under Pavan Kumar Kaushik's author identity.
@@ -671,7 +741,7 @@ and **269 on Windows**, with zero failures/ignored tests. Each platform passes
 **1,353 decoder tests**, the fixed 120-image synthetic gate and package version/
 source checks; Linux additionally passes three camera-adapter tests. Windows
 static-CRT/dumpbin validation and both Mac strict ad hoc signatures pass.
-The [final portability run](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40517340009)
+The [final portability run](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40517340009)
 passes on Ubuntu 22.04/24.04, Windows and Mac ARM. Windows packaging explicitly
 uses Python UTF-8 mode; Python is a build/test tool, not an application runtime.
 
@@ -688,7 +758,7 @@ Actual `dpkg` installation exposed unsupported PAX long-path headers in the
 draft installer. The published Debian container uses GNU headers; its **1,899
 regular files, 580 directories and six symlinks**, including both binaries,
 remain identical in bytes, permissions, ownership and targets. The independent
-[container repair and runtime run](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40522916906)
+[container repair and runtime run](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40522916906)
 records application source separately from packaging tool revision `870beea`.
 The final Debian SHA-256 is
 `3dd22253a8bd46e2f227e2954cb890b8ce882f8e00911a7ff2fc0bf261a44d14`.
@@ -946,11 +1016,11 @@ Historical platform and release results below retain their original scope;
 they are not evidence that this local Linux change ran natively on other OSes.
 ## v0.2.3 published release — 2026-10-26
 
-**[v0.2.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.3)** is
+**[v0.2.3](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.2.3)** is
 published as latest at **19:27:46 UTC**, from immutable source
 `35859b3faf7ec7a394b6608730e20a78d6e5d9b8`, with all five platform assets.
-All six [release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40381876617)
-and all four [portability jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40381869205)
+All six [release jobs](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40381876617)
+and all four [portability jobs](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40381869205)
 pass. Linux and both Macs pass **225 workspace tests**; Windows passes **222**
 applicable tests. Every platform passes **1,353 decoder tests** and the 120-frame
 demo; Linux also passes both camera-vendor regressions. Formatting, strict
@@ -1025,12 +1095,12 @@ retain the new fixture checks.
 
 ## v0.2.2 published release — 2026-10-26
 
-**[v0.2.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.2)** was
+**[v0.2.2](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.2.2)** was
 published at **17:22:53 UTC** from immutable source commit
 `d4aad90e233b4ba4b695d1a48a285dbff543d40b`. All five platform assets are
-present. The [release workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361383864)
+present. The [release workflow](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40361383864)
 passes all four native package jobs and both Ubuntu runtime jobs. The separate
-[portability workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361378082)
+[portability workflow](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40361378082)
 passes on Ubuntu 22.04, Ubuntu 24.04, Windows and Mac ARM. The official Ubuntu
 22.04 build passes **217 workspace tests**, both Linux camera regressions
 (`GREY` format and checked captured-buffer length), and **1,353 decoder tests**,
@@ -1146,7 +1216,7 @@ Ubuntu 22.04 userspace and checks the actual ELF symbol requirements of both
 executables against **glibc 2.35** before packaging. The exact preflight snapshot
 `86b71d7d3f53e8a468c4728513479d07a2d3543a` includes the recovery correction and
 Linux camera-format/JPEG changes, while retaining the previous Mac capture code.
-Its [package workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330930037)
+Its [package workflow](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40330930037)
 passes **214 workspace tests**, the canonical V4L `GREY` regression, **1,353 decoder
 tests**, the known-motion demo and package verification. Both packaged binaries
 require at most GLIBC_2.35; the installer declares `libc6 (>= 2.35)`.
@@ -1156,7 +1226,7 @@ The same built package is installed and run under **Ubuntu 22.04.5** and
 sample frames with zero rejections and pass the unchanged numerical comparison.
 Xvfb/Mesa native windows visibly show the patterned ball, trace and path;
 unavailable-camera startup falls back to the supplied sample. A separate
-[portability workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330929818)
+[portability workflow](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40330929818)
 passes on Ubuntu 22.04/24.04, Windows and Mac ARM. [Source hashes, exact ABI,
 package/runtime reports and screenshot evidence](benchmarks/ubuntu22-compatibility-20261026.json)
 record the scope. These are actual userspace/container executions with software
@@ -1273,19 +1343,19 @@ greeting, allowing Windows to report a normal connection reset before invalid
 signature validation. The publisher remained healthy. The v0.2.1 test reads the
 bounded greeting and keeps that peer alive through the original error-counter
 assertion; no production tracking/transport code, assertion or numerical gate
-was changed. [Candidate workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522495).
+was changed. [Candidate workflow](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40302522495).
 
 ## v0.1.4 published release — 2026-10-25
 
-**[v0.1.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.4)** is
+**[v0.1.4](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.1.4)** is
 published as latest at **14:06:27 UTC**, from immutable source commit
 `eed74b17dd29ed551140eab0d90c28c570308fcf`. All five expected platform assets
-are present. The [four native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739)
+are present. The [four native release jobs](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40198640739)
 pass formatting, strict Clippy, workspace tests, **1,353 decoder tests each**, the
 120-frame known-motion demo and packaging. Linux and both Macs pass **188
 workspace tests** each; Windows passes **185** applicable tests, with three
 Unix-only cases excluded. All use Rust 1.99.1. The separate
-[portability workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640789)
+[portability workflow](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40198640789)
 also passes on all three operating systems.
 
 The downloaded official Apple Silicon ZIP SHA-256 is
@@ -1299,7 +1369,7 @@ were performed in the local native v0.1.4 build described below; repeating them
 in the packaged preview hit a computer-use window-routing error. Native
 Windows/Linux visual and physical-camera checks remain unperformed.
 
-The release-source [website and manual](https://pvnkmrksk.github.io/hejjetrak/) pass
+The release-source [website and manual](https://pvnkmrksk.github.io/hejjetrac/) pass
 **1,558 local references across 36 HTML pages** and the download-controller
 regressions. The subsequent documentation/evidence build passes **1,566 references**
 across the same 36 pages. On the public GitHub README, one click on Download now opens the
@@ -1421,11 +1491,11 @@ On the same M2 Pro/Mac/toolchain below, formatting, strict locked all-target
 Clippy and the complete locked workspace suite pass **173 tests**, zero failures
 across 26 suites. The release workspace binaries/examples build successfully.
 Linux package-format tests, download-selection tests and the static-site link
-check also pass locally. The [v0.1.3 release workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262)
+check also pass locally. The [v0.1.3 release workflow](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40180700262)
 passes all four native jobs: Mac Apple Silicon, Mac Intel, Windows x64 and Linux
 x64. Mac and Linux pass 173 workspace tests each; Windows passes 170 with
 platform-specific exclusions. All pass the separate 1,353-test Rust decoder
-suite. The [published release](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)
+suite. The [published release](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.1.3)
 contains all five platform assets, including the Linux Debian/Ubuntu installer.
 Its metadata, relative launcher links, extracted CLI, desktop entry and package
 installation simulation pass on Ubuntu 24.04; glibc 2.39 or newer is required.
@@ -1488,7 +1558,7 @@ with formatting and strict all-target Clippy. Coverage includes actual video/age
 operations, gapped Linux device-ID mapping, explicit resolution-reference edits,
 interruptible source waits, immediate manual steps and running **120 → 30 → 120 FPS**
 changes that retain timestamps and every recorded row. The published
-[v0.1.2 release workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40174402745)
+[v0.1.2 release workflow](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40174402745)
 passed all four native platform jobs and uploaded the four archives. The official
 Mac archive passed ad hoc signature verification, the complete sample comparison
 with unchanged RMS, and a native visual smoke test. These are v0.1.2 results;
@@ -1636,7 +1706,7 @@ Local evidence remains under ignored `runs/*foundation-final/` and
 `runs/performance-foundation/`. Published v0.1.1 platform execution below is
 historical; this refinement's cross-platform CI must be assessed separately.
 
-Current release evidence is in **hejjetrak v0.1.1 refinement** below: 130 tests, full-video reference checks, native camera/recording checks, sixteen actual video windows and an extracted Mac bundle. The older sections retain the internal v0.3 checkpoint as history; their test counts and platform/release statements describe that checkpoint only.
+Current release evidence is in **hejjetrac v0.1.1 refinement** below: 130 tests, full-video reference checks, native camera/recording checks, sixteen actual video windows and an extracted Mac bundle. The older sections retain the internal v0.3 checkpoint as history; their test counts and platform/release statements describe that checkpoint only.
 
 ## Internal v0.3 checkpoint — 2026-10-24
 
@@ -1759,7 +1829,7 @@ Artifacts: `runs/benchmark-camera-v03/` contains full data, quality, map, summar
 
 The implementation is not scientifically or byte-for-byte identical to FicTrac. Optimizers differ; the renderer shares geometry with the tracker; the upstream reference is not physical ground truth. All five original recorded-video codec choices are implemented. H.264 recording requires even display dimensions; unfamiliar media profiles and formats remain outside the tested coverage. Built-in Mac camera acquisition and recording are verified; physical sphere accuracy, iPhone/industrial cameras, physical serial devices, native Windows/Linux execution, broader media and experimental ground-truth validation remain unverified. See [parity.md](parity.md). No release was published.
 
-## hejjetrak v0.1.1 refinement
+## hejjetrac v0.1.1 refinement
 
 On 2026-10-25 the final local required check sequence passed: `cargo fmt --all -- --check`, strict workspace/all-target Clippy, and **130 Rust tests**. These include real egui pointer events for tool isolation and nearest-point deletion, exact square-corner slot replacement, uniform scaling of landscape/portrait/cropped input, native-worker busy-port rollback retaining its source/tracker, real codec recording selections, native view atomicity and camera numeric-value schemas. No scientific tolerances or decoder oracle constants were relaxed.
 
@@ -1795,9 +1865,9 @@ Ordinary launch of that extracted bundle also opened camera 0 and delivered 195 
 
 ### Native release builds and Windows runtime audit
 
-[Release workflow 40139627271](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40139627271) passed on GitHub-hosted Linux x64, Windows x64, Mac Apple Silicon and Mac Intel: formatting, strict Clippy, workspace tests, release build, known-motion CLI demo, license collection, packaging and upload. All four archives are attached to [v0.1.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.1). These are actual native test/demo executions, not cross-target checks. They do not establish Windows/Linux GUI visual or camera-hardware behavior.
+[Release workflow 40139627271](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40139627271) passed on GitHub-hosted Linux x64, Windows x64, Mac Apple Silicon and Mac Intel: formatting, strict Clippy, workspace tests, release build, known-motion CLI demo, license collection, packaging and upload. All four archives are attached to [v0.1.1](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.1.1). These are actual native test/demo executions, not cross-target checks. They do not establish Windows/Linux GUI visual or camera-hardware behavior.
 
-An import-table audit found `VCRUNTIME140.dll` in both original Windows executables, despite the runner having that runtime installed. The Windows archive was therefore rebuilt from the **unchanged v0.1.1 source tag**, using `RUSTFLAGS=-C target-feature=+crt-static`; [workflow 40140958508](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40140958508) repeated formatting, strict Clippy, full tests, release build and demo before replacing only that archive. LLVM's PE import inspection of the downloaded replacement confirms that neither executable imports VCRUNTIME/MSVCP/MSVCR/CONCRT redistributable DLLs. Native system DLLs remain expected. Replacement ZIP SHA256: `dbb16f0771047d777b37b34f13a9038b6902bca189747d64b0e6d2e3bde7bdea`. Evidence: `runs/windows-portability-v0.1.1/`. Main now defaults Windows x64 source builds to static CRT, and the release workflow includes an import guard for future archives. No immutable release tag was moved.
+An import-table audit found `VCRUNTIME140.dll` in both original Windows executables, despite the runner having that runtime installed. The Windows archive was therefore rebuilt from the **unchanged v0.1.1 source tag**, using `RUSTFLAGS=-C target-feature=+crt-static`; [workflow 40140958508](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40140958508) repeated formatting, strict Clippy, full tests, release build and demo before replacing only that archive. LLVM's PE import inspection of the downloaded replacement confirms that neither executable imports VCRUNTIME/MSVCP/MSVCR/CONCRT redistributable DLLs. Native system DLLs remain expected. Replacement ZIP SHA256: `dbb16f0771047d777b37b34f13a9038b6902bca189747d64b0e6d2e3bde7bdea`. Evidence: `runs/windows-portability-v0.1.1/`. Main now defaults Windows x64 source builds to static CRT, and the release workflow includes an import guard for future archives. No immutable release tag was moved.
 
 
 ### Ubuntu four-rig bridge validation, 2026-10-27

@@ -19,11 +19,22 @@ pub struct Startup {
 }
 
 pub fn default_document(template: &Path) -> Result<Startup, String> {
-    default_at(template, user_config_path())
+    let cameras = hejjetrac_camera::list_cameras().unwrap_or_default();
+    default_with_cameras(template, user_config_path(), &cameras)
 }
 
+#[cfg(test)]
 fn default_at(template: &Path, destination: Result<PathBuf, String>) -> Result<Startup, String> {
-    match destination.and_then(|destination| initialize(template, &destination)) {
+    default_with_cameras(template, destination, &[])
+}
+fn default_with_cameras(
+    template: &Path,
+    destination: Result<PathBuf, String>,
+    cameras: &[hejjetrac_camera::CameraInfo],
+) -> Result<Startup, String> {
+    match destination.and_then(|destination| {
+        initialize_selected(template, &destination, cameras.first().map(|c| c.id))
+    }) {
         Ok(mut startup) => {
             // Open-four discovers sibling rig files beside the saved default.
             // Seed each independently; existing calibrations are never replaced
@@ -32,9 +43,10 @@ fn default_at(template: &Path, destination: Result<PathBuf, String>) -> Result<S
                 let mut failures = Vec::new();
                 for rig in 2..=4 {
                     let name = format!("VR{rig}.txt");
-                    if let Err(error) = initialize(
+                    if let Err(error) = initialize_selected(
                         &template.with_file_name(&name),
                         &startup.path.with_file_name(&name),
+                        cameras.get(rig - 1).map(|c| c.id),
                     ) {
                         failures.push(format!("{name}: {error}"));
                     }
@@ -90,13 +102,34 @@ fn read_document(path: &Path) -> Result<ConfigDocument, String> {
     ConfigDocument::parse(text).map_err(|error| format!("{}: {error}", path.display()))
 }
 
+#[cfg(test)]
 fn initialize(template: &Path, destination: &Path) -> Result<Startup, String> {
+    initialize_selected(template, destination, None)
+}
+fn initialize_selected(
+    template: &Path,
+    destination: &Path,
+    camera_id: Option<u32>,
+) -> Result<Startup, String> {
     match File::open(destination) {
         Ok(_) => return existing(destination),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
         Err(error) => return Err(format!("Cannot open {}: {error}", destination.display())),
     }
     let mut document = read_document(template)?;
+    if document
+        .camera_binding()
+        .map_err(|e| e.to_string())?
+        .is_none()
+        && document
+            .get("src_fn")
+            .is_some_and(|s| s.parse::<u32>().is_ok())
+        && let Some(id) = camera_id
+    {
+        document
+            .set("src_fn", &id.to_string())
+            .map_err(|e| e.to_string())?;
+    }
     if let SourceSpec::Video(source) = document
         .source(Some(template))
         .map_err(|error| error.to_string())?
@@ -187,6 +220,39 @@ mod tests {
     use super::*;
 
     type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+    #[test]
+    fn fresh_unbound_defaults_use_real_gapped_indices_and_never_reassign_saved_rigs() -> TestResult
+    {
+        let directory = Directory::new()?;
+        let bundle =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/defaults/VR1.txt");
+        let destination = directory.0.join("user/VR1.txt");
+        let cameras: Vec<_> = [6, 0, 10, 4]
+            .into_iter()
+            .map(|id| hejjetrac_camera::CameraInfo {
+                id,
+                name: "same camera model".into(),
+                hardware_id: Some(format!("serial-{id}")),
+                port_id: None,
+            })
+            .collect();
+        let startup = default_with_cameras(&bundle, Ok(destination.clone()), &cameras)?;
+        assert!(startup.fresh);
+        for (slot, id) in [6, 0, 10, 4].into_iter().enumerate() {
+            let doc = read_document(&destination.with_file_name(format!("VR{}.txt", slot + 1)))?;
+            assert_eq!(doc.source(None)?, SourceSpec::Camera(id));
+            assert_eq!(doc.camera_binding()?, None);
+            assert_eq!(doc.get("zmq_output_mode"), Some("native_ft"));
+            assert_eq!(doc.number("src_fps", 0.0), -1.0);
+        }
+        let previous = fs::read_to_string(&destination)?;
+        let reversed: Vec<_> = cameras.into_iter().rev().collect();
+        let next = default_with_cameras(&bundle, Ok(destination.clone()), &reversed)?;
+        assert!(!next.fresh);
+        assert_eq!(fs::read_to_string(destination)?, previous);
+        Ok(())
+    }
 
     struct Directory(PathBuf);
     impl Directory {

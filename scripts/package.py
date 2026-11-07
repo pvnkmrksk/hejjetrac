@@ -26,16 +26,17 @@ LINUX_RUNTIME_DEPENDS = (
 LINUX_GLIBC_CEILING = (2, 35)
 DESKTOP_ENTRY = """[Desktop Entry]
 Type=Application
-Name=HejjéTrac
+Name=Hejjetrac
 GenericName=Spherical motion tracker
-Comment=HejjéTrac native spherical-motion tracking
+Comment=Track spherical treadmills, calibrate cameras and record experiments
 Exec=hejjetrac
 TryExec=hejjetrac
-Icon=hejjetrak
+Icon=hejjetrac
 Terminal=false
 Categories=Science;Education;
 Keywords=Hejjetrac;tracking;camera;laboratory;
 StartupNotify=false
+StartupWMClass=hejjetrac
 Actions=SafeMode;
 
 [Desktop Action SafeMode]
@@ -76,18 +77,26 @@ def install_binaries(root, destination, suffix, system, version):
         verify_binary_version(compiled, version)
         installed = destination / (target + suffix)
         shutil.copy2(compiled, installed)
-        legacy = destination / (target.replace('hejjetrac', 'hejjetrak') + suffix)
-        if system == 'Windows':
-            shutil.copy2(installed, legacy)
-        else:
-            legacy.symlink_to(installed.name)
         manifest.append({'name': installed.name,
                          'compiled_sha256': hashlib.sha256(compiled.read_bytes()).hexdigest()})
     return manifest
 
 
+def install_default_configs(root, resource):
+    """Release defaults never come from a developer's calibrated rig files."""
+    for rig in range(1, 5):
+        source = root / 'examples/defaults' / f'VR{rig}.txt'
+        text = source.read_text(encoding='utf-8')
+        fields = dict(line.split('#', 1)[0].split(':', 1) for line in text.splitlines()
+                      if ':' in line.split('#', 1)[0])
+        fields = {key.strip(): value.strip() for key, value in fields.items()}
+        if fields.get('rust_camera_id') or fields.get('src_fn') != str(rig - 1):
+            raise ValueError(f'{source}: release default must be unbound with a portable ordinal')
+        shutil.copy2(source, resource / source.name)
+
+
 def write_zip_tree(stage, archive):
-    # Preserve Unix command aliases instead of duplicating executable payloads.
+    # Preserve resource symlinks instead of duplicating their payloads.
     with zipfile.ZipFile(archive, 'x', compression=zipfile.ZIP_DEFLATED,
                          strict_timestamps=False) as output:
         for path in sorted(stage.rglob('*')):
@@ -104,13 +113,13 @@ def write_zip_tree(stage, archive):
 def linux_dependencies(stage):
     if platform.machine().lower() not in ('x86_64', 'amd64'):
         raise ValueError('Linux release packaging currently supports x86_64/amd64 only')
-    with tempfile.TemporaryDirectory(prefix='hejjetrak-shlibdeps-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='hejjetrac-shlibdeps-') as temporary:
         directory = Path(temporary)
         (directory / 'debian').mkdir()
         (directory / 'debian/control').write_text(
-            'Source: hejjetrak\nSection: science\nPriority: optional\n'
-            'Maintainer: hejjetrak maintainers <noreply@github.com>\n\n'
-            'Package: hejjetrak\nArchitecture: amd64\nDescription: Native spherical motion tracker\n')
+            'Source: hejjetrac\nSection: science\nPriority: optional\n'
+            'Maintainer: hejjetrac maintainers <noreply@github.com>\n\n'
+            'Package: hejjetrac\nArchitecture: amd64\nDescription: Native spherical motion tracker\n')
         result = subprocess.run(['dpkg-shlibdeps', '-O',
                                  '-e' + str((stage / 'hejjetrac').resolve()),
                                  '-e' + str((stage / 'hejjetrac-cli').resolve())],
@@ -205,51 +214,71 @@ def build_deb(stage, destination, version, dependencies, assets):
     partial = destination.with_name(destination.name + '.partial')
     if destination.exists() or partial.exists():
         raise FileExistsError(f'Refusing to overwrite package: {destination}')
-    with tempfile.TemporaryDirectory(prefix='hejjetrak-deb-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='hejjetrac-deb-') as temporary:
         temporary = Path(temporary)
         data = temporary / 'data'
-        payload = data / 'usr/lib/hejjetrak'
+        payload = data / 'usr/lib/hejjetrac'
         payload.parent.mkdir(parents=True)
         shutil.copytree(stage, payload, symlinks=True)
-        for name in ('hejjetrac', 'hejjetrac-cli', 'hejjetrak', 'hejjetrak-cli'):
+        for name in ('hejjetrac', 'hejjetrac-cli'):
             (payload / name).chmod(0o755)
             link = data / 'usr/bin' / name
             link.parent.mkdir(parents=True, exist_ok=True)
-            link.symlink_to('../lib/hejjetrak/' + name)
-        entry = data / 'usr/share/applications/hejjetrak.desktop'
+            link.symlink_to('../lib/hejjetrac/' + name)
+        entry = data / 'usr/share/applications/hejjetrac.desktop'
         entry.parent.mkdir(parents=True)
         entry.write_bytes(DESKTOP_ENTRY.encode('utf-8'))
         for relative, source in (
-            ('scalable/apps/hejjetrak.svg', 'hejjetrak.svg'),
-            ('1024x1024/apps/hejjetrak.png', 'hejjetrak.png'),
+            ('scalable/apps/hejjetrac.svg', 'hejjetrac.svg'),
+            ('1024x1024/apps/hejjetrac.png', 'hejjetrac.png'),
         ):
             icon = data / 'usr/share/icons/hicolor' / relative
             icon.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(assets / source, icon)
-        doc = data / 'usr/share/doc/hejjetrak'
+        metadata = data / 'usr/share/metainfo/io.github.pvnkmrksk.hejjetrac.metainfo.xml'
+        metadata.parent.mkdir(parents=True)
+        shutil.copy2(assets / 'io.github.pvnkmrksk.hejjetrac.metainfo.xml', metadata)
+        doc = data / 'usr/share/doc/hejjetrac'
         doc.mkdir(parents=True)
         shutil.copy2(stage / 'LICENSE', doc / 'copyright')
+        for filename in ['README.md', 'CITATION.cff', 'THIRD_PARTY.md']:
+            if (stage / filename).is_file():
+                shutil.copy2(stage / filename, doc / filename)
+        pictures = doc / 'screenshots'
+        pictures.mkdir()
+        for filename in ['preview.png', 'calibration.png', 'rig-grid-v050-20261107.png']:
+            source = assets.parent / 'docs/images' / filename
+            if source.is_file():
+                shutil.copy2(source, pictures / filename)
         control = temporary / 'control'
         control.mkdir()
         installed_size = sum(p.stat().st_size for p in data.rglob('*') if p.is_file() and not p.is_symlink())
         control_text = (
-            f'Package: hejjetrak\nVersion: {version}\nArchitecture: amd64\n'
+            f'Package: hejjetrac\nVersion: {version}\nArchitecture: amd64\n'
             'Section: science\nPriority: optional\n'
             'Maintainer: Pavan Kumar Kaushik <noreply@github.com>\n'
             f'Installed-Size: {(installed_size + 1023) // 1024}\nDepends: {dependencies}\n'
             'Recommends: xdg-desktop-portal, xdg-desktop-portal-gtk | xdg-desktop-portal-kde\n'
-            'Homepage: https://github.com/pvnkmrksk/hejjetrak\n'
-            'Description: HejjéTrac native spherical motion tracking\n'
-            ' Pure Rust numerical engine, native desktop and command-line/agent interfaces.\n'
-            ' Includes sample video, calibration examples and dependency notices.\n')
+            'Homepage: https://github.com/pvnkmrksk/hejjetrac\n'
+            'Description: Hejjetrac - spherical treadmill tracking and experiment recording\n'
+            ' Measure patterned-ball rotation with a native desktop application, guided\n'
+            ' camera calibration and independent multi-camera rig sessions. Record source\n'
+            ' and diagnostic video, all-frame numerical data and synchronization metadata.\n'
+            ' Supports UDP and ZeroMQ motion output and authenticated remote recording\n'
+            ' control for experiments using a separate virtual-reality computer.\n'
+            ' .\n'
+            ' Includes the hejjetrac desktop and hejjetrac-cli command-line tools, an\n'
+            ' illustrated user manual, sample video, unbound camera defaults and complete\n'
+            ' attribution and dependency notices. No compiler or Python runtime is needed.\n'
+            ' Camera calibration is required for your own hardware. Based on FicTrac.\n')
         # Debian metadata uses LF even when these build-tool tests run on Windows.
         (control / 'control').write_bytes(control_text.encode('utf-8'))
         (temporary / 'debian-binary').write_bytes(b'2.0\n')
         tar_gz_tree(control, temporary / 'control.tar.gz', epoch)
         # Windows chmod cannot express Unix executable bits. Preserve the
         # install contract explicitly when exercising Debian assembly there.
-        executables = {f'usr/lib/hejjetrak/{name}' for name in
-                       ('hejjetrac', 'hejjetrac-cli', 'hejjetrak', 'hejjetrak-cli')}
+        executables = {f'usr/lib/hejjetrac/{name}' for name in
+                       ('hejjetrac', 'hejjetrac-cli')}
         tar_gz_tree(data, temporary / 'data.tar.gz', epoch, executables)
         with partial.open('xb') as output:
             output.write(b'!<arch>\n')
@@ -286,9 +315,9 @@ def main():
         if any(info.get(key) != version for key in ('CFBundleVersion', 'CFBundleShortVersionString')):
             raise ValueError('Info.plist version does not match Cargo.toml; update both before packaging')
         info['CFBundleExecutable'] = 'hejjetrac'
-        if (root / 'assets/hejjetrak.icns').is_file():
-            info['CFBundleIconFile'] = 'hejjetrak.icns'
-            shutil.copy2(root / 'assets/hejjetrak.icns', resource / 'hejjetrak.icns')
+        if (root / 'assets/hejjetrac.icns').is_file():
+            info['CFBundleIconFile'] = 'hejjetrac.icns'
+            shutil.copy2(root / 'assets/hejjetrac.icns', resource / 'hejjetrac.icns')
         (app / 'Info.plist').write_bytes(plistlib.dumps(info))
     else:
         binary = resource = stage
@@ -301,9 +330,7 @@ def main():
         linux_depends = linux_dependencies(stage)
     for directory in ['examples', 'docs', 'book']:
         shutil.copytree(root / directory, resource / directory)
-    for pattern in ['VR*.txt']:
-        for config in root.glob(pattern):
-            shutil.copy2(config, resource / config.name)
+    install_default_configs(root, resource)
     for filename in ['README.md', 'LICENSE', 'ATTRIBUTION.md', 'THIRD_PARTY.md', 'CITATION.cff']:
         shutil.copy2(root / filename, resource / filename)
     licenses = resource / 'DependencyLicenses'
@@ -324,7 +351,7 @@ def main():
             continue
         names = []
         for path in package.rglob('*'):
-            if path.is_file() and (path.name.lower().startswith(('license', 'licence', 'copying', 'notice', 'copyright')) or path.name == 'HEJJETRAK_PATCHES.md'):
+            if path.is_file() and (path.name.lower().startswith(('license', 'licence', 'copying', 'notice', 'copyright')) or path.name == 'HEJJETRAC_PATCHES.md'):
                 relative = path.relative_to(package)
                 destination = licenses / package.name / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -335,7 +362,7 @@ def main():
     build = {
         'name': 'HejjéTrac', 'version': version, 'platform': label,
         'architecture': arch, 'source_commit': os.environ.get('PACKAGE_SOURCE_COMMIT'),
-        'source_url': 'https://github.com/pvnkmrksk/hejjetrak',
+        'source_url': 'https://github.com/pvnkmrksk/hejjetrac',
         'binary_hash_boundary': 'compiled binaries before application signing',
         'binaries': binaries,
     }

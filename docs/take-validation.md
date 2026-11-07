@@ -260,7 +260,7 @@ and [bound current evidence](benchmarks/takes-20261027.json) preserve the tradeo
 
 ```sh
 python3 scripts/benchmark_takes.py \
-  --take /home/pkaushi/Videos/hejjetrak/VR1/take-1793134575426458881 \
+  --take /home/pkaushi/Videos/hejjetrac/VR1/take-1793134575426458881 \
   --original-fictrac /home/pkaushi/src/fictrac/bin/fictrac \
   --annotations examples/benchmark/takes-20261027.json \
   --output runs/new-vr1-benchmark --require-pass

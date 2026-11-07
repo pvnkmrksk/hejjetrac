@@ -1,6 +1,6 @@
 # Your first session
 
-[Website](https://pvnkmrksk.github.io/hejjetrak/) · [GitHub](https://github.com/pvnkmrksk/hejjetrak) · [Full parameter table](upstream-parameters.md)
+[Website](https://pvnkmrksk.github.io/hejjetrac/) · [GitHub](https://github.com/pvnkmrksk/hejjetrac) · [Full parameter table](upstream-parameters.md)
 
 ## 1. Open the application
 
@@ -24,7 +24,7 @@ A plausible-looking path is not a calibration test. Incorrect field of view or l
 
 ![FicTrac camera, animal and world coordinate frames](images/upstream/coordinate-frames.png)
 
-*Original FicTrac illustration by R. J. D. Moore and contributors, CC BY-NC-SA 3.0. [Full coordinate guide](upstream-coordinates.md) · [Source and unchanged-image checksums](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/images/upstream/README.md).*
+*Original FicTrac illustration by R. J. D. Moore and contributors, CC BY-NC-SA 3.0. [Full coordinate guide](upstream-coordinates.md) · [Source and unchanged-image checksums](https://github.com/pvnkmrksk/hejjetrac/blob/main/docs/images/upstream/README.md).*
 
 Use the diagram when aligning the lab square and checking forward, sideways and turning motion. The [original parameter table](upstream-parameters.md) explains every FicTrac field; [current configuration](configuration.md) covers HejjéTrac additions. The [25-column reference](upstream-data.md) and [output chapter](output.md) explain the recorded values.
 

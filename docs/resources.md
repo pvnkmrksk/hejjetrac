@@ -175,8 +175,8 @@ no subprocess decoder; this fixture is not RGB capture or new physical ground
 truth.
 
 ```sh
-cargo run -p hejjetrac-io --example resource_fixture --release --locked -- examples/sample.mp4 12 /tmp/hejjetrak-resource-pingpong.y4m
-python3 scripts/resource_probe.py --binary target/release/hejjetrac --config examples/benchmark/config.txt --input /tmp/hejjetrak-resource-pingpong.y4m --mode video --sessions 16 --fps 120 --seconds 20 --warmup 3 --output /tmp/hejjetrak-resource-16
+cargo run -p hejjetrac-io --example resource_fixture --release --locked -- examples/sample.mp4 12 /tmp/hejjetrac-resource-pingpong.y4m
+python3 scripts/resource_probe.py --binary target/release/hejjetrac --config examples/benchmark/config.txt --input /tmp/hejjetrac-resource-pingpong.y4m --mode video --sessions 16 --fps 120 --seconds 20 --warmup 3 --output /tmp/hejjetrac-resource-16
 ```
 
 Use fresh output paths, finish all compilation first, then run measurement cases

@@ -7,9 +7,9 @@ src = "src"
 [output.html]
 default-theme = "light"
 preferred-dark-theme = "navy"
-git-repository-url = "https://github.com/pvnkmrksk/hejjetrak"
+git-repository-url = "https://github.com/pvnkmrksk/hejjetrac"
 additional-css = ["theme/manual.css"]
-site-url = "/hejjetrak/manual/"
+site-url = "/hejjetrac/manual/"
 
 [output.html.search]
 limit-results = 20

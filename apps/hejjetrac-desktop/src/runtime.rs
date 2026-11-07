@@ -1,5 +1,6 @@
 use hejjetrac_control::{
-    MediaRecorders, MediaRecordingStatus, MediaRecordingTuning, RecordingOverflow,
+    FrameTiming, MediaRecorders, MediaRecordingStatus, MediaRecordingTuning, RecordingMetadata,
+    RecordingOverflow, SyncLog,
 };
 use hejjetrac_core::{DebugViews, Diagnostics, GrayFrame, TrackRow, Tracker};
 use hejjetrac_io::{
@@ -28,11 +29,11 @@ pub fn recording_root() -> PathBuf {
             } else {
                 "Videos"
             })
-            .join("hejjetrak");
+            .join("hejjetrac");
     }
     std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
-        .join("hejjetrak-recordings")
+        .join("hejjetrac-recordings")
 }
 fn tracking_frame(frame: GrayFrame, rgb: &[u8], doc: &ConfigDocument) -> Result<GrayFrame> {
     if doc.get("rust_engine") == Some("pairwise") {
@@ -59,6 +60,8 @@ pub struct Snapshot {
     pub atlas_cache_loaded: bool,
     pub atlas_cache_saved_frame: Option<u64>,
     pub actual_camera_id: Option<u32>,
+    pub actual_camera_hardware_id: Option<String>,
+    pub actual_camera_port_id: Option<String>,
     /// Actual opened video path or native camera identifier; never editor text.
     pub source_label: String,
     pub resources: WorkerResources,
@@ -295,11 +298,30 @@ pub enum Command {
         hejjetrac_control::RecordOptions,
         MediaRecordingTuning,
     ),
+    RecordTagged(Box<TaggedRecording>),
     CameraRefresh,
     CameraControl(hejjetrac_camera::CameraControlRequest),
     StopRecord,
     Realtime(bool),
     DisplayFps(u32),
+}
+pub struct TaggedRecording {
+    pub directory: PathBuf,
+    pub options: hejjetrac_control::RecordOptions,
+    pub tuning: MediaRecordingTuning,
+    pub metadata: RecordingMetadata,
+}
+struct RecordingSettings {
+    tuning: MediaRecordingTuning,
+    metadata: RecordingMetadata,
+}
+impl From<MediaRecordingTuning> for RecordingSettings {
+    fn from(tuning: MediaRecordingTuning) -> Self {
+        Self {
+            tuning,
+            metadata: RecordingMetadata::default(),
+        }
+    }
 }
 pub struct Worker {
     tx: SyncSender<Command>,
@@ -312,6 +334,16 @@ struct WorkerFiles {
     atlas: Option<PathBuf>,
 }
 impl Worker {
+    #[cfg(test)]
+    pub(crate) fn disconnected_for_test(snapshot: Snapshot) -> Self {
+        let (tx, _rx) = mpsc::sync_channel(1);
+        Self {
+            tx,
+            snapshot: Arc::new(Mutex::new(snapshot)),
+            stop: Arc::new(AtomicBool::new(false)),
+            handle: None,
+        }
+    }
     #[cfg(test)]
     pub fn start(source: SourceSpec, doc: ConfigDocument, realtime: bool) -> Result<Self> {
         Self::start_at(source, doc, realtime, None)
@@ -639,6 +671,8 @@ fn run(
     match &mut input {
         Input::Camera(camera) => {
             snapshot.actual_camera_id = Some(camera.id());
+            snapshot.actual_camera_hardware_id = camera.hardware_id();
+            snapshot.actual_camera_port_id = camera.port_id();
             snapshot.source_label = camera.source_label();
             match camera.capabilities() {
                 Ok(capabilities) => {
@@ -686,6 +720,14 @@ fn run(
     } else {
         None
     };
+    if let Some(recorder) = recorder.as_mut() {
+        recorder.sync.source(
+            &snapshot.source_label,
+            snapshot.actual_camera_id,
+            snapshot.actual_camera_hardware_id.as_deref(),
+            snapshot.actual_camera_port_id.as_deref(),
+        )?;
+    }
     let mut last_publish = Instant::now() - Duration::from_secs(1);
     let mut last_status_publish = Instant::now() - Duration::from_secs(1);
     let mut preview_interval = Duration::from_secs_f64(1.0 / 30.0);
@@ -700,6 +742,7 @@ fn run(
     let mut last_source_time: Option<f64> = None;
     let mut camera_clock_origin: Option<(Instant, f64)> = None;
     let mut previous_capture_instant = None;
+    let mut previous_timing = None;
     let mut camera_discontinuity = false;
     let mut retimed = false;
     let (mut sinks, mut outputs_unavailable) = match OutputSinks::from_config(&doc) {
@@ -974,6 +1017,30 @@ fn run(
                         snapshot.media_warnings.clear();
                         recording_applied(&mut snapshot, "Recording started");
                     }
+                    Command::RecordTagged(request) => {
+                        let effective = request.options.recording_document(&doc)?;
+                        if let Err(error) = replace_recording(
+                            &mut recorder,
+                            finalizer.as_ref(),
+                            request.directory,
+                            &effective,
+                            RecordingSettings {
+                                tuning: source_recording_tuning(&input, request.tuning),
+                                metadata: request.metadata,
+                            },
+                            &mut snapshot,
+                            recording_source_fps,
+                        ) {
+                            recording_rejected(&mut snapshot, error);
+                            continue;
+                        }
+                        manual_record_options = Some(request.options);
+                        snapshot.recording = true;
+                        snapshot.record_options = Some(request.options);
+                        snapshot.media_recording = None;
+                        snapshot.media_warnings.clear();
+                        recording_applied(&mut snapshot, "Recording started");
+                    }
                     Command::Record(dir) => {
                         let options =
                             hejjetrac_control::RecordOptions::from_document(&doc).with_video();
@@ -1109,7 +1176,11 @@ fn run(
                         let mut image = (**image).clone();
                         image.debug = Some(debug.clone());
                         if let Some(recorder) = &mut recorder {
-                            recorder.write(&row)?;
+                            recorder.write_timed(
+                                &row,
+                                previous_timing
+                                    .unwrap_or_else(|| FrameTiming::replay(row.timestamp_ms)),
+                            )?;
                             recorder
                                 .write_media(&frame, &image.rgb, &debug, &path, &e.config, &row)?;
                         }
@@ -1205,16 +1276,27 @@ fn run(
             };
             let raw_frame = frame.clone();
             let source_time = frame.timestamp_ms();
+            let delivered_at = Instant::now();
             let file_source = matches!(input, Input::File(_));
             let captured_at = if file_source {
                 None
             } else {
-                let received = Instant::now();
+                let received = delivered_at;
                 let captured =
                     camera_capture_instant(&mut camera_clock_origin, source_time, received)?;
                 snapshot.camera_lag_ms =
                     Some(received.saturating_duration_since(captured).as_secs_f64() * 1000.0);
                 Some(captured)
+            };
+            let timing = FrameTiming {
+                delivered_at,
+                capture_at: captured_at,
+                source_sequence: Some(if file_source {
+                    snapshot.frames
+                } else {
+                    sequence
+                }),
+                source_timestamp_ms: source_time,
             };
             let override_fps = doc.number("src_fps", -1.0);
             let frame = if file_source && (override_fps > 0.0 || retimed) {
@@ -1406,7 +1488,7 @@ fn run(
                     path = path.iter().step_by(2).copied().collect();
                 }
                 if let Some(r) = &mut recorder
-                    && let Err(error) = r.write(row)
+                    && let Err(error) = r.write_timed(row, timing)
                 {
                     output_error = Some(error);
                 }
@@ -1545,6 +1627,7 @@ fn run(
             }
             previous_frame = Some(frame);
             previous_capture_instant = captured_at;
+            previous_timing = Some(timing);
             previous_input = Some(input_frame);
             step_remaining = step_remaining.saturating_sub(1);
             snapshot.advance_remaining = step_remaining;
@@ -1598,7 +1681,7 @@ fn replace_recording(
     finalizer: Option<&RecordingFinalizer<Recorder>>,
     directory: PathBuf,
     doc: &ConfigDocument,
-    tuning: MediaRecordingTuning,
+    settings: impl Into<RecordingSettings>,
     snapshot: &mut Snapshot,
     source_fps: f64,
 ) -> Result<()> {
@@ -1623,7 +1706,20 @@ fn replace_recording(
         finalizer.check_capacity()?;
     }
     // Invalid destinations/options must not stop an existing take.
-    let next = Recorder::new_with_tuning(directory, doc, tuning, source_fps)?;
+    let settings = settings.into();
+    let mut next = Recorder::new_with_metadata(
+        directory,
+        doc,
+        settings.tuning,
+        source_fps,
+        &settings.metadata,
+    )?;
+    next.sync.source(
+        &snapshot.source_label,
+        snapshot.actual_camera_id,
+        snapshot.actual_camera_hardware_id.as_deref(),
+        snapshot.actual_camera_port_id.as_deref(),
+    )?;
     retire_recording(recorder, finalizer, snapshot)?;
     snapshot.recording_directory = Some(next.directory.clone());
     *recorder = Some(next);
@@ -1728,9 +1824,13 @@ fn retire_recording(
     {
         finalizer.check_capacity()?;
     }
+    if let Some(old) = recorder.as_mut() {
+        old.sync.mark_stopped()?;
+    }
     if let Some(old) = recorder.take() {
         if let Some(finalizer) = finalizer {
-            if let Err((error, old)) = finalizer.submit(old.directory.clone(), old) {
+            if let Err((error, mut old)) = finalizer.submit(old.directory.clone(), old) {
+                old.sync.cancel_stop();
                 *recorder = Some(old);
                 return Err(error);
             }
@@ -1793,6 +1893,7 @@ struct Recorder {
     media_disabled: bool,
     numeric_error: Option<String>,
     completion_attempted: bool,
+    sync: SyncLog,
 }
 impl Recorder {
     fn automatic(
@@ -1853,6 +1954,22 @@ impl Recorder {
         tuning: MediaRecordingTuning,
         source_fps: f64,
     ) -> Result<Self> {
+        Self::new_with_metadata(
+            directory,
+            doc,
+            tuning,
+            source_fps,
+            &RecordingMetadata::default(),
+        )
+    }
+    fn new_with_metadata(
+        directory: PathBuf,
+        doc: &ConfigDocument,
+        tuning: MediaRecordingTuning,
+        source_fps: f64,
+        metadata: &RecordingMetadata,
+    ) -> Result<Self> {
+        metadata.validate()?;
         let effective = tuning.recording_document(doc)?;
         let nominal_fps = Self::nominal_fps(&effective, source_fps)?;
         if let Some(p) = directory.parent() {
@@ -1865,6 +1982,7 @@ impl Recorder {
         let quality = file(&directory.join("epoch-0000-quality.csv"))?;
         fs::write(directory.join("epoch-0000-config.txt"), effective.text())
             .map_err(|e| e.to_string())?;
+        let sync = SyncLog::create(&directory, &effective, metadata)?;
         let mut result = Self {
             directory,
             index: 0,
@@ -1881,6 +1999,7 @@ impl Recorder {
             media_disabled: false,
             numeric_error: None,
             completion_attempted: false,
+            sync,
         };
         result.header()?;
         Ok(result)
@@ -1918,14 +2037,20 @@ impl Recorder {
         self.nominal_fps = nominal_fps;
         self.media_disabled = false;
         self.media_status = None;
+        self.sync.event("epoch", self.index)?;
         self.header()
     }
+    #[cfg(test)]
     fn write(&mut self, row: &TrackRow) -> Result<()> {
+        self.write_timed(row, FrameTiming::replay(row.timestamp_ms))
+    }
+    fn write_timed(&mut self, row: &TrackRow, timing: FrameTiming) -> Result<()> {
         let result = (|| {
             if row.accepted {
                 write_dat(&mut self.data, row).map_err(|e| e.to_string())?;
             }
             write_dat(&mut self.all, row).map_err(|e| e.to_string())?;
+            self.sync.write(self.index, row, timing)?;
             writeln!(
                 self.quality,
                 "{},{},{},{},{}",
@@ -2020,6 +2145,9 @@ impl Recorder {
                 first_error = Some(format!("Cannot finalize {name}: {error}"));
             }
         }
+        if let Err(error) = self.sync.flush() {
+            first_error.get_or_insert(error);
+        }
         if self.pending.is_some()
             && let Err(error) = self.start_media(self.nominal_fps.unwrap_or(25.0))
         {
@@ -2040,7 +2168,8 @@ impl Recorder {
     }
     fn complete_in_place(&mut self) -> RecordingFinalization {
         self.completion_attempted = true;
-        let numeric_error = self.finish().err();
+        let sync_error = self.sync.stop(self.index).err();
+        let numeric_error = self.finish().err().or(sync_error);
         let mut status = RecordingFinalization {
             directory: self.directory.clone(),
             state: if numeric_error.is_some() {
@@ -3419,7 +3548,7 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|error| error.to_string())?
             .as_nanos();
-        let directory = std::env::temp_dir().join(format!("hejjetrak-resource-rows-{stamp}"));
+        let directory = std::env::temp_dir().join(format!("hejjetrac-resource-rows-{stamp}"));
         worker.send(Command::RecordOptions(
             directory.clone(),
             hejjetrac_control::RecordOptions {
@@ -3535,7 +3664,7 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|error| error.to_string())?
             .as_nanos();
-        let directory = std::env::temp_dir().join(format!("hejjetrak-rate-change-{stamp}"));
+        let directory = std::env::temp_dir().join(format!("hejjetrac-rate-change-{stamp}"));
         fs::create_dir(&directory).map_err(|error| error.to_string())?;
         let input = directory.join("clock.y4m");
         let mut bytes = b"YUV4MPEG2 W64 H64 F120:1 Ip Cmono\n".to_vec();

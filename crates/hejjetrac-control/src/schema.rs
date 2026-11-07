@@ -14,6 +14,18 @@ fn points(min: usize, max: usize) -> Value {
 fn object(properties: Value, required: &[&str]) -> Value {
     json!({"type":"object","properties":properties,"required":required,"additionalProperties":false})
 }
+fn metadata() -> Value {
+    object(
+        json!({
+            "experiment_id":{"type":"string","maxLength":1024},
+            "trial_id":{"type":"string","maxLength":1024},
+            "trigger_id":{"type":"string","maxLength":1024},
+            "trigger_unix_ns":{"type":"string","pattern":"^[0-9]+$","description":"VR host UTC Unix nanoseconds as a decimal string"},
+            "tags":{"type":"object","maxProperties":32,"additionalProperties":{"type":"string","maxLength":1024}}
+        }),
+        &[],
+    )
+}
 fn descriptor(command: &str, args: Value) -> Value {
     let require_args = args
         .get("required")
@@ -123,7 +135,7 @@ pub fn request_schema() -> Value {
     variants.push(descriptor(
         "array_record",
         object(
-            json!({"start":{"type":"boolean"},"directory":path()}),
+            json!({"start":{"type":"boolean"},"directory":path(),"recording_metadata":metadata()}),
             &["start"],
         ),
     ));
@@ -131,7 +143,7 @@ pub fn request_schema() -> Value {
         "workspace_save",
         object(json!({"restore_on_launch":{"type":"boolean"}}), &[]),
     ));
-    variants.push(descriptor("record_start",object(json!({"directory":path(),"record_options":object(json!({"raw":{"type":"boolean"},"debug":{"type":"boolean"}}),&["raw","debug"]),"recording_tuning":object(json!({"encoding":{"enum":["configured","mjpeg","raw"]}}),&[])}),&["directory"])));
+    variants.push(descriptor("record_start",object(json!({"directory":path(),"recording_metadata":metadata(),"record_options":object(json!({"raw":{"type":"boolean"},"debug":{"type":"boolean"}}),&["raw","debug"]),"recording_tuning":object(json!({"encoding":{"enum":["configured","mjpeg","raw"]}}),&[])}),&["directory"])));
     for command in ["snapshot", "export"] {
         variants.push(descriptor(
             command,
@@ -185,7 +197,12 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "workspace_save" => &["restore_on_launch"],
         "workspace_export" => &["directory"],
         "workspace_load" => &["path"],
-        "record_start" => &["directory", "record_options", "recording_tuning"],
+        "record_start" => &[
+            "directory",
+            "record_options",
+            "recording_tuning",
+            "recording_metadata",
+        ],
         "snapshot" | "export" => &["directory"],
         "view" => &[
             "reuse_atlas",
@@ -208,7 +225,7 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "camera_set" => &["control", "mode", "value"],
         "step" | "run" => &["frames"],
         "array_view" => &["full_image", "diagnostics", "overlays"],
-        "array_record" => &["start", "directory"],
+        "array_record" => &["start", "directory", "recording_metadata"],
         "rig_focus" | "rig_grid" => &[],
         "rows" => &["offset", "limit"],
         "calibrate" => &[
@@ -379,6 +396,9 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         {
             return Err(format!("args.{key} must be a string"));
         }
+    }
+    if object.contains_key("recording_metadata") {
+        crate::recording_metadata(args).map_err(|e| format!("args.recording_metadata: {e}"))?;
     }
     if let Some(options) = object.get("record_options") {
         serde_json::from_value::<crate::RecordOptions>(options.clone())

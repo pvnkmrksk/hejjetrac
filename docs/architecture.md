@@ -221,7 +221,8 @@ OutputSinks owns the shared transport/payload reconfiguration transaction: uncha
 
 ## Desktop agent transport
 
-Each graphical process starts a loopback-only authenticated MCP HTTP listener.
+Each graphical process starts an authenticated MCP HTTP listener, using loopback
+by default. Explicit `--control-bind IP:PORT` enables remote experiment control.
 Four fixed transport workers submit bounded messages to the existing GUI command
 dispatcher; they never own or mutate numerical sessions. An egui plugin injects
 queued input before viewport input processing and collects native screenshot
@@ -229,3 +230,12 @@ events. PNG encoding runs off the render thread. Typed calibration, config,
 camera, recording and array actions use the same native dispatcher as JSONL.
 No new dependency enters core or I/O; no browser, model credentials or subprocess
 is needed. [Connection, bounds and protocol details](agent-control.md#automatic-desktop-mcp).
+
+Recording synchronization lives in the control crate. Shared manifests and a
+streamed per-row timing ledger retain trial metadata, original source time,
+emitted time, monotonic intervals and host UTC observations. Desktop adapters
+add relative capture-clock estimates and actual opened device identities. A
+worker samples Stop before handing the take to background finalization, so an
+encoder drain cannot shift its recorded stop boundary. These clocks are evidence
+only and never drive tracking, recovery or numerical output timestamps.
+[Remote control and synchronization semantics](remote-recording.md).

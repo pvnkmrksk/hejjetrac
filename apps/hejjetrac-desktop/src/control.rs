@@ -204,13 +204,14 @@ fn read_request(reader: &mut impl BufRead) -> Result<Option<Request>> {
 }
 pub(crate) fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
     hejjetrac_control::validate_request_arguments(&r.command, &r.args)?;
+    app.refresh_camera_occupancy();
     match r.command.as_str() {
         "array_view" => {
             app.set_array_view(&r.args)?;
             return Ok(json!({"applied":true}));
         }
         "array_record" => {
-            return app.record_array(
+            return app.record_array_tagged(
                 r.args
                     .get("start")
                     .and_then(Value::as_bool)
@@ -219,6 +220,7 @@ pub(crate) fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
                     .get("directory")
                     .and_then(Value::as_str)
                     .map(Path::new),
+                &hejjetrac_control::recording_metadata(&r.args)?,
             );
         }
         "array_reset" => return app.reset_array(),
@@ -482,6 +484,8 @@ fn status(s: &mut Session) -> Value {
     state["preview_age_ms"] = json!(s.snapshot.preview_age_ms);
     state["camera_lag_ms"] = json!(s.snapshot.camera_lag_ms);
     state["actual_camera_id"] = json!(s.snapshot.actual_camera_id);
+    state["actual_camera_hardware_id"] = json!(s.snapshot.actual_camera_hardware_id);
+    state["actual_camera_port_id"] = json!(s.snapshot.actual_camera_port_id);
     state["path_points"] = json!(s.snapshot.path.len());
     state["preview_target_fps"] = json!(s.snapshot.display_fps);
     let calibration_layers = [
@@ -504,7 +508,8 @@ fn send(s: &mut Session, command: Command) -> Result<Value> {
         .send(command)?;
     Ok(json!({"queued":true,"status":status(s)}))
 }
-fn edited(s: &mut Session, doc: ConfigDocument) -> Result<Value> {
+fn edited(s: &mut Session, mut doc: ConfigDocument) -> Result<Value> {
+    s.keep_unlinked_camera(&mut doc)?;
     s.ensure_source_available(&doc)?;
     if doc.get("src_fn") != s.document()?.get("src_fn") {
         preflight_source(&doc, s.path.as_deref().or(s.source_base.as_deref()))?;
@@ -512,10 +517,17 @@ fn edited(s: &mut Session, doc: ConfigDocument) -> Result<Value> {
     if let Some(image) = &s.snapshot.image {
         hejjetrac_io::load_config_text(doc.text(), image.width, image.height).map_err(display)?;
     }
+    let previous_history = s.history.clone();
+    let previous_changed = s.changed;
+    let previous_source = s.source_edit.clone();
     s.edit(doc.text().to_owned());
     s.source_edit = doc.get("src_fn").unwrap_or("").to_owned();
-    s.apply()
-        .map_err(|e| format!("configuration edited but apply is pending: {e}"))?;
+    if let Err(error) = s.apply() {
+        s.history = previous_history;
+        s.changed = previous_changed;
+        s.source_edit = previous_source;
+        return Err(format!("Configuration was not applied: {error}"));
+    }
     Ok(json!({"queued":s.worker.is_some(),"status":status(s)}))
 }
 pub(crate) fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
@@ -674,6 +686,36 @@ pub(crate) fn execute_session(s: &mut Session, command: &str, a: &Value) -> Resu
                 return Err("recording directory must be new".into());
             }
             let tuning = hejjetrac_control::recording_tuning(a)?;
+            if a.get("recording_metadata").is_some() {
+                let metadata = hejjetrac_control::recording_metadata(a)?;
+                let canonical = s.document()?;
+                let options = hejjetrac_control::record_options(a)?.unwrap_or_else(|| {
+                    hejjetrac_control::RecordOptions::from_document(&canonical).with_video()
+                });
+                if !options.raw && !options.debug {
+                    return Err(
+                        "Choose raw video, debug video, or both before starting a recording".into(),
+                    );
+                }
+                let mut result = send(
+                    s,
+                    Command::RecordTagged(Box::new(crate::runtime::TaggedRecording {
+                        directory: path,
+                        options,
+                        tuning,
+                        metadata,
+                    })),
+                )?;
+                s.record_raw = options.raw;
+                s.record_debug = options.debug;
+                if a.get("recording_tuning").is_some() {
+                    s.recording_encoding = tuning.encoding;
+                }
+                result["requested_record_options"] = json!(options);
+                result["requested_recording_tuning"] = json!({"encoding":tuning.encoding});
+                result["status"] = status(s);
+                return Ok(result);
+            }
             if let Some(options) = hejjetrac_control::record_options(a)? {
                 if !options.raw && !options.debug {
                     return Err(

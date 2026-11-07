@@ -65,6 +65,6 @@ The earlier v0.2.0 and v0.2.1 candidates remain unpublished; their source tags
 are retained. This release includes the deterministic Windows transport-test
 fixture correction and the subsequent Ubuntu and tracking fixes.
 
-[Downloads](https://pvnkmrksk.github.io/hejjetrak/?download=1) ·
-[Installation](https://pvnkmrksk.github.io/hejjetrak/manual/install.html) ·
-[User manual](https://pvnkmrksk.github.io/hejjetrak/manual/)
+[Downloads](https://pvnkmrksk.github.io/hejjetrac/?download=1) ·
+[Installation](https://pvnkmrksk.github.io/hejjetrac/manual/install.html) ·
+[User manual](https://pvnkmrksk.github.io/hejjetrac/manual/)

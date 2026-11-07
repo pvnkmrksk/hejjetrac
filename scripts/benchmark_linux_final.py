@@ -36,7 +36,7 @@ def quiet():
             name = (process / "comm").read_text().strip()
         except OSError:
             continue
-        if name in ("cargo", "rustc", "hejjetrac-cli", "hejjetrac", "hejjetrak"):
+        if name in ("cargo", "rustc", "hejjetrac-cli", "hejjetrac", "hejjetrac"):
             busy.append({"pid": int(process.name), "name": name})
     if busy:
         raise RuntimeError(f"serial timing requires no other build/native/tracking process: {busy}")

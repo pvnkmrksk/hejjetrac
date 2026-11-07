@@ -1,12 +1,16 @@
-# Releases and downloads
+# Releases
 
-[**Download the latest published release**](../?download=1) · [All releases and notes](https://github.com/pvnkmrksk/hejjetrak/releases)
+[v0.5.0](release-v0.5.0.md) adds LAN recording triggers, per-frame synchronization
+metadata, unbound release defaults and detailed ASCII Ubuntu package metadata.
+New packages and URLs use `hejjetrac` throughout. and downloads
+
+[**Download the latest published release**](../?download=1) · [All releases and notes](https://github.com/pvnkmrksk/hejjetrac/releases)
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
 ## v0.4.2 — 6 November 2026
 
-[v0.4.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.4.2) offers ZeroMQ,
+[v0.4.2](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.4.2) offers ZeroMQ,
 UDP socket, or both, with both enabled in fresh rig defaults and no disabled
 selector choice. Custom ports survive transport switches. Each tile and manager
 row has direct reset/settings buttons. One image click expands a rig;
@@ -16,7 +20,7 @@ bug/debug icons.
 
 ## v0.4.1 — 6 November 2026
 
-[v0.4.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.4.1) adds automatic
+[v0.4.1](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.4.1) adds automatic
 local desktop MCP, shared grid view/recording controls, a calibration-overlay
 toggle and saved window/layout restoration. Expanded rigs retain individual
 controls. Linux package checks require default Vulkan rendering and independently
@@ -25,46 +29,46 @@ exercise explicit OpenGL, isolated startup and missing bound-camera errors.
 
 ## v0.4.0 — 5 November 2026
 
-[v0.4.0](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.4.0) introduced
+[v0.4.0](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.4.0) introduced
 capture-clock tracking improvements, saved workspaces, optional atlas reuse and
 a shared native grid for up to sixteen rigs. [Release notes](release-v0.4.0.md)
 retain the fixture-specific accuracy, recovery and hardware limits.
 
 ## v0.3.5 — 29 October 2026
 
-[v0.3.5](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.5) includes the
+[v0.3.5](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.3.5) includes the
 fast-motion tracking, LAN publishing defaults and Linux graphics safeguards,
 with corrected cross-platform release tests and Linux Mesa build dependencies.
 Tracking algorithms and numeric acceptance limits are unchanged from the
 Linux-validated v0.3.3 candidate.
-[Release notes](https://github.com/pvnkmrksk/hejjetrak/blob/v0.3.5/docs/release-v035.md).
+[Release notes](https://github.com/pvnkmrksk/hejjetrac/blob/v0.3.5/docs/release-v035.md).
 
 ## v0.3.4 — 28 October 2026
 
-[v0.3.4 source](https://github.com/pvnkmrksk/hejjetrak/tree/v0.3.4) is an
+[v0.3.4 source](https://github.com/pvnkmrksk/hejjetrac/tree/v0.3.4) is an
 unpublished candidate. Both native Mac builds passed; Linux packaging and
 Windows test-tool issues are addressed by v0.3.5. It retains the v0.3.3
 tracking, networking and Linux graphics changes and corrects portable busy-port
 test setup. Test reservations now match the wildcard publisher bind,
 so native checks exercise a real endpoint conflict on macOS as well as Linux
 and Windows. Numeric reference tolerances are unchanged.
-[Release notes](https://github.com/pvnkmrksk/hejjetrak/blob/v0.3.4/docs/release-v034.md).
+[Release notes](https://github.com/pvnkmrksk/hejjetrac/blob/v0.3.4/docs/release-v034.md).
 
 ## v0.3.3 — 28 October 2026
 
-[v0.3.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.3) includes
+[v0.3.3](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.3.3) includes
 more robust fast-motion/partial-atlas fitting and capture-interval prediction,
 restored threshold controls, ZeroMQ enabled by default for localhost and IPv4
 LAN clients, and Linux software graphics mode with persistent diagnostics.
 Existing explicit output settings and saved rig ports remain authoritative.
-[Release notes](https://github.com/pvnkmrksk/hejjetrak/blob/v0.3.3/docs/release-v033.md)
+[Release notes](https://github.com/pvnkmrksk/hejjetrac/blob/v0.3.3/docs/release-v033.md)
 retain fixture-specific tracking evidence and outstanding limitations. Platform
 packages appear as their release jobs complete; offer only downloads actually
 present in the release.
 
 ## v0.3.2 — 27 October 2026
 
-[v0.3.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.2) is published
+[v0.3.2](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.3.2) is published
 with all five packages. Linux X11/XWayland startup prefers compatible OpenGL and
 automatically uses Vulkan when OpenGL cannot present to the window. Ordinary
 startup needs no backend override. Explicit graphics choices remain respected;
@@ -78,7 +82,7 @@ records hashes, source revisions and remaining platform limits.
 
 ## v0.3.1 — 27 October 2026
 
-[v0.3.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.1) is published
+[v0.3.1](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.3.1) is published
 with all five platform packages. Native platform checks, official archive audits
 and actual installed/portable Ubuntu 22.04/24.04 tracking/preview checks pass.
 [Validation](validation.md#v031-published-release--2026-10-27) records source,
@@ -97,7 +101,7 @@ user configuration and recording-clock fixes.
 
 The included VR1–VR4 files describe one particular calibrated 320×240/100-FPS
 setup. Check camera IDs, formats, output ports and geometry for your own rig.
-The [recording guide](recording.md) and [validation record](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/validation.md)
+The [recording guide](recording.md) and [validation record](https://github.com/pvnkmrksk/hejjetrac/blob/main/docs/validation.md)
 retain the tested limits and historical overnight-run evidence.
 
 
@@ -107,7 +111,7 @@ source provenance for legacy crates and complete bundled font terms.
 
 ## v0.2.3 — 26 October 2026
 
-[v0.2.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.3) was published with all five packages. All native build and Ubuntu runtime
+[v0.2.3](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.2.3) was published with all five packages. All native build and Ubuntu runtime
 checks pass. The official Mac archive passes signature, complete-sample,
 preview and saved-default relaunch checks. [Validation](validation.md#v023-published-release--2026-10-26)
 records hashes and execution scope.
@@ -123,7 +127,7 @@ to a temporary preview with Save As guidance.
 
 ## v0.2.2 — 26 October 2026
 
-[v0.2.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.2) is published
+[v0.2.2](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.2.2) is published
 with all five platform packages. All four native package jobs and both Ubuntu
 runtime jobs pass. The official Apple Silicon archive passes strict ad hoc
 signature, version, source and complete sample checks; its native preview was
@@ -169,15 +173,15 @@ corrected ball-only calibration before it can support an accuracy claim.
 
 ## v0.1.4 — 25 October 2026
 
-[v0.1.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.4) introduces the **HejjéTrac** display name and `hejjetrac` commands. Calibration opens directly into a fresh ball-outline draft, fits the outline automatically from the third point, and never joins rim marks with straight lines. Diagnostics includes the complete saved calibration, direct layer redraw and full config access. The website starts its silent demo automatically and the README download link opens the platform download page directly.
+[v0.1.4](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.1.4) introduces the **HejjéTrac** display name and `hejjetrac` commands. Calibration opens directly into a fresh ball-outline draft, fits the outline automatically from the third point, and never joins rim marks with straight lines. Diagnostics includes the complete saved calibration, direct layer redraw and full config access. The website starts its silent demo automatically and the README download link opens the platform download page directly.
 
-All five platform packages were published. All four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739) pass: 188 workspace tests on Linux and both Macs, 185 on Windows, and 1,353 decoder tests each. The official Mac archive passes signature, version, source-commit and complete sample checks. A public README click completed the recommended v0.1.4 download without a second click. See [validation evidence](validation.md) for hashes, execution scope and remaining hardware/visual limits.
+All five platform packages were published. All four [native release jobs](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40198640739) pass: 188 workspace tests on Linux and both Macs, 185 on Windows, and 1,353 decoder tests each. The official Mac archive passes signature, version, source-commit and complete sample checks. A public README click completed the recommended v0.1.4 download without a second click. See [validation evidence](validation.md) for hashes, execution scope and remaining hardware/visual limits.
 
 ## Earlier published checkpoint
 
-The preceding checkpoint **[v0.1.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)** has five assets: Mac Apple Silicon and Intel ZIPs, Windows x64 ZIP, Linux x64 portable tar archive and Linux amd64 `.deb`. All four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262) passed: Linux and both Macs ran 173 workspace tests, Windows ran 170 platform-applicable tests, and all four ran 1,353 decoder tests. The official Apple Silicon archive passed strict signature/version checks, the complete sample comparison with unchanged reference gates, and native preview/recording inspection. Native hover/loupe pointer testing remains incomplete. The download dialog reads the actual latest published release; a source change is included in a binary only after its release has been built and uploaded. Consult the selected release tag's README and notes when reproducing a build. A dynamically selected latest archive always follows the published release, not an arbitrary CI artifact.
+The preceding checkpoint **[v0.1.3](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.1.3)** has five assets: Mac Apple Silicon and Intel ZIPs, Windows x64 ZIP, Linux x64 portable tar archive and Linux amd64 `.deb`. All four [native release jobs](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40180700262) passed: Linux and both Macs ran 173 workspace tests, Windows ran 170 platform-applicable tests, and all four ran 1,353 decoder tests. The official Apple Silicon archive passed strict signature/version checks, the complete sample comparison with unchanged reference gates, and native preview/recording inspection. Native hover/loupe pointer testing remains incomplete. The download dialog reads the actual latest published release; a source change is included in a binary only after its release has been built and uploaded. Consult the selected release tag's README and notes when reproducing a build. A dynamically selected latest archive always follows the published release, not an arbitrary CI artifact.
 
-Each platform archive contains the native desktop executable, CLI companion, sample/config resources, documentation, upstream license and dependency notices. Mac archives contain an app bundle. Linux retains its portable tar archive and v0.1.3 additionally offers an amd64 Debian/Ubuntu `.deb` with an app-menu icon and explicit system-library dependencies. Mac/Windows use ZIP. Current packages use `hejjetrac` archive and executable names, with `hejjetrak` command aliases for existing scripts; the download page never invents a `.deb` URL for a release without that asset. No package is a signed store installer.
+Each platform archive contains the native desktop executable, CLI companion, sample/config resources, documentation, upstream license and dependency notices. Mac archives contain an app bundle. Linux retains its portable tar archive and v0.1.3 additionally offers an amd64 Debian/Ubuntu `.deb` with an app-menu icon and explicit system-library dependencies. Mac/Windows use ZIP. Current packages use only canonical `hejjetrac` archive and executable names; the download page never invents a `.deb` URL for a release without that asset. No package is a signed store installer.
 
 ## Release integrity and opening
 

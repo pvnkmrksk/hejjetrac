@@ -1,5 +1,21 @@
 # Behavioral parity assessment
 
+## Remote recording and portable startup — 2026-11-07
+
+Explicit LAN control uses the existing native command dispatcher. New recording
+sidecars retain trial tags and every numeric row's host UTC, monotonic clock and
+source/emitted times, without changing legacy wire columns or numerical quality
+policy. Replay capture wall time remains unknown. Fresh package defaults open
+one unbound camera; four-rig templates are also unbound. Binding changes preserve
+active-device identity, source position and invalid-edit atomicity.
+
+Linux non-loopback real-video recording and sixteen-rig native UI checks pass.
+The new device permutations do not establish physical hotplug or other-platform
+camera execution. No tracking algorithm, optimizer, error metric, oracle constant
+or declared scientific tolerance changes in this release.
+[Evidence and limits](validation.md#remote-recording-portable-defaults-and-binding-stress--2026-11-07).
+
+
 ## Recorded clock, retained tracking limits and large arrays — 2026-11-05
 
 The final engine uses a joint atlas/previous-image precision proposal for
@@ -197,7 +213,7 @@ or general scientific-parity claim is available for this recording.
 
 ## Published v0.3.2 graphics patch
 
-[v0.3.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.2), source
+[v0.3.2](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.3.2), source
 `93f973b1b1dc6c582f52f076dede0e272ebc9784`, adds automatic surface-compatible
 OpenGL/Vulkan selection on X11/XWayland. All four native package jobs pass.
 The original Debian/portable packages pass normal GL rendering, forced-GL failure
@@ -209,7 +225,7 @@ limits. Numerical tracking and camera behavior retain the v0.3.1 baseline below.
 
 ## Published v0.3.1 baseline
 
-[v0.3.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.1), source
+[v0.3.1](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.3.1), source
 `99d4f5711584dd211f8b8c16e52bbbd357119a2f`, publishes the Linux four-camera
 improvements together with the v0.2.3 recording-clock and saved-default fixes.
 All four native package builds pass; the official archives and the same actual
@@ -282,9 +298,9 @@ the historical accelerated-search assessment below describes that earlier policy
 
 ## Historical v0.2.3 release assessment
 
-Published baseline: [v0.2.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.3),
+Published baseline: [v0.2.3](https://github.com/pvnkmrksk/hejjetrac/releases/tag/v0.2.3),
 source `35859b3faf7ec7a394b6608730e20a78d6e5d9b8`, passes all four
-[native package jobs and both Ubuntu runtime jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40381876617).
+[native package jobs and both Ubuntu runtime jobs](https://github.com/pvnkmrksk/hejjetrac/actions/runs/40381876617).
 The official Apple Silicon archive passes strict ad hoc signature/version/source
 checks, the complete sample comparison and native preview inspection. The same
 Linux packages pass installed/portable sample and visible Xvfb/Mesa preview
