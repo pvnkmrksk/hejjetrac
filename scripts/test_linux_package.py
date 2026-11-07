@@ -410,16 +410,19 @@ def main():
             app = fallback / 'app'
             shutil.copytree(portable, app, symlinks=True)
             new_config = fallback / 'VR1.txt'
-            config(app / 'hejjetrac-cli', app / 'VR1.txt', new_config,
+            template = app / 'examples/defaults/VR1.txt'
+            if not template.is_file():
+                template = app / 'VR1.txt'
+            config(app / 'hejjetrac-cli', template, new_config,
                    app / 'examples/sample.mp4', fallback, 'configure-camera', camera=True)
-            new_config.replace(app / 'VR1.txt')
+            new_config.replace(template)
             report['no_camera_startup'] = gui(app / 'hejjetrac', fallback,
                                              'native-fallback', expect_fallback=True)
             binding = 'usb:ffff:ffff:missing:video:0'
-            run([app / 'hejjetrac-cli', 'config', '--config', app / 'VR1.txt',
+            run([app / 'hejjetrac-cli', 'config', '--config', template,
                  '--output', new_config, '--set', 'rust_camera_id=' + binding],
                 fallback, 'configure-missing-binding')
-            new_config.replace(app / 'VR1.txt')
+            new_config.replace(template)
             report['missing_bound_camera'] = missing_bound_camera(app / 'hejjetrac', fallback,
                                                                  binding)
         else:
