@@ -268,7 +268,7 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
     if command == "array_record"
         && object
             .get("directory")
-            .is_some_and(|v| !v.as_str().is_some_and(|s| !s.is_empty()))
+            .is_some_and(|v| v.as_str().is_none_or(str::is_empty))
     {
         return Err("args.directory must be a nonempty path".into());
     }

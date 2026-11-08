@@ -446,10 +446,10 @@ fn surface(state: &UiState, args: &Value) -> Result<ViewportId> {
             .find(|id| id.0.value().to_string() == s)
             .ok_or("Unknown surface; use hejjetrac_surfaces")?,
     };
-    if !state
+    if state
         .surfaces
         .get(&id)
-        .is_some_and(|s| s.3.elapsed() < Duration::from_secs(2))
+        .is_none_or(|s| s.3.elapsed() >= Duration::from_secs(2))
     {
         return Err(
             "Surface is not currently visible; open it with view or use hejjetrac_surfaces".into(),
@@ -634,9 +634,9 @@ fn handle_http(
             "Supported versions: 2025-03-26, 2025-06-18, 2025-11-25",
         );
     }
-    if !fields
+    if fields
         .get("content-type")
-        .is_some_and(|v| v.split(';').next() == Some("application/json"))
+        .is_none_or(|v| v.split(';').next() != Some("application/json"))
     {
         return respond(stream, 415, "Use application/json");
     }

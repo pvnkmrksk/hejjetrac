@@ -846,7 +846,7 @@ impl Session {
         let mut doc = self.document()?;
         if let Some(value) = hardware_id {
             hejjetrac_camera::validate_hardware_id(value).map_err(|e| e.to_string())?;
-            if !doc.get("src_fn").is_some_and(|v| v.parse::<u32>().is_ok()) {
+            if doc.get("src_fn").is_none_or(|v| v.parse::<u32>().is_err()) {
                 return Err("Select a camera before linking this rig to hardware".into());
             }
         } else if doc.camera_binding().map_err(|e| e.to_string())?.is_some()
