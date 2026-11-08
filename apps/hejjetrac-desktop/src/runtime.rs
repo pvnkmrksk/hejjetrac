@@ -107,6 +107,7 @@ pub struct Snapshot {
     pub recording_directory: Option<PathBuf>,
     /// Bounded recent history; live Stop/rotation can leave files finalizing.
     pub recording_finalizations: Vec<RecordingFinalization>,
+    pub recording_numeric_frames: u64,
 }
 #[derive(Clone, serde::Serialize)]
 pub struct RecordingFinalization {
@@ -116,6 +117,9 @@ pub struct RecordingFinalization {
     pub media_warnings: Vec<String>,
     pub media_recording: Option<MediaRecordingStatus>,
     pub completion_error: Option<String>,
+    pub control_stop_id: Option<String>,
+    pub capture_pause_count: u64,
+    pub numeric_frames: u64,
 }
 impl RecordingFinalization {
     fn queued(directory: PathBuf) -> Self {
@@ -123,6 +127,9 @@ impl RecordingFinalization {
             directory,
             state: "queued",
             numeric_error: None,
+            control_stop_id: None,
+            capture_pause_count: 0,
+            numeric_frames: 0,
             media_warnings: vec![],
             media_recording: None,
             completion_error: None,
@@ -302,6 +309,12 @@ pub enum Command {
     CameraRefresh,
     CameraControl(hejjetrac_camera::CameraControlRequest),
     StopRecord,
+    StopRecordIf(PathBuf, String),
+    RecordOwned(
+        PathBuf,
+        hejjetrac_control::RecordOptions,
+        MediaRecordingTuning,
+    ),
     Realtime(bool),
     DisplayFps(u32),
 }
@@ -765,6 +778,11 @@ fn run(
     let processing_result = (|| -> Result<()> {
         'worker: while !stop.load(Ordering::Acquire) {
             for cmd in pending_command.take().into_iter().chain(rx.try_iter()) {
+                let require_idle = matches!(&cmd, Command::RecordOwned(..));
+                let stop_fence = match &cmd {
+                    Command::StopRecordIf(directory, id) => Some((directory.clone(), id.clone())),
+                    _ => None,
+                };
                 match cmd {
                     Command::Configure(next, revision) => {
                         // Linking/unlinking the already opened physical camera
@@ -820,6 +838,11 @@ fn run(
                         needs_config |= !binding_only;
                     }
                     Command::Pause(p) => {
+                        if p && !paused
+                            && let Some(active) = &mut recorder
+                        {
+                            active.capture_pause_count += 1;
+                        }
                         skip_gap = true;
                         paused = p;
                         snapshot.paused = p;
@@ -996,7 +1019,15 @@ fn run(
                             _ => "Camera controls require a live camera source".into(),
                         };
                     }
-                    Command::RecordOptions(dir, options, tuning) => {
+                    Command::RecordOptions(dir, options, tuning)
+                    | Command::RecordOwned(dir, options, tuning) => {
+                        if require_idle && recorder.is_some() {
+                            recording_rejected(
+                                &mut snapshot,
+                                "Another take is active; it was not replaced".into(),
+                            );
+                            continue;
+                        }
                         let effective = options.recording_document(&doc)?;
                         if let Err(error) = replace_recording(
                             &mut recorder,
@@ -1064,10 +1095,28 @@ fn run(
                         snapshot.media_warnings.clear();
                         recording_applied(&mut snapshot, "Recording started");
                     }
-                    Command::StopRecord => {
+                    Command::StopRecord | Command::StopRecordIf(..) => {
+                        if stop_fence.as_ref().is_some_and(|(expected, _)| {
+                            recorder.as_ref().map(|active| &active.directory) != Some(expected)
+                        }) {
+                            recording_rejected(
+                                &mut snapshot,
+                                "Recorder belongs to another take; it was not stopped".into(),
+                            );
+                            continue;
+                        }
+                        let old_id = recorder
+                            .as_ref()
+                            .and_then(|active| active.control_stop_id.clone());
+                        if let Some(active) = &mut recorder {
+                            active.control_stop_id = stop_fence.map(|(_, id)| id);
+                        }
                         if let Err(error) =
                             retire_recording(&mut recorder, finalizer.as_ref(), &mut snapshot)
                         {
+                            if let Some(active) = &mut recorder {
+                                active.control_stop_id = old_id;
+                            }
                             recording_rejected(&mut snapshot, error);
                             continue;
                         }
@@ -1893,6 +1942,9 @@ struct Recorder {
     media_disabled: bool,
     numeric_error: Option<String>,
     completion_attempted: bool,
+    control_stop_id: Option<String>,
+    capture_pause_count: u64,
+    numeric_frames: u64,
     sync: SyncLog,
 }
 impl Recorder {
@@ -1999,6 +2051,9 @@ impl Recorder {
             media_disabled: false,
             numeric_error: None,
             completion_attempted: false,
+            control_stop_id: None,
+            capture_pause_count: 0,
+            numeric_frames: 0,
             sync,
         };
         result.header()?;
@@ -2058,6 +2113,9 @@ impl Recorder {
             )
             .map_err(|e| e.to_string())
         })();
+        if result.is_ok() {
+            self.numeric_frames += 1;
+        }
         if let Err(error) = &result {
             self.numeric_error
                 .get_or_insert_with(|| format!("Cannot write numeric recording: {error}"));
@@ -2178,6 +2236,9 @@ impl Recorder {
                 "complete"
             },
             numeric_error,
+            control_stop_id: self.control_stop_id.clone(),
+            capture_pause_count: self.capture_pause_count,
+            numeric_frames: self.numeric_frames,
             media_warnings: self.media_warnings.clone(),
             media_recording: self.media_status.clone(),
             completion_error: None,
@@ -2197,6 +2258,7 @@ impl Recorder {
         );
     }
     fn refresh_media(&mut self, snapshot: &mut Snapshot) {
+        snapshot.recording_numeric_frames = self.numeric_frames;
         if let Some(media) = &mut self.media {
             self.media_status = Some(media.status());
             for warning in media.take_warnings() {

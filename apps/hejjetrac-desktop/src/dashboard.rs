@@ -414,6 +414,7 @@ mod tests {
             requested_screenshot: false,
             last_state: std::time::Instant::now(),
             control: None,
+            mailbox: None,
             mcp: None,
             window_size: Pair(520., 480.),
             window_origin: Pair(0., 0.),

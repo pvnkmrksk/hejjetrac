@@ -10,6 +10,7 @@ mod icons;
 #[cfg(target_os = "linux")]
 mod launch;
 mod mcp;
+mod native_mailbox;
 mod profiles;
 mod runtime;
 mod session;
@@ -61,6 +62,12 @@ struct Args {
     /// Accept agent JSONL commands on stdin and return structured responses on stdout.
     #[arg(long)]
     control_stdio: bool,
+    /// Reconnectable local control for a single native tracker.
+    #[arg(long, requires_all = ["control_instance", "config"], conflicts_with_all = ["array", "control_stdio"])]
+    control_dir: Option<PathBuf>,
+    /// Unique 32-character launch identity for --control-dir.
+    #[arg(long, requires = "control_dir")]
+    control_instance: Option<String>,
     /// Listen for authenticated desktop control on this IP:PORT (e.g. 0.0.0.0:17871 for LAN).
     /// Without this option, control accepts loopback connections only.
     #[arg(long, value_name = "IP:PORT")]
@@ -166,6 +173,7 @@ struct Desktop {
     requested_screenshot: bool,
     last_state: Instant,
     control: Option<control::Bridge>,
+    mailbox: Option<native_mailbox::Mailbox>,
     mcp: Option<mcp::Server>,
     window_size: Pair,
     window_origin: Pair,
@@ -349,6 +357,19 @@ impl Desktop {
         } else {
             None
         };
+        if args.control_dir.is_some() && args.windows != 1 {
+            return Err(
+                "The recording mailbox controls one native tracker; use --windows 1".into(),
+            );
+        }
+        let mailbox = args
+            .control_dir
+            .clone()
+            .zip(args.control_instance.clone())
+            .map(|(directory, instance)| {
+                native_mailbox::Mailbox::new(directory, instance, "hejjetrac")
+            })
+            .transpose()?;
         let monitor = cc
             .egui_ctx
             .input(|i| i.viewport().monitor_size)
@@ -410,6 +431,7 @@ impl Desktop {
             requested_screenshot: false,
             last_state: Instant::now() - std::time::Duration::from_secs(1),
             control,
+            mailbox,
             mcp: None,
             window_size,
             window_origin,
@@ -1070,6 +1092,15 @@ impl eframe::App for Desktop {
             }
         }
         self.refresh_camera_occupancy();
+        if let Some(mut mailbox) = self.mailbox.take() {
+            if let Err(error) =
+                mailbox.poll(|command, args| control::execute_mailbox(self, command, args))
+            {
+                self.startup_notice = error;
+            }
+            self.mailbox = Some(mailbox);
+            ctx.request_repaint_after(std::time::Duration::from_millis(40));
+        }
         if let Some(mut bridge) = self.control.take() {
             bridge.poll(self);
             self.control = Some(bridge);

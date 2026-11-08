@@ -478,6 +478,7 @@ fn status(s: &mut Session) -> Value {
     state["window_max_inner_size"] = json!([s.max_window_inner_size.x, s.max_window_inner_size.y]);
     state["recording_encoding"] = json!(s.recording_encoding);
     state["media_recording"] = json!(s.snapshot.media_recording);
+    state["recording_numeric_frames"] = json!(s.snapshot.recording_numeric_frames);
     state["recording_finalizations"] = json!(s.snapshot.recording_finalizations);
     state["media_warnings"] = json!(s.snapshot.media_warnings);
     state["preview_fps"] = json!(s.snapshot.preview_fps);
@@ -1202,6 +1203,61 @@ fn display(error: impl std::fmt::Display) -> String {
     error.to_string()
 }
 
+/// Recording ownership fences used by the reconnectable mailbox, on the same worker as the GUI.
+pub fn execute_mailbox(app: &mut Desktop, command: &str, args: &Value) -> Result<Value> {
+    if command == "record_start" || command == "record_stop" {
+        let session = app
+            .sessions
+            .iter_mut()
+            .find(|session| session.id == 1 && !session.closed)
+            .ok_or("Native session1 is closed")?;
+        if command == "record_start" {
+            let directory = PathBuf::from(string(args, "directory")?);
+            if !directory.is_absolute() || directory.exists() {
+                return Err("Recording directory must be a new absolute path".into());
+            }
+            let document = session.document()?;
+            let options = hejjetrac_control::record_options(args)?
+                .unwrap_or_else(|| hejjetrac_control::RecordOptions::from_document(&document));
+            let tuning = hejjetrac_control::recording_tuning(args)?;
+            session.record_raw = options.raw;
+            session.record_debug = options.debug;
+            return send(session, Command::RecordOwned(directory, options, tuning));
+        }
+        let directory = PathBuf::from(string(args, "expected_directory")?);
+        if !directory.is_absolute() {
+            return Err("Expected take directory must be absolute".into());
+        }
+        let stop_id = string(args, "stop_request_id")?;
+        if stop_id.len() != 32 || !stop_id.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err("Stop request identity must be 32 hexadecimal characters".into());
+        }
+        return send(
+            session,
+            Command::StopRecordIf(directory, stop_id.to_owned()),
+        );
+    }
+    let response = Bridge::execute(
+        app,
+        Request {
+            id: Value::Null,
+            command: command.to_owned(),
+            session: Some(1),
+            args: args.clone(),
+        },
+    );
+    if response.ok {
+        response
+            .result
+            .ok_or("Native response has no result".into())
+    } else {
+        Err(response
+            .error
+            .map(|error| error.message)
+            .unwrap_or_else(|| "Native command failed".into()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1244,6 +1300,7 @@ mod tests {
             requested_screenshot: false,
             last_state: std::time::Instant::now(),
             control: None,
+            mailbox: None,
             mcp: None,
             tile_columns: 2,
             window_origin: crate::Pair(12., 36.),
@@ -1450,6 +1507,7 @@ mod tests {
             requested_screenshot: false,
             last_state: std::time::Instant::now(),
             control: None,
+            mailbox: None,
             mcp: None,
             tile_columns: 2,
             window_origin: crate::Pair(12., 36.),

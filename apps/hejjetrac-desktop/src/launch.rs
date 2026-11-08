@@ -443,7 +443,14 @@ pub fn supervise() -> Result<Option<ExitCode>, String> {
     let safe = args.iter().any(|s| s == "--safe-mode");
     let executable =
         std::env::current_exe().map_err(|e| format!("Cannot locate this application: {e}"))?;
-    if args.iter().any(|s| s == "--control-stdio") {
+    // MATREX binds its receipt to the process it starts. Keep that PID when
+    // the native app hosts a recording mailbox, just as for the stdio bridge.
+    if args.iter().any(|s| {
+        s == "--control-stdio"
+            || s == "--control-dir"
+            || s.to_str()
+                .is_some_and(|arg| arg.starts_with("--control-dir="))
+    }) {
         if safe {
             use std::os::unix::process::CommandExt;
             let mut command = Command::new(executable);
