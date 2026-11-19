@@ -283,3 +283,9 @@ is unknown and remains empty. Rejected/recovering rows stay in the ledger and
 all-frame data. This adds evidence without changing any legacy numeric column,
 error metric, accepted-only wire payload or missing-motion decision.
 [Columns, units and two-computer alignment](remote-recording.md#manual-synchronization-and-clock-limits).
+
+During live camera recovery, an active take logs `camera_disconnected` and
+`camera_reconnected` events. The latter is followed by a `source` event with
+the reopened device's identifiers. The camera's source sequence and timestamp
+can restart when it reopens. The emitted numerical timeline stays monotonic
+and spans the outage. No frames are emitted during the outage.

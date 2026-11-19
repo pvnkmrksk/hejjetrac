@@ -75,6 +75,8 @@ pub struct Snapshot {
     pub frames: u64,
     pub notice: String,
     pub command_error: Option<String>,
+    /// Last open or read failure while the camera worker is retrying.
+    pub camera_reconnect_error: Option<String>,
     pub ended: bool,
     pub paused: bool,
     pub advance_remaining: usize,
@@ -352,6 +354,10 @@ struct WorkerFiles {
     config: Option<PathBuf>,
     atlas: Option<PathBuf>,
 }
+struct WorkerSource<F> {
+    spec: SourceSpec,
+    open: F,
+}
 impl Worker {
     #[cfg(test)]
     pub(crate) fn disconnected_for_test(snapshot: Snapshot) -> Self {
@@ -378,6 +384,28 @@ impl Worker {
     }
     pub fn start_with_cache(
         source: SourceSpec,
+        doc: ConfigDocument,
+        realtime: bool,
+        config_path: Option<PathBuf>,
+        cache_path: Option<PathBuf>,
+    ) -> Result<Self> {
+        Self::start_with_source(
+            WorkerSource {
+                spec: source,
+                open: Input::open,
+            },
+            doc,
+            realtime,
+            config_path,
+            cache_path,
+        )
+    }
+    fn start_with_source(
+        source: WorkerSource<
+            impl FnMut(&SourceSpec, &ConfigDocument, Option<&Snapshot>) -> Result<Input>
+            + Send
+            + 'static,
+        >,
         doc: ConfigDocument,
         realtime: bool,
         config_path: Option<PathBuf>,
@@ -420,6 +448,7 @@ impl Worker {
                         .lock()
                         .unwrap_or_else(std::sync::PoisonError::into_inner);
                     s.notice = e;
+                    s.camera_reconnect_error = None;
                     s.ended = true;
                 }
             })
@@ -463,14 +492,49 @@ impl Drop for Worker {
 }
 enum Input {
     File(Box<hejjetrac_io::PrefetchedVideoSource>),
-    Camera(hejjetrac_camera::Camera),
+    Camera(Option<Box<dyn CameraStream>>),
+}
+// Capture stays on the worker thread. Tests use the same worker loop with a
+// scripted native stream to exercise disconnects without USB hardware.
+trait CameraStream {
+    fn update_source(&self, snapshot: &mut Snapshot);
+    fn capabilities(&mut self) -> hejjetrac_camera::Result<hejjetrac_camera::CameraCapabilities>;
+    fn set_control(
+        &mut self,
+        request: hejjetrac_camera::CameraControlRequest,
+    ) -> hejjetrac_camera::Result<hejjetrac_camera::CameraCapabilities>;
+    fn next_frame(&mut self) -> hejjetrac_camera::Result<Option<hejjetrac_camera::CameraFrame>>;
+}
+impl CameraStream for hejjetrac_camera::Camera {
+    fn update_source(&self, snapshot: &mut Snapshot) {
+        snapshot.actual_camera_id = Some(self.id());
+        snapshot.actual_camera_hardware_id = self.hardware_id();
+        snapshot.actual_camera_port_id = self.port_id();
+        snapshot.source_label = self.source_label();
+    }
+    fn capabilities(&mut self) -> hejjetrac_camera::Result<hejjetrac_camera::CameraCapabilities> {
+        self.capabilities()
+    }
+    fn set_control(
+        &mut self,
+        request: hejjetrac_camera::CameraControlRequest,
+    ) -> hejjetrac_camera::Result<hejjetrac_camera::CameraCapabilities> {
+        self.set_control(request)
+    }
+    fn next_frame(&mut self) -> hejjetrac_camera::Result<Option<hejjetrac_camera::CameraFrame>> {
+        self.next_frame()
+    }
 }
 impl Input {
-    fn open(source: SourceSpec, doc: &ConfigDocument) -> Result<Self> {
+    fn open(
+        source: &SourceSpec,
+        doc: &ConfigDocument,
+        previous: Option<&Snapshot>,
+    ) -> Result<Self> {
         match source {
             SourceSpec::Video(path) => {
                 let mut v =
-                    VideoSource::open(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+                    VideoSource::open(path).map_err(|e| format!("{}: {e}", path.display()))?;
                 v.enable_color();
                 Ok(Self::File(Box::new(
                     v.prefetch().map_err(|e| e.to_string())?,
@@ -479,14 +543,23 @@ impl Input {
             SourceSpec::Camera(id) => {
                 doc.validate_frontend().map_err(|e| e.to_string())?;
                 let binding = doc.camera_binding().map_err(|e| e.to_string())?;
-                let id = if let Some(binding) = binding {
+                // An unbound USB rig follows its last socket and, where available,
+                // verifies the serial too. A deliberate link takes precedence.
+                let reconnect_identity = binding.or_else(|| {
+                    let previous = previous?;
+                    previous
+                        .actual_camera_port_id
+                        .as_deref()
+                        .or(previous.actual_camera_hardware_id.as_deref())
+                });
+                let id = if let Some(identity) = reconnect_identity {
                     hejjetrac_camera::resolve_camera(
                         &hejjetrac_camera::list_cameras().map_err(|e| e.to_string())?,
-                        binding,
+                        identity,
                     )
                     .map_err(|e| e.to_string())?
                 } else {
-                    id
+                    previous.and_then(|s| s.actual_camera_id).unwrap_or(*id)
                 };
                 let width = doc.number("rust_camera_width", 0.0);
                 let height = doc.number("rust_camera_height", 0.0);
@@ -511,13 +584,41 @@ impl Input {
                     hejjetrac_camera::Camera::open(id, fps)
                 };
                 let camera = camera.map_err(|e| e.to_string())?;
-                if let Some(binding) = binding
-                    && camera.hardware_id().as_deref() != Some(binding)
-                    && camera.port_id().as_deref() != Some(binding)
-                {
+                let hardware_id = camera.hardware_id();
+                let port_id = camera.port_id();
+                if reconnect_identity.is_some_and(|identity| {
+                    hardware_id.as_deref() != Some(identity) && port_id.as_deref() != Some(identity)
+                }) {
                     return Err("Camera identity changed while opening; reconnect the required camera and retry".into());
                 }
-                Ok(Self::Camera(camera))
+                if binding.is_none()
+                    && let Some(previous) = previous
+                {
+                    if previous.actual_camera_hardware_id.is_some()
+                        && hardware_id != previous.actual_camera_hardware_id
+                    {
+                        return Err("A different camera is using this socket. Reconnect the original camera or select another source.".into());
+                    }
+                    if reconnect_identity.is_none()
+                        && camera.source_label() != previous.source_label
+                    {
+                        return Err("The reopened camera does not match the original source. Reconnect the original camera or select another source.".into());
+                    }
+                }
+                Ok(Self::Camera(Some(Box::new(camera))))
+            }
+        }
+    }
+    fn update_camera_source(&mut self, snapshot: &mut Snapshot) {
+        if let Self::Camera(Some(camera)) = self {
+            camera.update_source(snapshot);
+            snapshot.source_fps = 0.0;
+            match camera.capabilities() {
+                Ok(capabilities) => {
+                    snapshot.source_fps = capabilities.current_format.fps.unwrap_or(0.0);
+                    snapshot.camera = Some(capabilities);
+                }
+                Err(error) => snapshot.notice = format!("Camera controls unavailable: {error}"),
             }
         }
     }
@@ -534,10 +635,11 @@ impl Input {
                     (f, rgb, 0)
                 })
             }),
-            Self::Camera(c) => c
+            Self::Camera(Some(c)) => c
                 .next_frame()
                 .map_err(|e| e.to_string())
                 .map(|f| f.map(|f| (f.gray, f.rgb, f.sequence))),
+            Self::Camera(None) => Ok(None),
         }
     }
 }
@@ -656,7 +758,9 @@ fn engine(
     ))
 }
 fn run(
-    source: SourceSpec,
+    mut source: WorkerSource<
+        impl FnMut(&SourceSpec, &ConfigDocument, Option<&Snapshot>) -> Result<Input>,
+    >,
     mut doc: ConfigDocument,
     mut realtime: bool,
     rx: mpsc::Receiver<Command>,
@@ -664,11 +768,14 @@ fn run(
     stop: &AtomicBool,
     files: WorkerFiles,
 ) -> Result<()> {
+    const FIRST_CAMERA_RETRY: Duration = Duration::from_secs(2);
+    const MAX_CAMERA_RETRY: Duration = Duration::from_secs(8);
+    const CAMERA_FRAME_TIMEOUT: Duration = Duration::from_secs(5);
     let config_path = files.config.as_deref();
     let mut cache_path = files.atlas;
     let mut last_cache_save = Instant::now() - Duration::from_secs(30);
     let mut last_cache_row: Option<TrackRow> = None;
-    let source_label = match &source {
+    let source_label = match &source.spec {
         SourceSpec::Video(path) => path
             .canonicalize()
             .unwrap_or_else(|_| path.clone())
@@ -676,7 +783,7 @@ fn run(
             .to_string(),
         SourceSpec::Camera(id) => format!("camera {id}"),
     };
-    let mut input = Input::open(source, &doc)?;
+    let mut input = (source.open)(&source.spec, &doc, None)?;
     let mut finalizer = if matches!(input, Input::Camera(_)) {
         Some(RecordingFinalizer::start(Recorder::complete)?)
     } else {
@@ -688,19 +795,7 @@ fn run(
         ..Snapshot::default()
     };
     match &mut input {
-        Input::Camera(camera) => {
-            snapshot.actual_camera_id = Some(camera.id());
-            snapshot.actual_camera_hardware_id = camera.hardware_id();
-            snapshot.actual_camera_port_id = camera.port_id();
-            snapshot.source_label = camera.source_label();
-            match camera.capabilities() {
-                Ok(capabilities) => {
-                    snapshot.source_fps = capabilities.current_format.fps.unwrap_or(0.0);
-                    snapshot.camera = Some(capabilities);
-                }
-                Err(error) => snapshot.notice = format!("Camera controls unavailable: {error}"),
-            }
-        }
+        Input::Camera(_) => input.update_camera_source(&mut snapshot),
         Input::File(video) => {
             snapshot.source_fps = if doc.number("src_fps", -1.0) > 0.0 {
                 doc.number("src_fps", -1.0)
@@ -760,6 +855,10 @@ fn run(
     let mut last_camera_frame = Instant::now();
     let mut last_source_time: Option<f64> = None;
     let mut camera_clock_origin: Option<(Instant, f64)> = None;
+    let mut camera_time_offset = Some(0.0);
+    let mut camera_retry_at = Instant::now();
+    let mut camera_retry_interval = FIRST_CAMERA_RETRY;
+    let mut camera_has_delivered = false;
     let mut previous_capture_instant = None;
     let mut previous_timing = None;
     let mut camera_discontinuity = false;
@@ -1033,7 +1132,7 @@ fn run(
                     }
                     Command::CameraRefresh => {
                         snapshot.notice = match &mut input {
-                            Input::Camera(camera) => match camera.capabilities() {
+                            Input::Camera(Some(camera)) => match camera.capabilities() {
                                 Ok(c) => {
                                     recording_source_fps = c.current_format.fps.unwrap_or(0.0);
                                     snapshot.camera = Some(c);
@@ -1046,7 +1145,7 @@ fn run(
                     }
                     Command::CameraControl(request) => {
                         snapshot.notice = match &mut input {
-                            Input::Camera(camera) => match camera.set_control(request) {
+                            Input::Camera(Some(camera)) => match camera.set_control(request) {
                                 Ok(c) => {
                                     recording_source_fps = c.current_format.fps.unwrap_or(0.0);
                                     snapshot.camera = Some(c);
@@ -1191,6 +1290,43 @@ fn run(
                     }
                 }
             }
+            if let Input::Camera(None) = &input {
+                if Instant::now() >= camera_retry_at {
+                    match (source.open)(&source.spec, &doc, Some(&snapshot)) {
+                        Ok(reopened) => {
+                            input = reopened;
+                            last_camera_frame = Instant::now();
+                        }
+                        Err(error) => {
+                            snapshot.camera_reconnect_error = Some(error);
+                            camera_retry_interval =
+                                (camera_retry_interval * 2).min(MAX_CAMERA_RETRY);
+                            camera_retry_at = Instant::now() + camera_retry_interval;
+                        }
+                    }
+                }
+                if let Input::Camera(None) = &input {
+                    if let Some(finalizer) = &finalizer {
+                        finalizer.refresh(&mut snapshot);
+                    }
+                    if let Some(recorder) = &mut recorder {
+                        recorder.refresh_media(&mut snapshot);
+                    }
+                    snapshot.outputs = Some(sinks.status());
+                    *shared
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
+                    if let Ok(command) = rx.try_recv() {
+                        pending_command = Some(command);
+                        continue;
+                    }
+                    if stop.load(Ordering::Acquire) {
+                        break;
+                    }
+                    thread::park_timeout(camera_retry_at.saturating_duration_since(Instant::now()));
+                    continue;
+                }
+            }
             if paused || needs_config {
                 promote_preview(
                     &mut snapshot,
@@ -1276,7 +1412,8 @@ fn run(
                     snapshot.row = Some(row);
                 }
             }
-            if (paused && !step) || ended {
+            let held = paused && !step;
+            if held || ended {
                 if let Some(finalizer) = &finalizer {
                     finalizer.refresh(&mut snapshot);
                 }
@@ -1291,44 +1428,111 @@ fn run(
                 *shared
                     .lock()
                     .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
-                if !ended && let Input::Camera(_) = &input {
-                    // Calibration freezes the displayed image and numerical
-                    // state, not acquisition. Keep draining the driver while
-                    // paused so resuming cannot measure images exposed before
-                    // the user finished calibrating. Files retain their exact
-                    // decoder position. No paused image is taught or recorded.
-                    if input.next()?.is_some() {
-                        last_camera_frame = Instant::now();
-                        camera_discontinuity |= snapshot.row.is_some();
-                    } else if last_camera_frame.elapsed() > Duration::from_secs(5) {
-                        return Err("No camera frames for five seconds. Check the device and camera permission, then Connect again.".into());
-                    }
+                if ended || matches!(input, Input::File(_)) {
+                    // Commands and shutdown wake this wait immediately.
+                    thread::park_timeout(Duration::from_secs(1));
                     continue;
                 }
-                // Mutating commands and shutdown unpark immediately; the long idle
-                // timeout only refreshes asynchronous output health once a second.
-                thread::park_timeout(Duration::from_secs(1));
-                continue;
             }
             let work_tick = Instant::now();
-            let frame = if let Some(frame) = pending_input.take() {
-                Some(frame)
+            let file_source = matches!(input, Input::File(_));
+            let frame = if file_source {
+                if let Some(frame) = pending_input.take() {
+                    Some(frame)
+                } else {
+                    input.next()?
+                }
             } else {
-                input.next()?
+                let read = match input.next() {
+                    Ok(None) if last_camera_frame.elapsed() < CAMERA_FRAME_TIMEOUT => continue,
+                    Ok(None) => Err("No camera frames received for five seconds".into()),
+                    Ok(Some((frame, _, _)))
+                        if snapshot.camera_reconnect_error.is_some()
+                            && previous_frame.as_ref().is_some_and(|previous| {
+                                (frame.width(), frame.height())
+                                    != (previous.width(), previous.height())
+                            }) =>
+                    {
+                        Err(format!(
+                            "Camera returned with a different image size ({}×{}). Restore the previous capture format or apply a new calibration.",
+                            frame.width(),
+                            frame.height()
+                        ))
+                    }
+                    Ok(Some(frame)) => Ok(frame),
+                    Err(error) => Err(error),
+                };
+                match read {
+                    Ok(frame) => {
+                        camera_has_delivered = true;
+                        last_camera_frame = Instant::now();
+                        if snapshot.camera_reconnect_error.take().is_some() {
+                            camera_retry_interval = FIRST_CAMERA_RETRY;
+                            snapshot.notice = "Camera reconnected".into();
+                            input.update_camera_source(&mut snapshot);
+                            if snapshot.source_fps > 0.0 {
+                                recording_source_fps = snapshot.source_fps;
+                            }
+                            if let Some(recorder) = &mut recorder {
+                                recorder.sync.event("camera_reconnected", recorder.index)?;
+                                recorder.sync.source(
+                                    &snapshot.source_label,
+                                    snapshot.actual_camera_id,
+                                    snapshot.actual_camera_hardware_id.as_deref(),
+                                    snapshot.actual_camera_port_id.as_deref(),
+                                )?;
+                            }
+                        }
+                        if held {
+                            // Drain the live camera without advancing calibration,
+                            // recording, or tracking while the user is paused.
+                            camera_discontinuity |= snapshot.row.is_some();
+                            continue;
+                        }
+                        Some(frame)
+                    }
+                    Err(error) => {
+                        if !camera_has_delivered {
+                            return Err(error);
+                        }
+                        if snapshot.camera_reconnect_error.is_some() {
+                            camera_retry_interval =
+                                (camera_retry_interval * 2).min(MAX_CAMERA_RETRY);
+                        } else if let Some(recorder) = &mut recorder {
+                            recorder.sync.event("camera_disconnected", recorder.index)?;
+                        }
+                        // Drop the failed native stream before attempting to reopen it.
+                        input = Input::Camera(None);
+                        // Space out device enumeration when several cameras on a hub fail together.
+                        let stagger =
+                            u64::from(snapshot.actual_camera_id.unwrap_or_default() % 17) * 40;
+                        camera_retry_at =
+                            Instant::now() + camera_retry_interval + Duration::from_millis(stagger);
+                        snapshot.camera_reconnect_error = Some(error);
+                        snapshot.camera = None;
+                        snapshot.camera_lag_ms = None;
+                        snapshot.actual_fps = 0.0;
+                        snapshot.preview_fps = 0.0;
+                        snapshot.processing_fps = 0.0;
+                        last_completed = None;
+                        previous_preview = None;
+                        last_publish = Instant::now() - preview_interval;
+                        camera_clock_origin = None;
+                        camera_time_offset = None;
+                        camera_discontinuity = true;
+                        last_sequence = 0;
+                        skip_gap = true;
+                        continue;
+                    }
+                }
             };
-            let input_wait = if matches!(input, Input::Camera(_)) {
-                work_tick.elapsed()
-            } else {
+            let input_wait = if file_source {
                 Duration::ZERO
+            } else {
+                work_tick.elapsed()
             };
             let mut pace_wait = Duration::ZERO;
             let Some((frame, rgb, sequence)) = frame else {
-                if matches!(input, Input::Camera(_)) {
-                    if last_camera_frame.elapsed() > Duration::from_secs(5) {
-                        return Err("No camera frames for five seconds. Check the device and camera permission, then Connect again.".into());
-                    }
-                    continue;
-                }
                 promote_preview(
                     &mut snapshot,
                     &mut previous_rgb,
@@ -1364,7 +1568,6 @@ fn run(
             let raw_frame = frame.clone();
             let source_time = frame.timestamp_ms();
             let delivered_at = Instant::now();
-            let file_source = matches!(input, Input::File(_));
             let captured_at = if file_source {
                 None
             } else {
@@ -1386,7 +1589,26 @@ fn run(
                 source_timestamp_ms: source_time,
             };
             let override_fps = doc.number("src_fps", -1.0);
-            let frame = if file_source && (override_fps > 0.0 || retimed) {
+            let frame = if let Some(captured) = captured_at {
+                // A reopened backend starts its own source clock. Join it to the
+                // session timeline using the elapsed monotonic capture time.
+                let offset = *camera_time_offset.get_or_insert_with(|| {
+                    match (previous_capture_instant, last_timestamp) {
+                        (Some(previous), Some(timestamp)) => {
+                            timestamp + captured.duration_since(previous).as_secs_f64() * 1000.0
+                                - source_time
+                        }
+                        _ => 0.0,
+                    }
+                });
+                if offset == 0.0 {
+                    frame
+                } else {
+                    frame
+                        .with_timestamp(source_time + offset)
+                        .map_err(|e| e.to_string())?
+                }
+            } else if override_fps > 0.0 || retimed {
                 let time = if let (Some(previous), Some(source_prev)) =
                     (&previous_frame, last_source_time)
                 {
@@ -1450,7 +1672,6 @@ fn run(
             }
             let input_frame = frame.clone();
             let frame = tracking_frame(frame, &rgb, &doc)?;
-            last_camera_frame = Instant::now();
             if sequence > 0 {
                 let skipped = sequence.saturating_sub(last_sequence).saturating_sub(1);
                 snapshot.dropped += skipped;
@@ -2404,6 +2625,147 @@ mod tests {
         )?)?;
         doc.set("zmq_port", "0")?;
         Ok((SourceSpec::Video(root.join("examples/sample.mp4")), doc))
+    }
+    struct ScriptedCamera {
+        id: u32,
+        frame: GrayFrame,
+        sequence: u64,
+        unplugged: Arc<AtomicBool>,
+    }
+    impl CameraStream for ScriptedCamera {
+        fn update_source(&self, snapshot: &mut Snapshot) {
+            snapshot.actual_camera_id = Some(self.id);
+            snapshot.actual_camera_hardware_id = Some("test-camera".into());
+            snapshot.source_label = format!("Test camera {}", self.id);
+        }
+        fn capabilities(
+            &mut self,
+        ) -> hejjetrac_camera::Result<hejjetrac_camera::CameraCapabilities> {
+            Err(hejjetrac_camera::Error(
+                "No controls on the test camera".into(),
+            ))
+        }
+        fn set_control(
+            &mut self,
+            _: hejjetrac_camera::CameraControlRequest,
+        ) -> hejjetrac_camera::Result<hejjetrac_camera::CameraCapabilities> {
+            self.capabilities()
+        }
+        fn next_frame(
+            &mut self,
+        ) -> hejjetrac_camera::Result<Option<hejjetrac_camera::CameraFrame>> {
+            thread::sleep(Duration::from_millis(25));
+            if self.unplugged.load(Ordering::Acquire) {
+                return Err(hejjetrac_camera::Error("USB hub disconnected".into()));
+            }
+            let gray = self
+                .frame
+                .clone()
+                .with_timestamp(self.sequence as f64 * 25.0)
+                .map_err(|error| hejjetrac_camera::Error(error.to_string()))?;
+            self.sequence += 1;
+            Ok(Some(hejjetrac_camera::CameraFrame {
+                rgb: vec![127; gray.width() * gray.height() * 3],
+                gray,
+                sequence: self.sequence,
+            }))
+        }
+    }
+    #[test]
+    fn camera_retries_after_an_outage_and_preserves_pause_and_recording() -> Result<()> {
+        let (SourceSpec::Video(path), mut doc) = fixture().map_err(|e| e.to_string())? else {
+            return Err("Expected a video fixture".into());
+        };
+        let frame = VideoSource::open(&path)
+            .and_then(|mut video| video.next_frame())
+            .map_err(|e| e.to_string())?
+            .ok_or("Missing fixture image")?;
+        doc.set("src_fn", "0").map_err(|e| e.to_string())?;
+        doc.set("rust_engine", "pairwise")
+            .map_err(|e| e.to_string())?;
+        let unplugged = Arc::new(AtomicBool::new(false));
+        let connection = Arc::clone(&unplugged);
+        let open = move |_: &SourceSpec, _: &ConfigDocument, previous: Option<&Snapshot>| {
+            if connection.load(Ordering::Acquire) {
+                return Err("USB hub still unavailable".into());
+            }
+            let id = if let Some(previous) = previous {
+                assert_eq!(previous.actual_camera_id, Some(0));
+                assert_eq!(
+                    previous.actual_camera_hardware_id.as_deref(),
+                    Some("test-camera")
+                );
+                12
+            } else {
+                0
+            };
+            Ok(Input::Camera(Some(Box::new(ScriptedCamera {
+                id,
+                frame: frame.clone(),
+                sequence: 0,
+                unplugged: Arc::clone(&connection),
+            }))))
+        };
+        let worker = Worker::start_with_source(
+            WorkerSource {
+                spec: SourceSpec::Camera(0),
+                open,
+            },
+            doc,
+            true,
+            None,
+            None,
+        )?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let take = std::env::temp_dir().join(format!("hejjetrac-camera-reconnect-{stamp}"));
+        wait_for(&worker, |s| s.row.is_some())?;
+        worker.send(Command::RecordOptions(
+            take.clone(),
+            hejjetrac_control::RecordOptions {
+                raw: false,
+                debug: false,
+            },
+            MediaRecordingTuning::default(),
+        ))?;
+        wait_for(&worker, |s| s.recording_numeric_frames >= 2)?;
+        worker.send(Command::Pause(true))?;
+        let paused = wait_for(&worker, |s| s.paused)?;
+        let before = paused.row.ok_or("Missing pre-outage row")?;
+        unplugged.store(true, Ordering::Release);
+        let missing = wait_for(&worker, |s| {
+            s.camera_reconnect_error.as_deref() == Some("USB hub still unavailable")
+        })?;
+        assert!(missing.recording && missing.paused && !missing.ended);
+        assert_eq!(missing.frames, paused.frames);
+        unplugged.store(false, Ordering::Release);
+        let restored = wait_for(&worker, |s| s.actual_camera_id == Some(12))?;
+        assert!(restored.camera_reconnect_error.is_none() && restored.paused && restored.recording);
+        assert_eq!(restored.frames, paused.frames);
+        worker.send(Command::Step)?;
+        let after = wait_for(&worker, |s| s.frames > restored.frames)?
+            .row
+            .ok_or("Missing post-outage row")?;
+        assert_eq!(after.frame, before.frame + 1);
+        assert_eq!(after.delta_camera, [0.0; 3]);
+        assert_eq!(after.position, before.position);
+        assert!(after.timestamp_ms > before.timestamp_ms + 5000.0);
+        worker.send(Command::StopRecord)?;
+        wait_for(&worker, |s| {
+            s.recording_finalizations
+                .iter()
+                .any(|status| status.state == "complete")
+        })?;
+        drop(worker);
+        let events =
+            fs::read_to_string(take.join("recording-events.jsonl")).map_err(|e| e.to_string())?;
+        assert_eq!(events.matches("camera_disconnected").count(), 1);
+        assert_eq!(events.matches("camera_reconnected").count(), 1);
+        assert!(events.contains("\"camera_id\":12"));
+        fs::remove_dir_all(take).map_err(|e| e.to_string())?;
+        Ok(())
     }
     struct UnblockFinalizer(SyncSender<()>);
     impl Drop for UnblockFinalizer {
@@ -3403,7 +3765,10 @@ mod tests {
         tx.send(Command::Advance(5)).map_err(|e| e.to_string())?;
         let shared = Arc::new(Mutex::new(Snapshot::default()));
         let error = run(
-            SourceSpec::Video(input_path),
+            WorkerSource {
+                spec: SourceSpec::Video(input_path),
+                open: Input::open,
+            },
             doc,
             false,
             rx,

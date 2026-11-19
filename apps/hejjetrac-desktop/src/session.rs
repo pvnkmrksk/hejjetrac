@@ -360,6 +360,8 @@ impl Session {
             "Did not start"
         } else if self.snapshot.ended {
             "Stopped"
+        } else if self.snapshot.camera_reconnect_error.is_some() {
+            "Reconnecting"
         } else if self.snapshot.frames == 0 {
             "Opening"
         } else if self.tool != Tool::Inspect {
@@ -426,7 +428,11 @@ impl Session {
         Ok(())
     }
     pub fn repaint_interval(&self) -> std::time::Duration {
-        if self.snapshot.paused || self.snapshot.ended || self.worker.is_none() {
+        if self.snapshot.paused
+            || self.snapshot.ended
+            || self.snapshot.camera_reconnect_error.is_some()
+            || self.worker.is_none()
+        {
             std::time::Duration::from_millis(250)
         } else {
             std::time::Duration::from_secs_f64(1.0 / f64::from(self.display_fps))

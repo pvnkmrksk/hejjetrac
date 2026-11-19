@@ -56,7 +56,11 @@ pub(crate) fn constrain_framebuffer(ctx: &egui::Context, texture_limit: u32) -> 
     limit
 }
 fn live_preview_delay(snapshot: &crate::runtime::Snapshot) -> Option<f64> {
-    if snapshot.paused || snapshot.ended || snapshot.actual_camera_id.is_none() {
+    if snapshot.paused
+        || snapshot.ended
+        || snapshot.camera_reconnect_error.is_some()
+        || snapshot.actual_camera_id.is_none()
+    {
         return None;
     }
     [snapshot.preview_age_ms, snapshot.camera_lag_ms]
@@ -719,7 +723,10 @@ impl Session {
             ui.visuals().weak_text_color()
         } else if lag.is_some_and(|ms| ms >= 1000.0) {
             ui.visuals().error_fg_color
-        } else if !quality || lag.is_some_and(|ms| ms >= 250.0) {
+        } else if self.snapshot.camera_reconnect_error.is_some()
+            || !quality
+            || lag.is_some_and(|ms| ms >= 250.0)
+        {
             ui.visuals().warn_fg_color
         } else if overloaded {
             ui.visuals().error_fg_color
@@ -728,7 +735,9 @@ impl Session {
         } else {
             Color32::from_rgb(96, 210, 158)
         };
-        let text = if ui.available_width() < 200.0 {
+        let text = if self.snapshot.camera_reconnect_error.is_some() {
+            "Reconnecting camera…".into()
+        } else if ui.available_width() < 200.0 {
             format!(
                 "{:.0} fps · {:.1} ms",
                 self.snapshot.actual_fps, self.snapshot.tracking_ms
@@ -790,6 +799,10 @@ impl Session {
                 .map(|ms| format!("{ms:.1} ms"))
                 .unwrap_or_else(|| "unavailable".into()),
         );
+        let detail = match &self.snapshot.camera_reconnect_error {
+            Some(error) => format!("{error}\n\n{detail}"),
+            None => detail,
+        };
         ui.horizontal(|ui| {
             let (indicator, _) = ui.allocate_exact_size(Vec2::new(7.0, 12.0), egui::Sense::hover());
             ui.painter().circle_filled(indicator.center(), 2.5, color);
@@ -2353,6 +2366,8 @@ value}
                 &self.error
             } else if self.snapshot.ended {
                 &self.snapshot.notice
+            } else if self.snapshot.camera_reconnect_error.is_some() {
+                "Reconnecting camera…"
             } else {
                 "Opening source…\nDrop a video to begin"
             };

@@ -64,6 +64,14 @@ video. A single-window sample fallback is stopped and its saved camera config is
 restored before joining the array. Explicitly configured video files remain video
 sources.
 
+Once a live camera has delivered frames, HejjéTrac automatically reopens it
+after a capture error or timeout. The affected rig shows **Reconnecting camera…**
+while it waits. It first retries after about two seconds, then backs off to a
+maximum of eight seconds between failed open attempts. Linked rigs use their
+saved camera or USB socket ID even if the operating system renumbers the device.
+Tracking and any active take continue when frames return. The take's timing
+ledger retains the outage, and motion during that interval is unmeasured.
+
 **Start all** resumes existing paused sessions and retries stopped sources.
 **Arrange in a grid** tiles the open windows. Save one config per rig before
 starting the array; review calibration, bindings and output ports for each rig.

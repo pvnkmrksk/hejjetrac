@@ -89,6 +89,27 @@ these checks, so timings are fixture observations, not isolated-machine or
 cross-platform performance claims.
 [Machine-readable evidence](benchmarks/cropped-sphere-atlas-20261117.json).
 
+## Automatic camera reconnection — 2026-11-13
+
+The desktop worker regression simulates a camera read failure, an unavailable
+hub on the first reopen attempt, and the camera returning under a new device
+number. It checks that the worker retains its paused state and active take,
+then verifies a monotonic timestamp with the outage preserved, zero relative
+motion on re-anchoring, and both reconnect events in the finalized take.
+The native Linux window was also inspected during sample playback on an isolated
+virtual display. On November 16, a lab user reported successful reconnect in
+the installed Linux build. The report did not specify the camera count or
+whether a whole hub was disconnected.
+
+Serial release checks used Rust 1.100.0 on Ubuntu 24.04 x86-64 (Intel i7-11700),
+limited to one logical CPU at low priority while the lab app was running. The
+120-frame synthetic demo passed at rotation-component RMSE **0.00030405 rad**
+(limit 0.003). The 300-frame supplied sample passed the existing reference
+gates with path RMS **0.044807 sphere rad**, heading RMS **0.013185 rad**, and
+rotation-component RMS **0.008761 / 0.008292 / 0.014211 rad**. The CLI reported
+1.095 s and 6.166 s end to end, respectively, for source open, decode, tracking,
+numeric output and finalization under this scheduling limit.
+
 ## Remote recording, portable defaults and binding stress — 2026-11-07
 
 The native Linux release passes **20 start/stop cycles on four independent

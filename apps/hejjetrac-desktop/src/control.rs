@@ -477,6 +477,7 @@ fn status(s: &mut Session) -> Value {
     }));
     state["running_camera_binding"] = json!(s.running_camera_binding);
     state["launch_state"] = json!(s.launch_state());
+    state["camera_reconnect_error"] = json!(s.snapshot.camera_reconnect_error);
     state["sample_fallback_active"] = json!(s.sample_fallback_active);
     state["window_max_inner_size"] = json!([s.max_window_inner_size.x, s.max_window_inner_size.y]);
     state["recording_encoding"] = json!(s.recording_encoding);
