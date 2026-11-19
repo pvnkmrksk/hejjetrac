@@ -1,5 +1,18 @@
 # HejjéTrac validation evidence
 
+## v0.5.3 release scope — 2026-11-19
+
+[v0.5.3](release-v0.5.3.md) packages the merged camera-reconnection,
+cropped-sphere sampling and atlas-save changes documented in the November 13
+and November 17 entries below. The release preparation changes version metadata
+and CI coverage without adding another tracking algorithm change.
+
+Ubuntu 24.04 is now the Linux portability and package-runtime test target;
+Windows and macOS checks remain. Linux package builds retain the Ubuntu
+22.04/glibc 2.35 baseline. Removing the Ubuntu 22.04 runtime job does not add new
+runtime evidence for that system; earlier executions remain historical results.
+The v0.5.3 release workflow records its own native build/check results separately.
+
 ## Default atlas folder and rig filenames — 2026-11-17
 
 The new default atlas save uses the rig's displayed label and a shared atlas

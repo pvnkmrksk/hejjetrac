@@ -4,6 +4,7 @@
 
 # Getting started
 
+- [v0.5.3 cropped-camera atlases and reconnection](release-v0.5.3.md)
 - [v0.5.0 remote recording and portable defaults](release-v0.5.0.md)
 - [v0.4.2 direct rig controls and outputs](release-v0.4.2.md)
 - [v0.4.1 desktop MCP and rig controls](release-v0.4.1.md)

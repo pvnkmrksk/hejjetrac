@@ -186,7 +186,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ubuntu: ['22.04', '24.04']
+        ubuntu: ['24.04']
     steps:
       - name: Native runtime, software graphics and installer tools
         env:

@@ -23,7 +23,7 @@ jobs:
   repack:
     name: Verify Linux artifact source and prepare runtime inputs
     runs-on: ubuntu-latest
-    container: ubuntu:22.04
+    container: ubuntu:24.04
     steps:
       - name: Packaging tools
         env:
@@ -119,7 +119,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ubuntu: ['22.04', '24.04']
+        ubuntu: ['24.04']
     steps:
       - name: Native runtime and software graphics tools
         env:
