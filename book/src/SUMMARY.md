@@ -30,6 +30,7 @@
 - [Video and offline tracking](video.md)
 - [Recording and files](recording.md)
 - [Remote recording and synchronization](remote-recording.md)
+- [Local experiment recording control](recording-mailbox.md)
 - [Several rigs](rigs.md)
 - [Saved workspaces and atlas startup](workspaces.md)
 - [Legacy MATREX VR output](matrex-vr.md)
